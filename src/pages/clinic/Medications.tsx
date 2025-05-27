@@ -22,7 +22,8 @@ import {
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-import { getMedicationDetails, searchCimavet, importMedicationFromCimavet } from '../../utils/cimavetApi';
+import CimavetAdvancedSearch from '../../components/CimavetAdvancedSearch';
+import { getMedicationDetails, importMedicationFromCimavet } from '../../utils/cimavetApi';
 
 interface Medication {
   id: string;
@@ -188,9 +189,6 @@ const Medications: React.FC = () => {
   const [cimavetDetails, setCimavetDetails] = useState<any>(null);
   const [loadingCimavet, setLoadingCimavet] = useState(false);
   const [showCimavetSearch, setShowCimavetSearch] = useState(false);
-  const [cimavetSearchTerm, setCimavetSearchTerm] = useState('');
-  const [cimavetResults, setCimavetResults] = useState<any[]>([]);
-  const [loadingCimavetSearch, setLoadingCimavetSearch] = useState(false);
 
   // Get unique medication types
   const medicationTypes = Array.from(new Set(medications.map(med => med.type)));
@@ -262,24 +260,9 @@ const Medications: React.FC = () => {
     setShowEditMedicationForm(false);
   };
 
-  const handleCimavetSearch = async () => {
-    if (!cimavetSearchTerm.trim()) return;
-    
-    setLoadingCimavetSearch(true);
+  const handleImportFromCimavet = async (medicationData: any) => {
     try {
-      const results = await searchCimavet({ name: cimavetSearchTerm });
-      setCimavetResults(results);
-    } catch (error) {
-      console.error('Error searching CIMAVET:', error);
-      setCimavetResults([]);
-    } finally {
-      setLoadingCimavetSearch(false);
-    }
-  };
-
-  const handleImportFromCimavet = async (medicationId: string) => {
-    try {
-      const importedMedication = await importMedicationFromCimavet(medicationId);
+      const importedMedication = await importMedicationFromCimavet(medicationData.codigo);
       // Add to local medications list
       const newMedication: Medication = {
         id: Date.now().toString(),
@@ -288,8 +271,6 @@ const Medications: React.FC = () => {
       };
       setMedications(prev => [...prev, newMedication]);
       setShowCimavetSearch(false);
-      setCimavetResults([]);
-      setCimavetSearchTerm('');
     } catch (error) {
       console.error('Error importing medication from CIMAVET:', error);
     }
@@ -1512,128 +1493,12 @@ const Medications: React.FC = () => {
         </div>
       )}
 
-      {/* CIMAVET Search Modal */}
+      {/* CIMAVET Advanced Search Modal */}
       {showCimavetSearch && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Buscar en CIMAVET</h2>
-              <button
-                onClick={() => {
-                  setShowCimavetSearch(false);
-                  setCimavetResults([]);
-                  setCimavetSearchTerm('');
-                }}
-                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="flex gap-4 mb-6">
-                <Input
-                  placeholder="Buscar medicamentos en CIMAVET..."
-                  value={cimavetSearchTerm}
-                  onChange={(e) => setCimavetSearchTerm(e.target.value)}
-                  className="flex-1"
-                  onKeyPress={(e) => e.key === 'Enter' && handleCimavetSearch()}
-                />
-                <Button
-                  variant="primary"
-                  icon={loadingCimavetSearch ? <Loader size={18} className="animate-spin" /> : <Search size={18} />}
-                  onClick={handleCimavetSearch}
-                  disabled={loadingCimavetSearch || !cimavetSearchTerm.trim()}
-                >
-                  Buscar
-                </Button>
-              </div>
-
-              <div className="overflow-y-auto max-h-96">
-                {loadingCimavetSearch ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader size={24} className="animate-spin text-blue-500 mr-2" />
-                    <p className="text-sm text-gray-600">Buscando en CIMAVET...</p>
-                  </div>
-                ) : cimavetResults.length > 0 ? (
-                  <div className="space-y-4">
-                    {cimavetResults.map((medication) => (
-                      <div key={medication.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-medium text-gray-900">{medication.name}</h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Principio activo: {medication.activeIngredients.join(', ')}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Laboratorio: {medication.holder}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Registro: {medication.registrationNumber}
-                            </p>
-                            
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {medication.species.map((species, index) => (
-                                <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  {species}
-                                </span>
-                              ))}
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {medication.dosageForm}
-                              </span>
-                              {medication.prescriptionRequired && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  Prescripción
-                                </span>
-                              )}
-                              {medication.antibiotic && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                  Antibiótico
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-col gap-2 ml-4">
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              icon={<Plus size={16} />}
-                              onClick={() => handleImportFromCimavet(medication.id)}
-                            >
-                              Importar
-                            </Button>
-                            {medication.datasheet && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                icon={<FileText size={16} />}
-                                onClick={() => window.open(medication.datasheet, '_blank')}
-                              >
-                                Ficha
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : cimavetSearchTerm && !loadingCimavetSearch ? (
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <Info size={24} className="text-blue-500 mb-2" />
-                    <p className="text-sm text-gray-600 text-center">No se encontraron medicamentos para "{cimavetSearchTerm}"</p>
-                    <p className="text-sm text-gray-500 text-center mt-1">Pruebe con términos de búsqueda diferentes.</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <Search size={24} className="text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 text-center">Ingrese un término de búsqueda para encontrar medicamentos en CIMAVET</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <CimavetAdvancedSearch
+          onClose={() => setShowCimavetSearch(false)}
+          onImport={handleImportFromCimavet}
+        />
       )}
     </div>
   );
