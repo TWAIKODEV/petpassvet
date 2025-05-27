@@ -480,7 +480,6 @@ export const mockUsers: User[] = [
     department: 'Dirección',
     position: 'Gerente',
     status: 'active',
-    lastLogin: '2025-05-20T16:45:00'w_patients']
-    }
+    lastLogin: '2025-05-20T16:45:00'
   }
 ];
