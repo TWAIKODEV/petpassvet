@@ -48,11 +48,13 @@ import Financieros from './pages/informes/Financieros';
 import MiPerfil from './pages/rrhh/MiPerfil';
 import ControlHorario from './pages/rrhh/ControlHorario';
 import RegistrarEntradaSalida from './pages/rrhh/RegistrarEntradaSalida';
+import Configuracion from './pages/administracion/configuracion';
+import Usuarios from './pages/administracion/usuarios';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -60,11 +62,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -74,7 +76,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          
+
           <Route path="/" element={
             <ProtectedRoute>
               <PageLayout />
@@ -82,46 +84,46 @@ function App() {
           }>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            
+
             {/* Agenda routes */}
             <Route path="agenda" element={<Calendar />} />
             <Route path="agenda/citas" element={<Appointments />} />
             <Route path="agenda/calendario" element={<Calendar />} />
-            
+
             {/* Clients routes */}
             <Route path="clientes/propietarios" element={<Patients />} />
             <Route path="clientes/propietarios/:id" element={<PatientProfile />} />
             <Route path="clientes/mascotas" element={<Pets />} />
-            
+
             {/* Opportunities routes */}
             <Route path="oportunidades" element={<Navigate to="/oportunidades/leads" replace />} />
             <Route path="oportunidades/leads" element={<Leads />} />
             <Route path="oportunidades/funnel-ventas" element={<FunnelVentas />} />
-            
+
             {/* Consultorio routes */}
             <Route path="consultorio" element={<Consultation />} />
             <Route path="consultorio/historiales" element={<MedicalHistory />} />
             <Route path="consultorio/tratamientos" element={<Tratamientos />} />
             <Route path="consultorio/medicamentos" element={<Medications />} />
             <Route path="consultorio/recetas" element={<Prescriptions />} />
-            
+
             {/* Peluquería routes */}
             <Route path="peluqueria" element={<GroomingAppointments />} />
             <Route path="peluqueria/citas" element={<GroomingAppointments />} />
             <Route path="peluqueria/historiales" element={<GroomingHistory />} />
             <Route path="peluqueria/tratamientos" element={<GroomingTreatments />} />
-            
+
             {/* Tienda routes */}
             <Route path="tienda" element={<TiendaDashboard />} />
             <Route path="tienda/productos" element={<TiendaProducts />} />
             <Route path="tienda/inventario" element={<TiendaInventory />} />
             <Route path="tienda/pedidos" element={<Pedidos />} />
-            
+
             {/* Sales routes */}
             <Route path="ventas" element={<Sales />} />
             <Route path="ventas/facturas" element={<Invoices />} />
             <Route path="ventas/presupuestos" element={<Budgets />} />
-            
+
             {/* Compras routes */}
             <Route path="compras" element={<Providers />} />
             <Route path="compras/proveedores" element={<Providers />} />
@@ -129,13 +131,13 @@ function App() {
             <Route path="compras/productos-servicios" element={<ProductsServices />} />
             <Route path="compras/inventario" element={<Inventory />} />
             <Route path="compras/pedidos" element={<Orders />} />
-            
+
             {/* Marketing routes */}
             <Route path="marketing" element={<WebDashboard />} />
             <Route path="marketing/web" element={<WebDashboard />} />
             <Route path="marketing/campanas" element={<CampañasMK />} />
             <Route path="marketing/redes-sociales" element={<SocialMediaDashboard />} />
-            
+
             {/* RRHH routes */}
             <Route path="rrhh">
               <Route path="mi-perfil" element={<MiPerfil />} />
@@ -143,7 +145,7 @@ function App() {
               <Route path="registrar-entrada-salida" element={<RegistrarEntradaSalida />} />
               <Route path="personal" element={<Staff />} />
             </Route>
-            
+
             {/* ERP routes */}
             <Route path="erp">
               <Route path="tesoreria" element={<Tesoreria />} />
@@ -151,21 +153,30 @@ function App() {
               <Route path="impuestos" element={<Impuestos />} />
               <Route path="asesorias" element={<Asesorias />} />
             </Route>
-            
+
             {/* Informes routes */}
             <Route path="informes">
               <Route path="general" element={<General />} />
               <Route path="financieros" element={<Financieros />} />
             </Route>
-            
+
             {/* Inbox route */}
             <Route path="inbox" element={<Inbox />} />
-            
+
             {/* Administration routes */}
             <Route path="administracion" element={<Placeholder pageName="Administración" />} />
-            <Route path="administracion/usuarios" element={<Placeholder pageName="Usuarios" />} />
+            <Route path="administracion/configuracion" element={
+              <ProtectedRoute requiredPermission="admin_view">
+                <Configuracion />
+              </ProtectedRoute>
+            } />
+            <Route path="administracion/usuarios" element={
+              <ProtectedRoute requiredPermission="users_manage">
+                <Usuarios />
+              </ProtectedRoute>
+            } />
             <Route path="administracion/configuracion" element={<Placeholder pageName="Configuración" />} />
-            
+
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

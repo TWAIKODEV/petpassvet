@@ -70,7 +70,7 @@ const getIcon = (iconName: string) => {
     'TruckIcon': <TruckIcon size={20} />,
     'UserCircle': <UserCircle size={20} />
   };
-  
+
   return icons[iconName] || <div className="w-5 h-5" />;
 };
 
