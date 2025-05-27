@@ -5,6 +5,7 @@ import Button from '../common/Button';
 import Input from '../common/Input';
 import { mockPatients } from '../../data/mockData';
 import { generatePrescriptionPDF } from '../../utils/pdfGenerator';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface NewPrescriptionFormProps {
   onClose: () => void;
@@ -215,7 +216,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
       duration: medication.duration,
       notes: ''
     };
-    
+
     setSelectedMedications(prev => [...prev, newMedication]);
   };
 
@@ -262,12 +263,12 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
 
   const handleSharePrescription = (method: 'email' | 'whatsapp' | 'sms') => {
     setShareMethod(method);
-    
+
     // Create a summary of medications for the message
     const medicationsSummary = selectedMedications.map(med => 
       `${med.name} - ${med.dosage} ${med.frequency ? `(${med.frequency})` : ''} - ${med.duration}`
     ).join('\n');
-    
+
     if (method === 'email') {
       setEmailData({
         to: selectedPatient.email || '',
@@ -295,7 +296,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
   const handleSendEmail = () => {
     // In a real app, this would send an email with the prescription attached
     console.log('Sending email:', emailData);
-    
+
     // Close the form and proceed with form submission
     setShowEmailForm(false);
     handleSubmit(new Event('submit') as any);
@@ -304,12 +305,12 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
   const handleSendWhatsapp = () => {
     // In a real app, this would send a WhatsApp message with the prescription
     console.log('Sending WhatsApp:', whatsappData);
-    
+
     // For demo purposes, we'll open a WhatsApp web link
     const encodedMessage = encodeURIComponent(whatsappData.message);
     const whatsappUrl = `https://wa.me/${whatsappData.number.replace(/\D/g, '')}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
-    
+
     // Close the form and proceed with form submission
     setShowWhatsappForm(false);
     handleSubmit(new Event('submit') as any);
@@ -318,15 +319,33 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
   const handleSendSms = () => {
     // In a real app, this would send an SMS with the prescription
     console.log('Sending SMS:', smsData);
-    
+
     // For demo purposes, we'll try to open the native SMS app
     const encodedMessage = encodeURIComponent(smsData.message);
     const smsUrl = `sms:${smsData.number}?body=${encodedMessage}`;
     window.location.href = smsUrl;
-    
+
     // Close the form and proceed with form submission
     setShowSmsForm(false);
     handleSubmit(new Event('submit') as any);
+  };
+
+  const generateQRData = (prescriptionData: any, selectedPatient: any, diagnosis: string, selectedMedications: Medication[]) => {
+    return JSON.stringify({
+      prescriptionNumber: prescriptionData.number,
+      date: formData.date,
+      patientName: selectedPatient.name,
+      petName: selectedPatient.pet.name,
+      diagnosis: diagnosis,
+      medications: selectedMedications.map(med => ({
+        name: med.name,
+        dosage: med.dosage,
+        frequency: med.frequency,
+        duration: med.duration,
+        notes: med.notes
+      })),
+      clinic: "ClinicPro",
+    });
   };
 
   return (
@@ -453,7 +472,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-medium text-gray-900">Medicamentos</h3>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input
@@ -462,7 +481,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                         onChange={(e) => setMedicationSearchTerm(e.target.value)}
                         icon={<Search size={18} />}
                       />
-                      
+
                       <select
                         className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         value={selectedCondition}
@@ -568,7 +587,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                               <Trash size={16} />
                             </button>
                           </div>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -724,7 +743,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                       <p className="text-gray-600">{selectedPatient.email}</p>
                       <p className="text-gray-600">{selectedPatient.phone}</p>
                     </div>
-                    
+
                     <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                       <h3 className="text-lg font-medium text-gray-900 mb-2">Datos del Paciente</h3>
                       <p className="font-medium text-gray-900">{selectedPatient.pet.name}</p>
@@ -753,7 +772,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                             <Pill className="text-blue-600 mr-2" size={20} />
                             <h4 className="text-lg font-medium text-gray-900">{medication.name}</h4>
                           </div>
-                          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4```text
                             <div>
                               <p className="text-sm text-gray-500">Dosis</p>
                               <p className="text-sm font-medium">{medication.dosage}</p>
@@ -786,7 +805,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                   )}
 
                   <div className="mt-8 pt-6 border-t border-gray-200">
-                    <div className="flex justify-between items-start">
+                    <div className="grid grid-cols-2 gap-6">
                       <div>
                         <p className="font-medium text-gray-900">Dr. Alejandro Ramírez</p>
                         <p className="text-gray-600">Veterinario Colegiado</p>
@@ -794,6 +813,24 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                       </div>
                       <div className="w-32 h-16 border border-gray-300 rounded flex items-center justify-center text-gray-400">
                         [Firma]
+                      </div>
+                    </div>
+
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 mb-2">Código QR</h4>
+                        <div className="bg-white p-3 rounded-lg border border-gray-200 inline-block">
+                          <QRCodeSVG 
+                            value={generateQRData(prescriptionData, selectedPatient, diagnosis, selectedMedications)}
+                            size={120}
+                            level="H"
+                            includeMargin={true}
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500">
+                          Escaneable en farmacias según protocolo español
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -58,6 +58,7 @@ interface PrescriptionData {
     phone: string;
     email: string;
   };
+  qrData?: string;
 }
 
 interface TicketData {
@@ -435,11 +436,22 @@ export const generatePrescriptionPDF = (data: PrescriptionData): jsPDF => {
   doc.setFontSize(8);
   addText('Firma y sello', 145, yPos + 5);
 
-  // QR Code placeholder
-  // In a real implementation, you would generate a QR code image and add it to the PDF
-  doc.rect(20, yPos + 20, 40, 40);
+  // QR Code section
+  doc.setFontSize(10);
+  addText('Código QR para farmacia:', 20, yPos + 20);
+  
+  // QR Code placeholder - in a real implementation, you would use a library like qrcode to generate an image
+  doc.rect(20, yPos + 25, 40, 40);
   doc.setFontSize(8);
-  addText('Código QR', 30, yPos + 45);
+  addText('QR Code', 30, yPos + 50);
+  
+  if (data.qrData) {
+    // Add QR data as text for reference (in a real implementation, this would be encoded in the QR image)
+    doc.setFontSize(6);
+    addText('Datos QR:', 70, yPos + 30);
+    const qrDataLines = data.qrData.substring(0, 100) + '...'; // Truncate for display
+    addText(qrDataLines, 70, yPos + 35);
+  }
 
   // Footer
   doc.setFontSize(8);
