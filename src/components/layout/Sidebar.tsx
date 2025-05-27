@@ -117,6 +117,7 @@ const navItems: NavItem[] = [
     href: '/consultorio',
     icon: 'Stethoscope',
     children: [
+      { title: 'Citas', href: '/consultorio/citas' },
       { title: 'Cita', href: '/consultorio' },
       { title: 'Historiales', href: '/consultorio/historiales' },
       { title: 'Tratamientos', href: '/consultorio/tratamientos' },
