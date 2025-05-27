@@ -1,0 +1,170 @@
+Aquí tienes un ejemplo de cómo recrear en React (y Tailwind) la vista del buscador avanzado de Cimavet que aparece en https://cimavet.aemps.es/cimavet/publico/buscadoravanzado.html, adaptándolo a tu esquema de colores y listo para pegar en un Repl de Replit:
+
+jsx
+Copiar
+Editar
+// src/components/CimavetSearch.jsx
+import React, { useState } from "react";
+import axios from "axios";
+
+export default function CimavetSearch() {
+  const [form, setForm] = useState({
+    principioActivo: "",
+    tipoMed: "",
+    laboratorio: "",
+    // … añade más campos según necesites
+  });
+  const [results, setResults] = useState([]);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSearch = async () => {
+    try {
+      const res = await axios.get("/api/cimavet/search", { params: form });
+      setResults(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-2xl shadow-lg">
+      <h2 className="text-2xl font-bold mb-4 text-primary">Buscador Avanzado Cimavet</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block mb-1 text-secondary">Principio Activo</label>
+          <input
+            name="principioActivo"
+            value={form.principioActivo}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-lg p-2"
+            placeholder="Ej. Amoxicilina"
+          />
+        </div>
+        <div>
+          <label className="block mb-1 text-secondary">Tipo de Medicamento</label>
+          <select
+            name="tipoMed"
+            value={form.tipoMed}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-lg p-2"
+          >
+            <option value="">— Selecciona —</option>
+            <option value="comprimido">Comprimido</option>
+            <option value="jarabe">Jarabe</option>
+            {/* …más opciones */}
+          </select>
+        </div>
+        <div>
+          <label className="block mb-1 text-secondary">Laboratorio</label>
+          <input
+            name="laboratorio"
+            value={form.laboratorio}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-lg p-2"
+            placeholder="Ej. Pfizer"
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={handleSearch}
+        className="mt-6 px-6 py-2 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition"
+      >
+        Buscar
+      </button>
+
+      {/* Resultados */}
+      {results.length > 0 && (
+        <table className="w-full mt-8 table-auto border-collapse">
+          <thead className="bg-secondary-light">
+            <tr>
+              <th className="px-4 py-2 text-left">Código</th>
+              <th className="px-4 py-2 text-left">Nombre</th>
+              <th className="px-4 py-2 text-left">Presentación</th>
+              {/* …otras columnas */}
+            </tr>
+          </thead>
+          <tbody>
+            {results.map((med) => (
+              <tr key={med.codigo} className="odd:bg-white even:bg-gray-50">
+                <td className="px-4 py-2">{med.codigo}</td>
+                <td className="px-4 py-2">{med.nombre}</td>
+                <td className="px-4 py-2">{med.presentacion}</td>
+                {/* … */}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+);
+}
+Para que esto funcione “out-of-the-box” en tu Repl:
+
+Instala dependencias
+
+bash
+Copiar
+Editar
+npm install axios
+Define tu tema en tailwind.config.js (o CSS global):
+
+js
+Copiar
+Editar
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: "#005F8C",        // tu color principal
+        "primary-dark": "#00496B", // variante más oscura
+        secondary: "#0093D0",      // color de etiquetas
+        "secondary-light": "#E6F7FF"
+      }
+    }
+  }
+};
+Implementa el endpoint en tu backend de Replit (/api/cimavet/search) que haga la llamada real a la API de Cimavet y devuelva JSON. Por ejemplo, en Express:
+
+js
+Copiar
+Editar
+// index.js (o server.js)
+import express from "express";
+import axios from "axios";
+const app = express();
+
+app.get("/api/cimavet/search", async (req, res) => {
+  try {
+    const resp = await axios.get("https://cimavet.aemps.es/cimavet/rest/buscar", {
+      params: req.query
+    });
+    res.json(resp.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.listen(3000, () => console.log("API corriendo en puerto 3000"));
+Importa y utiliza el componente en tu página principal:
+
+jsx
+Copiar
+Editar
+// src/App.jsx
+import CimavetSearch from "./components/CimavetSearch";
+
+function App() {
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <CimavetSearch />
+    </div>
+  );
+}
+
+export default App;
+Con esto tendrás la misma estructura y campos que el buscador oficial de Cimavet, pero con tus colores y listo para ejecutarse e iterar directamente en Replit.
