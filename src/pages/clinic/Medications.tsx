@@ -192,7 +192,7 @@ const Medications: React.FC = () => {
 
   // Get unique medication types
   const medicationTypes = Array.from(new Set(medications.map(med => med.type)));
-  
+
   // Get unique species
   const species = Array.from(new Set(medications.flatMap(med => med.species)));
 
@@ -228,7 +228,7 @@ const Medications: React.FC = () => {
 
   const handleViewDetails = (medication: Medication) => {
     setShowMedicationDetails(medication);
-    
+
     // Fetch CIMAVET details if registration number is available
     if (medication.registrationNumber) {
       setLoadingCimavet(true);
@@ -276,6 +276,10 @@ const Medications: React.FC = () => {
     }
   };
 
+    const openCimavetSearch = () => {
+        setShowCimavetSearch(true);
+    };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -294,14 +298,13 @@ const Medications: React.FC = () => {
           >
             Exportar
           </Button>
-          <Button
-            variant="outline"
-            icon={<ExternalLink size={18} />}
-            className="flex-1 sm:flex-none"
-            onClick={() => setShowCimavetSearch(true)}
-          >
-            Cimavet
-          </Button>
+            <button
+              onClick={() => openCimavetSearch()}
+              className="bg-cimavet-dark hover:bg-cimavet-light text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+            >
+              <Search size={18} />
+              <span>Cimavet</span>
+            </button>
           <Button
             variant="primary"
             icon={<Plus size={18} />}
@@ -657,7 +660,7 @@ const Medications: React.FC = () => {
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="overflow-y-auto flex-1 p-6">
               <form className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -666,19 +669,19 @@ const Medications: React.FC = () => {
                     placeholder="Ej: Amoxicilina 250mg"
                     required
                   />
-                  
+
                   <Input
                     label="Principio Activo"
                     placeholder="Ej: Amoxicilina"
                     required
                   />
-                  
+
                   <Input
                     label="Fabricante"
                     placeholder="Ej: Laboratorios MSD"
                     required
                   />
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tipo
@@ -700,7 +703,7 @@ const Medications: React.FC = () => {
                       <option value="Otro">Otro</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Forma Farmacéutica
@@ -723,7 +726,7 @@ const Medications: React.FC = () => {
                       <option value="Otro">Otro</option>
                     </select>
                   </div>
-                  
+
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Especies
@@ -740,7 +743,7 @@ const Medications: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Posología Recomendada
@@ -750,7 +753,7 @@ const Medications: React.FC = () => {
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Duración Recomendada
@@ -760,7 +763,7 @@ const Medications: React.FC = () => {
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Número de Registro
@@ -769,7 +772,7 @@ const Medications: React.FC = () => {
                       placeholder="Ej: 1234-ESP"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Referencia
@@ -779,7 +782,7 @@ const Medications: React.FC = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Inventario</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -819,7 +822,7 @@ const Medications: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Información Clínica</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -865,7 +868,7 @@ const Medications: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-gray-900">Estado</h3>
@@ -884,7 +887,7 @@ const Medications: React.FC = () => {
                 </div>
               </form>
             </div>
-            
+
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
               <Button
                 variant="outline"
@@ -916,7 +919,7 @@ const Medications: React.FC = () => {
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="overflow-y-auto flex-1 p-6">
               <form className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -925,19 +928,19 @@ const Medications: React.FC = () => {
                     defaultValue={selectedMedication.name}
                     required
                   />
-                  
+
                   <Input
                     label="Principio Activo"
                     defaultValue={selectedMedication.activeIngredient}
                     required
                   />
-                  
+
                   <Input
                     label="Fabricante"
                     defaultValue={selectedMedication.manufacturer}
                     required
                   />
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tipo
@@ -959,7 +962,7 @@ const Medications: React.FC = () => {
                       <option value="Otro">Otro</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Forma Farmacéutica
@@ -982,7 +985,7 @@ const Medications: React.FC = () => {
                       <option value="Otro">Otro</option>
                     </select>
                   </div>
-                  
+
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Especies
@@ -1000,7 +1003,7 @@ const Medications: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Posología Recomendada
@@ -1010,7 +1013,7 @@ const Medications: React.FC = () => {
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Duración Recomendada
@@ -1020,7 +1023,7 @@ const Medications: React.FC = () => {
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Número de Registro
@@ -1029,7 +1032,7 @@ const Medications: React.FC = () => {
                       defaultValue={selectedMedication.registrationNumber}
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Referencia
@@ -1039,7 +1042,7 @@ const Medications: React.FC = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Inventario</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1079,7 +1082,7 @@ const Medications: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Información Clínica</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1125,7 +1128,7 @@ const Medications: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-gray-900">Estado</h3>
@@ -1144,7 +1147,7 @@ const Medications: React.FC = () => {
                 </div>
               </form>
             </div>
-            
+
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
               <Button
                 variant="outline"
@@ -1208,7 +1211,7 @@ const Medications: React.FC = () => {
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="overflow-y-auto flex-1 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -1258,7 +1261,7 @@ const Medications: React.FC = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Información Clínica</h3>
                   <div className="bg-gray-50 rounded-lg p-4 space-y-4">
@@ -1304,7 +1307,7 @@ const Medications: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Inventario</h3>
                   <div className="bg-gray-50 rounded-lg p-4 space-y-4">
@@ -1340,7 +1343,7 @@ const Medications: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* CIMAVET Information */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Información CIMAVET</h3>
@@ -1357,7 +1360,7 @@ const Medications: React.FC = () => {
                             <p className="text-sm text-gray-500">Número de Registro</p>
                             <p className="text-sm font-medium text-gray-900">{cimavetDetails.registrationNumber}</p>
                           </div>
-                          
+
                           <div>
                             <p className="text-sm text-gray-500">Documentación</p>
                             <div className="mt-1 space-y-2">
@@ -1405,7 +1408,7 @@ const Medications: React.FC = () => {
                               </a>
                             </div>
                           </div>
-                          
+
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <p className="text-sm text-gray-500">Especies Aprobadas</p>
@@ -1417,7 +1420,7 @@ const Medications: React.FC = () => {
                                 ))}
                               </div>
                             </div>
-                            
+
                             <div>
                               <p className="text-sm text-gray-500">Vías de Administración</p>
                               <div className="flex flex-wrap gap-1 mt-1">
@@ -1428,28 +1431,28 @@ const Medications: React.FC = () => {
                                 ))}
                               </div>
                             </div>
-                            
+
                             <div>
                               <p className="text-sm text-gray-500">Requiere Prescripción</p>
                               <p className="text-sm font-medium text-gray-900">
                                 {cimavetDetails.prescriptionRequired ? 'Sí' : 'No'}
                               </p>
                             </div>
-                            
+
                             <div>
                               <p className="text-sm text-gray-500">Antibiótico</p>
                               <p className="text-sm font-medium text-gray-900">
                                 {cimavetDetails.antibiotic ? 'Sí' : 'No'}
                               </p>
                             </div>
-                            
+
                             <div>
                               <p className="text-sm text-gray-500">Comercializado</p>
                               <p className="text-sm font-medium text-gray-900">
                                 {cimavetDetails.commercialized ? 'Sí' : 'No'}
                               </p>
                             </div>
-                            
+
                             <div>
                               <p className="text-sm text-gray-500">Situación</p>
                               <p className="text-sm font-medium text-gray-900">
@@ -1477,7 +1480,7 @@ const Medications: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
               <Button
                 variant="outline"
