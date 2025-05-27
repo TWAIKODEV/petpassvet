@@ -759,7 +759,7 @@ const Prescriptions = () => {
                 type="email"
                 value={emailData.to}
                 onChange={(e) => setEmailData({...emailData, to: e.target.value})}
-                placeholder="email@ejemplo.com"```
+                placeholder="email@ejemplo.com"
                 icon={<Mail size={18} />}
                 required
               />
