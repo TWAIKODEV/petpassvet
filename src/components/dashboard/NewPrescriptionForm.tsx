@@ -4,7 +4,7 @@ import { Calendar, Clock, FileText, Plus, X, User, Pill, Printer, Download, QrCo
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Input from '../common/Input';
-import { QRCode } from 'react-qr-code';
+import QRCode from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { generatePrescriptionPDF } from '../../utils/pdfGenerator';
 
