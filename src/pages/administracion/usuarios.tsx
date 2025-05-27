@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Users, 
@@ -16,47 +17,164 @@ import {
   X, 
   Check, 
   Lock, 
-  Unlock
+  Unlock,
+  Settings,
+  Save,
+  Plus,
+  Minus
 } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: {
-    id: string;
-    name: string;
-  };
-  department: string;
-  position: string;
-  status: 'active' | 'inactive';
-  lastLogin?: string;
-  avatar?: string;
-}
+import { User, UserRole, Permission } from '../../types';
 
 const Usuarios: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showNewUserForm, setShowNewUserForm] = useState(false);
+  const [showRoleManagement, setShowRoleManagement] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<User | null>(null);
 
-  // Mock data for users
+  // Permisos disponibles del sistema
+  const [availablePermissions] = useState<Permission[]>([
+    // Dashboard
+    { id: 'dashboard_view', name: 'Ver Dashboard', description: 'Acceso al panel principal', module: 'dashboard', action: 'view' },
+    
+    // Inbox
+    { id: 'inbox_view', name: 'Ver Inbox', description: 'Ver mensajes entrantes', module: 'inbox', action: 'view' },
+    { id: 'inbox_reply', name: 'Responder Mensajes', description: 'Responder a mensajes', module: 'inbox', action: 'edit' },
+    
+    // Agenda
+    { id: 'agenda_view', name: 'Ver Agenda', description: 'Ver calendario de citas', module: 'agenda', action: 'view' },
+    { id: 'agenda_create', name: 'Crear Citas', description: 'Agendar nuevas citas', module: 'agenda', action: 'create' },
+    { id: 'agenda_edit', name: 'Editar Citas', description: 'Modificar citas existentes', module: 'agenda', action: 'edit' },
+    { id: 'agenda_delete', name: 'Eliminar Citas', description: 'Cancelar o eliminar citas', module: 'agenda', action: 'delete' },
+    
+    // Clientes
+    { id: 'clients_view', name: 'Ver Clientes', description: 'Ver lista de clientes', module: 'clients', action: 'view' },
+    { id: 'clients_create', name: 'Crear Clientes', description: 'Registrar nuevos clientes', module: 'clients', action: 'create' },
+    { id: 'clients_edit', name: 'Editar Clientes', description: 'Modificar datos de clientes', module: 'clients', action: 'edit' },
+    { id: 'clients_delete', name: 'Eliminar Clientes', description: 'Eliminar clientes del sistema', module: 'clients', action: 'delete' },
+    
+    // Pacientes/Mascotas
+    { id: 'patients_view', name: 'Ver Pacientes', description: 'Ver historiales médicos', module: 'patients', action: 'view' },
+    { id: 'patients_create', name: 'Crear Pacientes', description: 'Registrar nuevas mascotas', module: 'patients', action: 'create' },
+    { id: 'patients_edit', name: 'Editar Pacientes', description: 'Modificar datos médicos', module: 'patients', action: 'edit' },
+    
+    // Consultorio
+    { id: 'consultorio_view', name: 'Ver Consultorio', description: 'Acceso al área médica', module: 'consultorio', action: 'view' },
+    { id: 'consultorio_manage', name: 'Gestionar Consultas', description: 'Realizar y gestionar consultas', module: 'consultorio', action: 'manage' },
+    
+    // Peluquería
+    { id: 'grooming_view', name: 'Ver Peluquería', description: 'Acceso al área de peluquería', module: 'grooming', action: 'view' },
+    { id: 'grooming_manage', name: 'Gestionar Peluquería', description: 'Realizar servicios de peluquería', module: 'grooming', action: 'manage' },
+    
+    // Finanzas
+    { id: 'finances_view', name: 'Ver Finanzas', description: 'Ver información financiera', module: 'finances', action: 'view' },
+    { id: 'finances_manage', name: 'Gestionar Finanzas', description: 'Gestión completa financiera', module: 'finances', action: 'manage' },
+    
+    // Administración
+    { id: 'admin_view', name: 'Ver Administración', description: 'Ver configuración del sistema', module: 'admin', action: 'view' },
+    { id: 'admin_manage', name: 'Gestionar Sistema', description: 'Administración completa del sistema', module: 'admin', action: 'manage' },
+    { id: 'users_manage', name: 'Gestionar Usuarios', description: 'Crear y gestionar usuarios', module: 'admin', action: 'manage' },
+    
+    // Informes
+    { id: 'reports_view', name: 'Ver Informes', description: 'Acceso a reportes', module: 'reports', action: 'view' },
+    { id: 'reports_export', name: 'Exportar Informes', description: 'Exportar datos y reportes', module: 'reports', action: 'edit' }
+  ]);
+
+  // Roles predefinidos con permisos
+  const [roles, setRoles] = useState<UserRole[]>([
+    {
+      id: 'admin',
+      name: 'admin',
+      displayName: 'Administrador',
+      permissions: availablePermissions,
+      isEditable: false
+    },
+    {
+      id: 'manager',
+      name: 'manager',
+      displayName: 'Manager',
+      permissions: availablePermissions.filter(p => !p.id.includes('admin_manage') && !p.id.includes('users_manage')),
+      isEditable: true
+    },
+    {
+      id: 'veterinarian',
+      name: 'veterinarian',
+      displayName: 'Veterinario',
+      permissions: availablePermissions.filter(p => 
+        p.module === 'dashboard' || 
+        p.module === 'agenda' || 
+        p.module === 'clients' || 
+        p.module === 'patients' || 
+        p.module === 'consultorio' ||
+        (p.module === 'inbox' && p.action === 'view')
+      ),
+      isEditable: true
+    },
+    {
+      id: 'vet_assistant',
+      name: 'vet_assistant',
+      displayName: 'Asistente Veterinario',
+      permissions: availablePermissions.filter(p => 
+        p.module === 'dashboard' || 
+        (p.module === 'agenda' && p.action !== 'delete') || 
+        p.module === 'clients' || 
+        (p.module === 'patients' && p.action !== 'edit') || 
+        (p.module === 'consultorio' && p.action === 'view')
+      ),
+      isEditable: true
+    },
+    {
+      id: 'receptionist',
+      name: 'receptionist',
+      displayName: 'Auxiliar Oficina',
+      permissions: availablePermissions.filter(p => 
+        p.module === 'dashboard' || 
+        p.module === 'agenda' || 
+        p.module === 'clients' || 
+        (p.module === 'patients' && p.action === 'view') || 
+        p.module === 'inbox' ||
+        (p.module === 'finances' && p.action === 'view')
+      ),
+      isEditable: true
+    },
+    {
+      id: 'groomer',
+      name: 'groomer',
+      displayName: 'Peluquero',
+      permissions: availablePermissions.filter(p => 
+        p.module === 'dashboard' || 
+        (p.module === 'agenda' && p.action !== 'delete') || 
+        (p.module === 'clients' && p.action !== 'delete') || 
+        (p.module === 'patients' && p.action === 'view') || 
+        p.module === 'grooming'
+      ),
+      isEditable: true
+    }
+  ]);
+
+  // Departamentos para dropdown
+  const departments = [
+    'Dirección',
+    'Veterinaria',
+    'Peluquería',
+    'Administración',
+    'Recepción',
+    'Tienda'
+  ];
+
+  // Mock data para usuarios
   const [users, setUsers] = useState<User[]>([
     {
       id: '1',
       name: 'Dr. Alejandro Ramírez',
       email: 'alejandro.ramirez@clinica.com',
       phone: '+34 666 123 456',
-      role: {
-        id: 'veterinarian',
-        name: 'Veterinario'
-      },
+      role: roles.find(r => r.id === 'veterinarian')!,
       department: 'Veterinaria',
       position: 'Veterinario Senior',
       status: 'active',
@@ -67,10 +185,7 @@ const Usuarios: React.FC = () => {
       name: 'Dra. Laura Gómez',
       email: 'laura.gomez@clinica.com',
       phone: '+34 666 234 567',
-      role: {
-        id: 'veterinarian',
-        name: 'Veterinario'
-      },
+      role: roles.find(r => r.id === 'veterinarian')!,
       department: 'Veterinaria',
       position: 'Veterinaria',
       status: 'active',
@@ -81,10 +196,7 @@ const Usuarios: React.FC = () => {
       name: 'Ana López',
       email: 'ana.lopez@clinica.com',
       phone: '+34 666 345 678',
-      role: {
-        id: 'groomer',
-        name: 'Peluquero'
-      },
+      role: roles.find(r => r.id === 'groomer')!,
       department: 'Peluquería',
       position: 'Peluquera',
       status: 'active',
@@ -95,10 +207,7 @@ const Usuarios: React.FC = () => {
       name: 'Carlos Ruiz',
       email: 'carlos.ruiz@clinica.com',
       phone: '+34 666 456 789',
-      role: {
-        id: 'receptionist',
-        name: 'Auxiliar Oficina'
-      },
+      role: roles.find(r => r.id === 'receptionist')!,
       department: 'Administración',
       position: 'Recepcionista',
       status: 'active',
@@ -109,10 +218,7 @@ const Usuarios: React.FC = () => {
       name: 'María Sánchez',
       email: 'maria.sanchez@clinica.com',
       phone: '+34 666 567 890',
-      role: {
-        id: 'receptionist',
-        name: 'Auxiliar Oficina'
-      },
+      role: roles.find(r => r.id === 'receptionist')!,
       department: 'Administración',
       position: 'Contable',
       status: 'active',
@@ -123,66 +229,15 @@ const Usuarios: React.FC = () => {
       name: 'Dra. Carmen Jiménez',
       email: 'carmen.jimenez@clinica.com',
       phone: '+34 666 678 901',
-      role: {
-        id: 'admin',
-        name: 'Administrador'
-      },
+      role: roles.find(r => r.id === 'admin')!,
       department: 'Dirección',
       position: 'Directora',
       status: 'active',
       lastLogin: '2025-05-21T11:10:00'
-    },
-    {
-      id: '7',
-      name: 'Miguel Torres',
-      email: 'miguel.torres@clinica.com',
-      phone: '+34 666 789 012',
-      role: {
-        id: 'vet_assistant',
-        name: 'Asistente Veterinario'
-      },
-      department: 'Veterinaria',
-      position: 'Auxiliar Veterinario',
-      status: 'active',
-      lastLogin: '2025-05-21T09:45:00'
-    },
-    {
-      id: '8',
-      name: 'Javier Martínez',
-      email: 'javier.martinez@clinica.com',
-      phone: '+34 666 890 123',
-      role: {
-        id: 'manager',
-        name: 'Manager'
-      },
-      department: 'Dirección',
-      position: 'Gerente',
-      status: 'inactive',
-      lastLogin: '2025-05-15T10:30:00'
     }
   ]);
 
-  // Roles for dropdown
-  const roles = [
-    { id: 'admin', name: 'Administrador' },
-    { id: 'manager', name: 'Manager' },
-    { id: 'veterinarian', name: 'Veterinario' },
-    { id: 'vet_assistant', name: 'Asistente Veterinario' },
-    { id: 'receptionist', name: 'Auxiliar Oficina' },
-    { id: 'groomer', name: 'Peluquero' }
-  ];
-
-  // Departments for dropdown
-  const departments = [
-    'Dirección',
-    'Veterinaria',
-    'Peluquería',
-    'Administración',
-    'Recepción',
-    'Tienda'
-  ];
-
-  // Filter users based on search term, role, and status
+  // Filtrar usuarios
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,7 +253,6 @@ const Usuarios: React.FC = () => {
   });
 
   const handleNewUser = (userData: any) => {
-    // Here you would typically make an API call to save the new user
     console.log('New user data:', userData);
     setShowNewUserForm(false);
   };
@@ -207,18 +261,17 @@ const Usuarios: React.FC = () => {
     setSelectedUser(user);
   };
 
+  const handleManageUserPermissions = (user: User) => {
+    setSelectedUserForPermissions(user);
+  };
+
   const handleResetPassword = (userId: string) => {
-    // Here you would typically make an API call to reset the user's password
     console.log('Resetting password for user:', userId);
     alert('Se ha enviado un enlace de restablecimiento de contraseña al usuario.');
   };
 
   const handleToggleUserStatus = (userId: string, currentStatus: 'active' | 'inactive') => {
-    // Here you would typically make an API call to toggle the user's status
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    console.log('Toggling status for user:', userId, 'to', newStatus);
-    
-    // Update the user's status in the local state
     setUsers(prev => 
       prev.map(user => 
         user.id === userId 
@@ -228,17 +281,60 @@ const Usuarios: React.FC = () => {
     );
   };
 
+  const handleUpdateUserPermissions = (userId: string, newPermissions: Permission[]) => {
+    setUsers(prev =>
+      prev.map(user =>
+        user.id === userId
+          ? { ...user, customPermissions: newPermissions }
+          : user
+      )
+    );
+    setSelectedUserForPermissions(null);
+  };
+
+  const handleAddRole = () => {
+    const newRoleId = `role_${Date.now()}`;
+    setRoles(prev => [
+      ...prev,
+      {
+        id: newRoleId,
+        name: 'manager',
+        displayName: 'Nuevo Rol',
+        permissions: [],
+        isEditable: true
+      }
+    ]);
+  };
+
+  const handleUpdateRole = (roleId: string, updatedRole: Partial<UserRole>) => {
+    setRoles(prev =>
+      prev.map(role =>
+        role.id === roleId
+          ? { ...role, ...updatedRole }
+          : role
+      )
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Gestión de usuarios y permisos del sistema
+            Administra usuarios, roles y permisos del sistema
           </p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            icon={<Settings size={18} />}
+            onClick={() => setShowRoleManagement(true)}
+            className="flex-1 sm:flex-none"
+          >
+            Gestionar Roles
+          </Button>
           <Button
             variant="outline"
             icon={<Download size={18} />}
@@ -274,7 +370,7 @@ const Usuarios: React.FC = () => {
           >
             <option value="all">Todos los roles</option>
             {roles.map(role => (
-              <option key={role.id} value={role.id}>{role.name}</option>
+              <option key={role.id} value={role.id}>{role.displayName}</option>
             ))}
           </select>
           <select
@@ -300,7 +396,7 @@ const Usuarios: React.FC = () => {
         </div>
       </Card>
 
-      {/* Users List */}
+      {/* Users Table */}
       <div className="bg-white shadow-sm rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -319,7 +415,7 @@ const Usuarios: React.FC = () => {
                   Departamento
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Último Acceso
+                  Permisos
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
@@ -351,20 +447,19 @@ const Usuarios: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {user.role.name}
+                      {user.role.displayName}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {user.department}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.lastLogin ? new Date(user.lastLogin).toLocaleString('es-ES', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    }) : 'Nunca'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {user.customPermissions ? 'Personalizado' : 'Por rol'}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {(user.customPermissions || user.role.permissions).length} permisos
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -385,6 +480,13 @@ const Usuarios: React.FC = () => {
                         <Eye size={18} />
                       </button>
                       <button
+                        onClick={() => handleManageUserPermissions(user)}
+                        className="text-purple-600 hover:text-purple-800"
+                        title="Gestionar permisos"
+                      >
+                        <Shield size={18} />
+                      </button>
+                      <button
                         className="text-gray-600 hover:text-gray-800"
                         title="Editar"
                       >
@@ -395,7 +497,7 @@ const Usuarios: React.FC = () => {
                         className="text-yellow-600 hover:text-yellow-800"
                         title="Resetear contraseña"
                       >
-                        {user.status === 'active' ? <Lock size={18} /> : <Unlock size={18} />}
+                        <Lock size={18} />
                       </button>
                       <button
                         onClick={() => handleToggleUserStatus(user.id, user.status)}
@@ -432,7 +534,6 @@ const Usuarios: React.FC = () => {
               <button
                 onClick={() => setShowNewUserForm(false)}
                 className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Cerrar"
               >
                 <X size={24} />
               </button>
@@ -444,38 +545,12 @@ const Usuarios: React.FC = () => {
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Información Personal</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="Nombre"
-                      name="firstName"
-                      required
-                    />
-                    <Input
-                      label="Apellidos"
-                      name="lastName"
-                      required
-                    />
-                    <Input
-                      label="Email"
-                      type="email"
-                      name="email"
-                      required
-                    />
-                    <Input
-                      label="Teléfono"
-                      type="tel"
-                      name="phone"
-                      required
-                    />
-                    <Input
-                      label="DNI/NIE"
-                      name="idNumber"
-                      required
-                    />
-                    <Input
-                      label="Fecha de Nacimiento"
-                      type="date"
-                      name="birthDate"
-                    />
+                    <Input label="Nombre" name="firstName" required />
+                    <Input label="Apellidos" name="lastName" required />
+                    <Input label="Email" type="email" name="email" required />
+                    <Input label="Teléfono" type="tel" name="phone" required />
+                    <Input label="DNI/NIE" name="idNumber" required />
+                    <Input label="Fecha de Nacimiento" type="date" name="birthDate" />
                   </div>
                 </div>
 
@@ -484,9 +559,7 @@ const Usuarios: React.FC = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Rol y Acceso</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Rol
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
                       <select
                         name="role"
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -494,14 +567,12 @@ const Usuarios: React.FC = () => {
                       >
                         <option value="">Seleccionar rol</option>
                         {roles.map(role => (
-                          <option key={role.id} value={role.id}>{role.name}</option>
+                          <option key={role.id} value={role.id}>{role.displayName}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Departamento
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
                       <select
                         name="department"
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -513,15 +584,9 @@ const Usuarios: React.FC = () => {
                         ))}
                       </select>
                     </div>
-                    <Input
-                      label="Puesto"
-                      name="position"
-                      required
-                    />
+                    <Input label="Puesto" name="position" required />
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Estado
-                      </label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                       <select
                         name="status"
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -538,18 +603,8 @@ const Usuarios: React.FC = () => {
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Contraseña</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="Contraseña"
-                      type="password"
-                      name="password"
-                      required
-                    />
-                    <Input
-                      label="Confirmar Contraseña"
-                      type="password"
-                      name="confirmPassword"
-                      required
-                    />
+                    <Input label="Contraseña" type="password" name="password" required />
+                    <Input label="Confirmar Contraseña" type="password" name="confirmPassword" required />
                   </div>
                   <div className="mt-4">
                     <label className="flex items-center">
@@ -564,36 +619,14 @@ const Usuarios: React.FC = () => {
                     </label>
                   </div>
                 </div>
-
-                {/* Additional Information */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Información Adicional</h3>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notas
-                    </label>
-                    <textarea
-                      name="notes"
-                      rows={3}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="Añade notas o comentarios relevantes..."
-                    />
-                  </div>
-                </div>
               </form>
             </div>
             
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowNewUserForm(false)}
-              >
+              <Button variant="outline" onClick={() => setShowNewUserForm(false)}>
                 Cancelar
               </Button>
-              <Button
-                variant="primary"
-                onClick={() => handleNewUser({})}
-              >
+              <Button variant="primary" onClick={() => handleNewUser({})}>
                 Guardar Usuario
               </Button>
             </div>
@@ -610,7 +643,6 @@ const Usuarios: React.FC = () => {
               <button
                 onClick={() => setSelectedUser(null)}
                 className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Cerrar"
               >
                 <X size={24} />
               </button>
@@ -646,37 +678,6 @@ const Usuarios: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Actividad</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Último Acceso</label>
-                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                          {selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleString('es-ES', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }) : 'Nunca'}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Estado</label>
-                        <p className="mt-1">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            selectedUser.status === 'active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {selectedUser.status === 'active' ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
                 
                 {/* Role and Permissions */}
@@ -689,7 +690,7 @@ const Usuarios: React.FC = () => {
                         <p className="mt-1 flex items-center">
                           <Shield size={16} className="text-blue-600 mr-2" />
                           <span className="text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200 flex-1">
-                            {selectedUser.role.name}
+                            {selectedUser.role.displayName}
                           </span>
                         </p>
                       </div>
@@ -700,87 +701,278 @@ const Usuarios: React.FC = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Puesto</label>
-                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedUser.position}</p>
+                        <label className="block text-sm font-medium text-gray-700">Permisos Activos</label>
+                        <div className="mt-1 max-h-40 overflow-y-auto bg-gray-50 p-2 rounded border border-gray-200">
+                          {(selectedUser.customPermissions || selectedUser.role.permissions).map(permission => (
+                            <div key={permission.id} className="text-xs text-gray-700 py-1 border-b border-gray-200 last:border-b-0">
+                              <span className="font-medium">{permission.name}</span>
+                              <span className="text-gray-500 ml-2">({permission.module})</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Acciones</h3>
-                    <div className="space-y-3">
-                      <Button
-                        variant="outline"
-                        icon={<Edit size={18} />}
-                        fullWidth
-                      >
-                        Editar Usuario
-                      </Button>
-                      <Button
-                        variant="outline"
-                        icon={<Lock size={18} />}
-                        fullWidth
-                        onClick={() => handleResetPassword(selectedUser.id)}
-                      >
-                        Resetear Contraseña
-                      </Button>
-                      <Button
-                        variant={selectedUser.status === 'active' ? 'outline' : 'primary'}
-                        icon={selectedUser.status === 'active' ? <X size={18} /> : <Check size={18} />}
-                        fullWidth
-                        onClick={() => handleToggleUserStatus(selectedUser.id, selectedUser.status)}
-                      >
-                        {selectedUser.status === 'active' ? 'Desactivar Usuario' : 'Activar Usuario'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Historial de Actividad</h3>
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <div className="flex items-center">
-                      <Calendar size={16} className="text-gray-500 mr-2" />
-                      <p className="text-sm text-gray-900">Último inicio de sesión</p>
-                      <p className="ml-auto text-sm text-gray-500">
-                        {selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleString('es-ES', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 'Nunca'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <div className="flex items-center">
-                      <Calendar size={16} className="text-gray-500 mr-2" />
-                      <p className="text-sm text-gray-900">Fecha de creación</p>
-                      <p className="ml-auto text-sm text-gray-500">01/01/2025</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <div className="flex items-center">
-                      <Lock size={16} className="text-gray-500 mr-2" />
-                      <p className="text-sm text-gray-900">Último cambio de contraseña</p>
-                      <p className="ml-auto text-sm text-gray-500">15/04/2025</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+              <Button variant="outline" onClick={() => setSelectedUser(null)}>
+                Cerrar
+              </Button>
+              <Button
+                variant="primary"
+                icon={<Shield size={18} />}
+                onClick={() => {
+                  setSelectedUser(null);
+                  handleManageUserPermissions(selectedUser);
+                }}
+              >
+                Gestionar Permisos
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Permissions Management Modal */}
+      {selectedUserForPermissions && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Gestionar Permisos - {selectedUserForPermissions.name}
+              </h2>
+              <button
+                onClick={() => setSelectedUserForPermissions(null)}
+                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto p-6 flex-1">
+              <div className="mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Shield size={20} className="text-blue-600 mr-2" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">
+                        Rol actual: {selectedUserForPermissions.role.displayName}
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        {selectedUserForPermissions.customPermissions 
+                          ? 'Este usuario tiene permisos personalizados que sobrescriben el rol base.'
+                          : 'Este usuario utiliza los permisos estándar del rol asignado.'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {/* Permisos por módulo */}
+                {Object.values(
+                  availablePermissions.reduce((acc, permission) => {
+                    if (!acc[permission.module]) {
+                      acc[permission.module] = [];
+                    }
+                    acc[permission.module].push(permission);
+                    return acc;
+                  }, {} as Record<string, Permission[]>)
+                ).map((modulePermissions, index) => (
+                  <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="text-lg font-medium text-gray-900 mb-3 capitalize">
+                      {modulePermissions[0].module}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {modulePermissions.map(permission => {
+                        const currentPermissions = selectedUserForPermissions.customPermissions || selectedUserForPermissions.role.permissions;
+                        const hasPermission = currentPermissions.some(p => p.id === permission.id);
+                        
+                        return (
+                          <label key={permission.id} className="flex items-start space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={hasPermission}
+                              onChange={(e) => {
+                                const currentPerms = selectedUserForPermissions.customPermissions || selectedUserForPermissions.role.permissions;
+                                const newPermissions = e.target.checked
+                                  ? [...currentPerms, permission]
+                                  : currentPerms.filter(p => p.id !== permission.id);
+                                
+                                handleUpdateUserPermissions(selectedUserForPermissions.id, newPermissions);
+                              }}
+                              className="mt-1 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                            />
+                            <div className="flex-1">
+                              <span className="text-sm font-medium text-gray-900">
+                                {permission.name}
+                              </span>
+                              <p className="text-xs text-gray-500">{permission.description}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between">
               <Button
                 variant="outline"
-                onClick={() => setSelectedUser(null)}
+                onClick={() => {
+                  // Restablecer a permisos del rol
+                  setUsers(prev =>
+                    prev.map(user =>
+                      user.id === selectedUserForPermissions.id
+                        ? { ...user, customPermissions: undefined }
+                        : user
+                    )
+                  );
+                }}
               >
-                Cerrar
+                Restablecer a Rol Base
+              </Button>
+              <div className="flex space-x-3">
+                <Button variant="outline" onClick={() => setSelectedUserForPermissions(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  icon={<Save size={18} />}
+                  onClick={() => setSelectedUserForPermissions(null)}
+                >
+                  Guardar Cambios
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Management Modal */}
+      {showRoleManagement && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Gestión de Roles</h2>
+              <button
+                onClick={() => setShowRoleManagement(false)}
+                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto p-6 flex-1">
+              <div className="mb-6">
+                <Button
+                  variant="outline"
+                  icon={<Plus size={18} />}
+                  onClick={handleAddRole}
+                >
+                  Añadir Nuevo Rol
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {roles.map(role => (
+                  <div key={role.id} className="border border-gray-200 rounded-lg p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        {role.isEditable ? (
+                          <Input
+                            value={role.displayName}
+                            onChange={(e) => handleUpdateRole(role.id, { displayName: e.target.value })}
+                            className="text-lg font-medium"
+                          />
+                        ) : (
+                          <h3 className="text-lg font-medium text-gray-900">{role.displayName}</h3>
+                        )}
+                        <p className="text-sm text-gray-500 mt-1">
+                          {role.permissions.length} permisos asignados
+                        </p>
+                      </div>
+                      {role.isEditable && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={<Trash size={16} />}
+                          onClick={() => {
+                            if (confirm('¿Estás seguro de que quieres eliminar este rol?')) {
+                              setRoles(prev => prev.filter(r => r.id !== role.id));
+                            }
+                          }}
+                        >
+                          Eliminar
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.values(
+                        availablePermissions.reduce((acc, permission) => {
+                          if (!acc[permission.module]) {
+                            acc[permission.module] = [];
+                          }
+                          acc[permission.module].push(permission);
+                          return acc;
+                        }, {} as Record<string, Permission[]>)
+                      ).map((modulePermissions, index) => (
+                        <div key={index} className="bg-gray-50 p-3 rounded">
+                          <h4 className="font-medium text-gray-900 mb-2 capitalize">
+                            {modulePermissions[0].module}
+                          </h4>
+                          <div className="space-y-2">
+                            {modulePermissions.map(permission => {
+                              const hasPermission = role.permissions.some(p => p.id === permission.id);
+                              
+                              return (
+                                <label key={permission.id} className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={hasPermission}
+                                    disabled={!role.isEditable}
+                                    onChange={(e) => {
+                                      if (!role.isEditable) return;
+                                      
+                                      const newPermissions = e.target.checked
+                                        ? [...role.permissions, permission]
+                                        : role.permissions.filter(p => p.id !== permission.id);
+                                      
+                                      handleUpdateRole(role.id, { permissions: newPermissions });
+                                    }}
+                                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                  />
+                                  <span className="text-xs text-gray-700">{permission.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+              <Button
+                variant="primary"
+                icon={<Save size={18} />}
+                onClick={() => {
+                  console.log('Guardando roles:', roles);
+                  setShowRoleManagement(false);
+                  alert('Roles guardados correctamente');
+                }}
+              >
+                Guardar Cambios
               </Button>
             </div>
           </div>

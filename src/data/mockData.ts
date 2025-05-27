@@ -418,40 +418,69 @@ export const mockUsers: User[] = [
     id: '1',
     name: 'Admin User',
     email: 'admin@clinica.com',
+    phone: '+34 666 000 000',
     role: {
-      id: '1',
+      id: 'admin',
       name: 'admin',
-      permissions: ['all']
-    }
+      displayName: 'Administrador',
+      permissions: [],
+      isEditable: false
+    },
+    department: 'Dirección',
+    position: 'Administrador del Sistema',
+    status: 'active',
+    lastLogin: '2025-05-21T12:00:00'
   },
   {
     id: '2',
     name: 'Dr. Alejandro Ramírez',
     email: 'alejandro.ramirez@clinica.com',
+    phone: '+34 666 111 111',
     role: {
-      id: '2',
-      name: 'doctor',
-      permissions: ['view_patients', 'edit_patients', 'view_appointments', 'edit_appointments']
-    }
+      id: 'veterinarian',
+      name: 'veterinarian',
+      displayName: 'Veterinario',
+      permissions: [],
+      isEditable: true
+    },
+    department: 'Veterinaria',
+    position: 'Veterinario Senior',
+    status: 'active',
+    lastLogin: '2025-05-21T11:30:00'
   },
   {
     id: '3',
     name: 'Lucía Sánchez',
     email: 'lucia.sanchez@clinica.com',
+    phone: '+34 666 222 222',
     role: {
-      id: '3',
+      id: 'receptionist',
       name: 'receptionist',
-      permissions: ['view_patients', 'edit_patients', 'view_appointments', 'edit_appointments', 'view_payments']
-    }
+      displayName: 'Auxiliar Oficina',
+      permissions: [],
+      isEditable: true
+    },
+    department: 'Administración',
+    position: 'Recepcionista',
+    status: 'active',
+    lastLogin: '2025-05-21T09:15:00'
   },
   {
     id: '4',
     name: 'Pedro Vargas',
     email: 'pedro.vargas@clinica.com',
+    phone: '+34 666 333 333',
     role: {
-      id: '4',
-      name: 'accountant',
-      permissions: ['view_payments', 'edit_payments', 'view_patients']
+      id: 'manager',
+      name: 'manager',
+      displayName: 'Manager',
+      permissions: [],
+      isEditable: true
+    },
+    department: 'Dirección',
+    position: 'Gerente',
+    status: 'active',
+    lastLogin: '2025-05-20T16:45:00'w_patients']
     }
   }
 ];

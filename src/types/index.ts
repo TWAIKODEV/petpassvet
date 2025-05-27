@@ -127,16 +127,32 @@ export interface DashboardSummary {
   revenueMonth: number;
 }
 
-interface UserRole {
+export interface Permission {
   id: string;
-  name: 'admin' | 'doctor' | 'nurse' | 'receptionist' | 'accountant';
-  permissions: string[];
+  name: string;
+  description: string;
+  module: string;
+  action: 'view' | 'create' | 'edit' | 'delete' | 'manage';
+}
+
+export interface UserRole {
+  id: string;
+  name: 'admin' | 'manager' | 'veterinarian' | 'vet_assistant' | 'receptionist' | 'groomer';
+  displayName: string;
+  permissions: Permission[];
+  isEditable: boolean;
 }
 
 export interface User {
   id: string;
   name: string;
   email: string;
+  phone: string;
   role: UserRole;
+  department: string;
+  position: string;
+  status: 'active' | 'inactive';
+  lastLogin?: string;
   avatar?: string;
+  customPermissions?: Permission[];
 }
