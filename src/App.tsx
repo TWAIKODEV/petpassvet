@@ -50,6 +50,7 @@ import ControlHorario from './pages/rrhh/ControlHorario';
 import RegistrarEntradaSalida from './pages/rrhh/RegistrarEntradaSalida';
 import Configuracion from './pages/administracion/configuracion';
 import Usuarios from './pages/administracion/usuarios';
+import GroomingAppointment from './pages/peluqueria/GroomingAppointment';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -110,6 +111,7 @@ function App() {
             {/* Peluquería routes */}
             <Route path="peluqueria" element={<GroomingAppointments />} />
             <Route path="peluqueria/citas" element={<GroomingAppointments />} />
+            <Route path="peluqueria/citas/:id" element={<GroomingAppointment />} />
             <Route path="peluqueria/historiales" element={<GroomingHistory />} />
             <Route path="peluqueria/tratamientos" element={<GroomingTreatments />} />
 
