@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
-import { Search, Filter, X, FileText, Download, Info, Loader } from 'lucide-react';
+import { Search, Filter, X, FileText, Download, Info, Loader, AlertTriangle } from 'lucide-react';
 import Button from './common/Button';
 import Input from './common/Input';
 import Card from './common/Card';
+import axios from 'axios';
 
 interface CimavetSearchForm {
   nombreComercial: string;
@@ -26,6 +27,7 @@ interface CimavetSearchForm {
   antibiotico: 'all' | 'yes' | 'no';
   situacion: 'all' | 'authorized' | 'suspended' | 'revoked';
   tipoMedicamento: 'all' | 'pharmacological' | 'immunological' | 'mixed' | 'homeopathic';
+  numeroRegistro: string;
 }
 
 interface CimavetResult {
@@ -69,74 +71,176 @@ const CimavetAdvancedSearch: React.FC<CimavetAdvancedSearchProps> = ({ onClose, 
     psicotropo: 'all',
     antibiotico: 'all',
     situacion: 'all',
-    tipoMedicamento: 'all'
+    tipoMedicamento: 'all',
+    numeroRegistro: ''
   });
 
   const [results, setResults] = useState<CimavetResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const buildSearchParams = () => {
+    const params: any = {};
+    
+    // Mapear campos del formulario a parámetros de la API
+    if (form.nombreComercial.trim()) params.nombre = form.nombreComercial.trim();
+    if (form.principioActivo.trim()) params.principioActivo = form.principioActivo.trim();
+    if (form.laboratorio.trim()) params.fabricante = form.laboratorio.trim();
+    if (form.numeroRegistro.trim()) params.numeroRegistro = form.numeroRegistro.trim();
+    if (form.codigoAtcVet.trim()) params.codigoAtcVet = form.codigoAtcVet.trim();
+    if (form.especie.trim()) params.especie = form.especie.trim();
+    if (form.formaFarmaceutica.trim()) params.formaFarmaceutica = form.formaFarmaceutica.trim();
+    if (form.viaAdministracion.trim()) params.viaAdministracion = form.viaAdministracion.trim();
+    if (form.excipiente.trim()) params.excipiente = form.excipiente.trim();
+    if (form.indicacion.trim()) params.indicacion = form.indicacion.trim();
+    if (form.contraindicacion.trim()) params.contraindicacion = form.contraindicacion.trim();
+    if (form.reaccionAdversa.trim()) params.reaccionAdversa = form.reaccionAdversa.trim();
+    if (form.interaccion.trim()) params.interaccion = form.interaccion.trim();
+
+    // Mapear tipos de medicamento
+    if (form.tipoMedicamento !== 'all') {
+      const tipoMap = {
+        'pharmacological': 'Farmacológico',
+        'immunological': 'Inmunológico', 
+        'mixed': 'Mixto',
+        'homeopathic': 'Homeopático'
+      };
+      params.tipo = tipoMap[form.tipoMedicamento as keyof typeof tipoMap];
+    }
+
+    // Mapear filtros booleanos
+    if (form.comercializado !== 'all') {
+      params.comercializado = form.comercializado === 'yes' ? 'S' : 'N';
+    }
+    if (form.prescripcion !== 'all') {
+      params.prescripcion = form.prescripcion === 'yes' ? 'S' : 'N';
+    }
+    if (form.antibiotico !== 'all') {
+      params.antibiotico = form.antibiotico === 'yes' ? 'S' : 'N';
+    }
+    if (form.psicotropo !== 'all') {
+      params.psicotropo = form.psicotropo === 'yes' ? 'S' : 'N';
+    }
+
+    // Mapear situación
+    if (form.situacion !== 'all') {
+      const situacionMap = {
+        'authorized': 'Autorizado',
+        'suspended': 'Suspendido',
+        'revoked': 'Revocado'
+      };
+      params.situacion = situacionMap[form.situacion as keyof typeof situacionMap];
+    }
+
+    return params;
+  };
+
   const handleSearch = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      // Simular búsqueda en CIMAVET
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Leer configuración desde las Secrets de Replit
+      const apiUrl = process.env.CIMAVET_API_URL || 'https://cimavet.aemps.es/cimavet/rest/buscar';
+      const apiKey = process.env.CIMAVET_API_KEY;
       
-      // Datos de ejemplo
-      const mockResults: CimavetResult[] = [
-        {
-          codigo: '1234-ESP',
-          nombre: 'AMOXICILINA NORMON 250 mg COMPRIMIDOS',
-          presentacion: 'Envase con 20 comprimidos',
-          laboratorio: 'Laboratorios Normon, S.A.',
-          principiosActivos: ['Amoxicilina'],
-          especies: ['Perro', 'Gato'],
-          situacion: 'Autorizado',
-          comercializado: true,
-          prescripcion: true,
-          antibiotico: true,
-          fichaUrl: '#',
-          prospectoUrl: '#'
-        },
-        {
-          codigo: '2345-ESP',
-          nombre: 'METACAM 1,5 mg/ml SUSPENSIÓN ORAL',
-          presentacion: 'Frasco de 30 ml',
-          laboratorio: 'Boehringer Ingelheim Vetmedica GmbH',
-          principiosActivos: ['Meloxicam'],
-          especies: ['Perro'],
-          situacion: 'Autorizado',
-          comercializado: true,
-          prescripcion: true,
-          antibiotico: false,
-          fichaUrl: '#',
-          prospectoUrl: '#'
-        }
-      ].filter(med => {
-        // Filtrar por nombre comercial
-        if (form.nombreComercial && !med.nombre.toLowerCase().includes(form.nombreComercial.toLowerCase())) {
-          return false;
-        }
-        // Filtrar por principio activo
-        if (form.principioActivo && !med.principiosActivos.some(pa => 
-          pa.toLowerCase().includes(form.principioActivo.toLowerCase())
-        )) {
-          return false;
-        }
-        // Filtrar por laboratorio
-        if (form.laboratorio && !med.laboratorio.toLowerCase().includes(form.laboratorio.toLowerCase())) {
-          return false;
-        }
-        return true;
+      const params = buildSearchParams();
+      
+      // Configurar headers
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'VetClinic/1.0'
+      };
+      
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+
+      console.log('Realizando búsqueda en CIMAVET con parámetros:', params);
+
+      const response = await axios.get(apiUrl, {
+        params: params,
+        headers: headers,
+        timeout: 30000, // 30 segundos de timeout
+        validateStatus: (status) => status < 500 // Aceptar códigos de estado menores a 500
       });
 
-      setResults(mockResults);
-    } catch (error) {
+      if (response.status === 200 && response.data) {
+        // Procesar respuesta de la API
+        let medicamentos = [];
+        
+        if (Array.isArray(response.data)) {
+          medicamentos = response.data;
+        } else if (response.data.medicamentos && Array.isArray(response.data.medicamentos)) {
+          medicamentos = response.data.medicamentos;
+        } else if (response.data.resultados && Array.isArray(response.data.resultados)) {
+          medicamentos = response.data.resultados;
+        }
+
+        // Mapear resultados al formato esperado
+        const mappedResults: CimavetResult[] = medicamentos.map((med: any) => ({
+          codigo: med.numeroRegistro || med.codigo || med.nregistro || '',
+          nombre: med.nombre || med.nombreComercial || '',
+          presentacion: med.presentacion || med.descripcion || '',
+          laboratorio: med.laboratorio || med.titular || med.fabricante || '',
+          principiosActivos: Array.isArray(med.principiosActivos) 
+            ? med.principiosActivos 
+            : med.principioActivo 
+              ? [med.principioActivo]
+              : [],
+          especies: Array.isArray(med.especies) 
+            ? med.especies 
+            : med.especie 
+              ? [med.especie]
+              : [],
+          situacion: med.situacion || 'Autorizado',
+          comercializado: med.comercializado === 'S' || med.comercializado === true || med.comercializado === 'Sí',
+          prescripcion: med.prescripcion === 'S' || med.prescripcion === true || med.prescripcion === 'Sí',
+          antibiotico: med.antibiotico === 'S' || med.antibiotico === true || med.antibiotico === 'Sí',
+          fichaUrl: med.fichaUrl || med.urlFicha,
+          prospectoUrl: med.prospectoUrl || med.urlProspecto
+        }));
+
+        setResults(mappedResults);
+        
+        if (mappedResults.length === 0) {
+          setError('No se encontraron medicamentos que coincidan con los criterios de búsqueda.');
+        }
+      } else {
+        throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+      }
+    } catch (error: any) {
       console.error('Error en búsqueda CIMAVET:', error);
+      
+      let errorMessage = 'Error al conectar con la API de CIMAVET.';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Tiempo de espera agotado. La API de CIMAVET no responde.';
+      } else if (error.response) {
+        if (error.response.status === 404) {
+          errorMessage = 'Servicio no encontrado. Verifique la URL de la API.';
+        } else if (error.response.status === 401) {
+          errorMessage = 'No autorizado. Verifique la clave de API.';
+        } else if (error.response.status === 429) {
+          errorMessage = 'Demasiadas solicitudes. Intente de nuevo en unos minutos.';
+        } else if (error.response.status >= 500) {
+          errorMessage = 'Error del servidor de CIMAVET. Intente más tarde.';
+        } else {
+          errorMessage = `Error HTTP ${error.response.status}: ${error.response.data?.message || error.response.statusText}`;
+        }
+      } else if (error.request) {
+        errorMessage = 'No se pudo conectar con la API de CIMAVET. Verifique su conexión a internet.';
+      } else {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      setError(errorMessage);
       setResults([]);
     } finally {
       setLoading(false);
@@ -164,9 +268,11 @@ const CimavetAdvancedSearch: React.FC<CimavetAdvancedSearchProps> = ({ onClose, 
       psicotropo: 'all',
       antibiotico: 'all',
       situacion: 'all',
-      tipoMedicamento: 'all'
+      tipoMedicamento: 'all',
+      numeroRegistro: ''
     });
     setResults([]);
+    setError(null);
   };
 
   return (
@@ -216,11 +322,11 @@ const CimavetAdvancedSearch: React.FC<CimavetAdvancedSearchProps> = ({ onClose, 
                 </div>
               </div>
 
-              {/* Campos básicos */}
+              {/* Campos principales vinculados a la API */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre Comercial
+                    Nombre de Medicamento *
                   </label>
                   <Input
                     name="nombreComercial"
@@ -231,7 +337,7 @@ const CimavetAdvancedSearch: React.FC<CimavetAdvancedSearchProps> = ({ onClose, 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Principio Activo
+                    Principio Activo *
                   </label>
                   <Input
                     name="principioActivo"
@@ -242,13 +348,55 @@ const CimavetAdvancedSearch: React.FC<CimavetAdvancedSearchProps> = ({ onClose, 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Laboratorio Titular
+                    Fabricante *
                   </label>
                   <Input
                     name="laboratorio"
                     value={form.laboratorio}
                     onChange={handleChange}
                     placeholder="Ej: Pfizer"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Medicamento *
+                  </label>
+                  <select
+                    name="tipoMedicamento"
+                    value={form.tipoMedicamento}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  >
+                    <option value="all">— Todos los tipos —</option>
+                    <option value="pharmacological">Farmacológico</option>
+                    <option value="immunological">Inmunológico</option>
+                    <option value="mixed">Mixto</option>
+                    <option value="homeopathic">Homeopático</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número de Registro *
+                  </label>
+                  <Input
+                    name="numeroRegistro"
+                    value={form.numeroRegistro}
+                    onChange={handleChange}
+                    placeholder="Ej: 1234-ESP"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código ATC-Vet *
+                  </label>
+                  <Input
+                    name="codigoAtcVet"
+                    value={form.codigoAtcVet}
+                    onChange={handleChange}
+                    placeholder="Ej: QJ01CA04"
                   />
                 </div>
               </div>
@@ -314,17 +462,6 @@ const CimavetAdvancedSearch: React.FC<CimavetAdvancedSearchProps> = ({ onClose, 
                           value={form.excipiente}
                           onChange={handleChange}
                           placeholder="Nombre del excipiente"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Código ATC vet
-                        </label>
-                        <Input
-                          name="codigoAtcVet"
-                          value={form.codigoAtcVet}
-                          onChange={handleChange}
-                          placeholder="Ej: QJ01CA04"
                         />
                       </div>
                     </div>
@@ -463,6 +600,21 @@ const CimavetAdvancedSearch: React.FC<CimavetAdvancedSearchProps> = ({ onClose, 
             </div>
           </Card>
 
+          {/* Mostrar errores */}
+          {error && (
+            <Card className="mb-6">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center">
+                  <AlertTriangle size={20} className="text-red-600 mr-2" />
+                  <div>
+                    <h4 className="text-sm font-medium text-red-800">Error en la búsqueda</h4>
+                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Resultados */}
           {results.length > 0 && (
             <Card>
@@ -585,14 +737,17 @@ const CimavetAdvancedSearch: React.FC<CimavetAdvancedSearchProps> = ({ onClose, 
           )}
 
           {/* Estado vacío */}
-          {!loading && results.length === 0 && (
+          {!loading && results.length === 0 && !error && (
             <div className="text-center py-12">
               <Search size={48} className="mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Buscar medicamentos en CIMAVET
               </h3>
-              <p className="text-gray-500">
+              <p className="text-gray-500 mb-4">
                 Utilice los criterios de búsqueda para encontrar medicamentos veterinarios autorizados en España
+              </p>
+              <p className="text-sm text-gray-400">
+                Los campos marcados con * están vinculados directamente a la API de CIMAVET
               </p>
             </div>
           )}
