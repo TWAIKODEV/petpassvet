@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback } from 'react';
 import { Calendar, Clock, FileText, Plus, X, User, Pill, Printer, Download, QrCode } from 'lucide-react';
 import Card from '../common/Card';
@@ -99,7 +98,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
 
   const generateQRData = () => {
     if (!selectedPatient) return '';
-    
+
     return JSON.stringify({
       prescriptionNumber,
       date: prescriptionDate,
@@ -138,14 +137,14 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (!selectedPatient) {
         console.error('No patient selected for prescription');
         alert('Por favor seleccione un paciente');
         return;
       }
-      
+
       if (medications.length === 0) {
         console.error('No medications added to prescription');
         alert('Por favor añada al menos un medicamento');
@@ -153,7 +152,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
       }
 
       const finalPrescriptionNumber = prescriptionNumber || `RX-${Date.now()}`;
-      
+
       const prescription = {
         id: Date.now().toString(),
         number: finalPrescriptionNumber,
@@ -180,19 +179,19 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
         alert('Por favor seleccione un paciente');
         return;
       }
-      
+
       if (medications.length === 0) {
         console.error('No medications added');
         alert('Por favor añada al menos un medicamento');
         return;
       }
-      
+
       if (!prescriptionNumber) {
         const newNumber = `RX-${Date.now()}`;
         setPrescriptionNumber(newNumber);
         console.log('Generated prescription number:', newNumber);
       }
-      
+
       console.log('Opening preview with patient:', selectedPatient);
       console.log('Medications:', medications);
       setShowPreview(true);
@@ -207,7 +206,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
       <Card>
         <div className="p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Nueva Receta</h3>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Datos básicos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -318,7 +317,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
               <div>
                 <h4 className="text-md font-medium text-gray-900 mb-3">Medicamentos Añadidos</h4>
                 <div className="space-y-2">
-                  {medications.map((medication) => (
+                  {(medications || []).map((medication) => (
                     <div key={medication.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex-1">
                         <div className="font-medium">{medication.name}</div>
@@ -369,7 +368,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                   Vista Previa
                 </Button>
               </div>
-              
+
               <div className="flex space-x-2">
                 <Button
                   type="button"
@@ -421,7 +420,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                 </button>
               </div>
             </div>
-            
+
             {/* Contenido de la receta para imprimir */}
             <div ref={printRef} className="prescription-print-content">
               <div className="p-8 bg-white">
@@ -476,7 +475,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Medicamentos Prescritos</h3>
                   <div className="space-y-6">
-                    {medications.map((medication, index) => (
+                    {(medications || []).map((medication, index) => (
                       <div key={medication.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex items-start">
                           <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
@@ -539,7 +538,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                       Escanea para verificar la receta
                     </p>
                   </div>
-                  
+
                   <div className="text-center">
                     <h4 className="text-sm font-semibold text-gray-900 mb-4">Firma y Sello</h4>
                     <div className="border-2 border-dashed border-gray-300 h-24 flex items-center justify-center">
