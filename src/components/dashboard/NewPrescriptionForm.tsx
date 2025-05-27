@@ -836,6 +836,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                   </div>
                 </div>
               </div>
+              </div>
 
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
