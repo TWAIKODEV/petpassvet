@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Fonarto';
+  src: url('https://fonts.cdnfonts.com/s/16671/Fonarto.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-fonarto {
+  font-family: 'Fonarto', sans-serif;
+}

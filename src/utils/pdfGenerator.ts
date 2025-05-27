@@ -1,0 +1,561 @@
+import { jsPDF } from 'jspdf';
+
+interface InvoiceData {
+  invoiceNumber: string;
+  date: string;
+  clientName: string;
+  clientAddress: string;
+  clientNif: string;
+  clientEmail: string;
+  clientPhone: string;
+  items: Array<{
+    description: string;
+    area: string;
+    amount: number;
+  }>;
+  paymentMethod: string;
+  notes?: string;
+}
+
+interface BudgetData {
+  budgetNumber: string;
+  date: string;
+  validUntil: string;
+  clientName: string;
+  clientAddress: string;
+  clientNif: string;
+  clientEmail: string;
+  clientPhone: string;
+  items: Array<{
+    description: string;
+    area: string;
+    amount: number;
+    discount?: number;
+  }>;
+  notes?: string;
+}
+
+interface PrescriptionData {
+  prescriptionNumber: string;
+  date: string;
+  patientName: string;
+  petName: string;
+  petDetails: string;
+  diagnosis: string;
+  medications: Array<{
+    id: string;
+    name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    notes?: string;
+  }>;
+  notes?: string;
+  doctor: string;
+  clinic: {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+  };
+}
+
+interface TicketData {
+  date: string;
+  clientName: string;
+  items: Array<{
+    description: string;
+    amount: number;
+  }>;
+  paymentMethod: string;
+  professional: string;
+}
+
+export const generateInvoicePDF = (data: InvoiceData): jsPDF => {
+  const doc = new jsPDF();
+  
+  // Helper function to add text with proper encoding
+  const addText = (text: string, x: number, y: number, options: any = {}) => {
+    doc.text(text, x, y, options);
+  };
+
+  // Company Header
+  doc.setFontSize(22);
+  addText('ClinicPro', 20, 20);
+  
+  doc.setFontSize(10);
+  addText('Calle de Beatriz de Bobadilla, 9', 20, 30);
+  addText('28040 Madrid', 20, 35);
+  addText('CIF: B12345678', 20, 40);
+  addText('Tel: +34 912 345 678', 20, 45);
+  addText('Email: facturacion@clinicpro.com', 20, 50);
+
+  // Invoice Details
+  doc.setFontSize(16);
+  addText('FACTURA', 150, 20);
+  
+  doc.setFontSize(10);
+  addText(`Nº: ${data.invoiceNumber}`, 150, 30);
+  addText(`Fecha: ${data.date}`, 150, 35);
+
+  // Client Details
+  doc.setFillColor(240, 240, 240);
+  doc.rect(20, 60, 170, 35, 'F');
+  
+  doc.setFontSize(12);
+  addText('Datos del Cliente', 25, 70);
+  
+  doc.setFontSize(10);
+  addText(data.clientName, 25, 80);
+  addText(data.clientAddress, 25, 85);
+  addText(`NIF/CIF: ${data.clientNif}`, 25, 90);
+  
+  addText(data.clientEmail, 120, 80);
+  addText(data.clientPhone, 120, 85);
+
+  // Table Header
+  const tableTop = 105;
+  doc.setFillColor(240, 240, 240);
+  doc.rect(20, tableTop, 170, 8, 'F');
+  
+  doc.setFontSize(10);
+  addText('Descripción', 25, tableTop + 6);
+  addText('Base Imponible', 100, tableTop + 6);
+  addText('IVA (21%)', 130, tableTop + 6);
+  addText('Total', 160, tableTop + 6);
+
+  // Table Content
+  let yPos = tableTop + 15;
+  data.items.forEach(item => {
+    addText(item.description, 25, yPos);
+    addText(`Área: ${item.area}`, 25, yPos + 5, { fontSize: 8 });
+    
+    const baseAmount = item.amount.toLocaleString('es-ES', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    });
+    addText(baseAmount, 100, yPos, { align: 'right' });
+    
+    const tax = (item.amount * 0.21).toLocaleString('es-ES', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    });
+    addText(tax, 130, yPos, { align: 'right' });
+    
+    const total = (item.amount * 1.21).toLocaleString('es-ES', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    });
+    addText(total, 160, yPos, { align: 'right' });
+    
+    yPos += 15;
+  });
+
+  // Total
+  doc.setLineWidth(0.5);
+  doc.line(20, yPos, 190, yPos);
+  
+  yPos += 10;
+  doc.setFontSize(12);
+  addText('Total:', 130, yPos);
+  const grandTotal = (data.items.reduce((sum, item) => sum + item.amount, 0) * 1.21)
+    .toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+  addText(grandTotal, 160, yPos, { align: 'right' });
+
+  // Payment Info
+  yPos += 20;
+  doc.setFillColor(240, 240, 240);
+  doc.rect(20, yPos, 170, 15, 'F');
+  
+  doc.setFontSize(10);
+  addText('Información de Pago', 25, yPos + 5);
+  addText(`Método de pago: ${data.paymentMethod}`, 25, yPos + 10);
+
+  // Notes
+  if (data.notes) {
+    yPos += 25;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, yPos, 170, 20, 'F');
+    
+    addText('Notas:', 25, yPos + 5);
+    addText(data.notes, 25, yPos + 10);
+  }
+
+  // Footer
+  doc.setFontSize(8);
+  addText('Esta factura sirve como justificante de pago.', 20, 270);
+  addText('IVA incluido según la legislación vigente.', 20, 275);
+
+  return doc;
+};
+
+export const generateBudgetPDF = (data: BudgetData): jsPDF => {
+  const doc = new jsPDF();
+  
+  // Helper function to add text with proper encoding
+  const addText = (text: string, x: number, y: number, options: any = {}) => {
+    doc.text(text, x, y, options);
+  };
+
+  // Company Header
+  doc.setFontSize(22);
+  addText('ClinicPro', 20, 20);
+  
+  doc.setFontSize(10);
+  addText('Calle de Beatriz de Bobadilla, 9', 20, 30);
+  addText('28040 Madrid', 20, 35);
+  addText('CIF: B12345678', 20, 40);
+  addText('Tel: +34 912 345 678', 20, 45);
+  addText('Email: info@clinicpro.com', 20, 50);
+
+  // Budget Details
+  doc.setFontSize(16);
+  addText('PRESUPUESTO', 150, 20);
+  
+  doc.setFontSize(10);
+  addText(`Nº: ${data.budgetNumber}`, 150, 30);
+  addText(`Fecha: ${data.date}`, 150, 35);
+  addText(`Válido hasta: ${data.validUntil}`, 150, 40);
+
+  // Client Details
+  doc.setFillColor(240, 240, 240);
+  doc.rect(20, 60, 170, 35, 'F');
+  
+  doc.setFontSize(12);
+  addText('Datos del Cliente', 25, 70);
+  
+  doc.setFontSize(10);
+  addText(data.clientName, 25, 80);
+  addText(data.clientAddress, 25, 85);
+  addText(`NIF/CIF: ${data.clientNif}`, 25, 90);
+  
+  addText(data.clientEmail, 120, 80);
+  addText(data.clientPhone, 120, 85);
+
+  // Table Header
+  const tableTop = 105;
+  doc.setFillColor(240, 240, 240);
+  doc.rect(20, tableTop, 170, 8, 'F');
+  
+  doc.setFontSize(10);
+  addText('Descripción', 25, tableTop + 6);
+  addText('Precio', 100, tableTop + 6);
+  addText('Descuento', 125, tableTop + 6);
+  addText('Base Imponible', 150, tableTop + 6);
+  addText('IVA (21%)', 175, tableTop + 6);
+
+  // Table Content
+  let yPos = tableTop + 15;
+  let totalBase = 0;
+  let totalTax = 0;
+  
+  data.items.forEach(item => {
+    addText(item.description, 25, yPos);
+    addText(`Área: ${item.area}`, 25, yPos + 5, { fontSize: 8 });
+    
+    const price = item.amount.toLocaleString('es-ES', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    });
+    addText(price, 100, yPos, { align: 'right' });
+    
+    // Calculate discount if applicable
+    let discountText = '0%';
+    let baseAmount = item.amount;
+    
+    if (item.discount && item.discount > 0) {
+      discountText = `${item.discount}%`;
+      const discountAmount = item.amount * (item.discount / 100);
+      baseAmount = item.amount - discountAmount;
+    }
+    
+    addText(discountText, 125, yPos, { align: 'right' });
+    
+    const baseAmountText = baseAmount.toLocaleString('es-ES', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    });
+    addText(baseAmountText, 150, yPos, { align: 'right' });
+    
+    const tax = (baseAmount * 0.21).toLocaleString('es-ES', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    });
+    addText(tax, 175, yPos, { align: 'right' });
+    
+    totalBase += baseAmount;
+    totalTax += baseAmount * 0.21;
+    
+    yPos += 15;
+  });
+
+  // Total
+  doc.setLineWidth(0.5);
+  doc.line(20, yPos, 190, yPos);
+  
+  yPos += 10;
+  doc.setFontSize(10);
+  addText('Base Imponible:', 130, yPos);
+  addText(totalBase.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' }), 175, yPos, { align: 'right' });
+  
+  yPos += 8;
+  addText('IVA (21%):', 130, yPos);
+  addText(totalTax.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' }), 175, yPos, { align: 'right' });
+  
+  yPos += 10;
+  doc.setLineWidth(0.5);
+  doc.line(130, yPos, 190, yPos);
+  
+  yPos += 8;
+  doc.setFontSize(12);
+  addText('Total:', 130, yPos);
+  const grandTotal = (totalBase + totalTax).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+  addText(grandTotal, 175, yPos, { align: 'right' });
+
+  // Notes
+  if (data.notes) {
+    yPos += 25;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, yPos, 170, 20, 'F');
+    
+    doc.setFontSize(10);
+    addText('Notas:', 25, yPos + 5);
+    addText(data.notes, 25, yPos + 10);
+  }
+
+  // Footer
+  doc.setFontSize(8);
+  addText('Este presupuesto tiene validez hasta la fecha indicada.', 20, 270);
+  addText('Los precios incluyen IVA según la legislación vigente.', 20, 275);
+  addText('El presupuesto no supone compromiso de reserva.', 20, 280);
+
+  return doc;
+};
+
+export const generatePrescriptionPDF = (data: PrescriptionData): jsPDF => {
+  const doc = new jsPDF();
+  
+  // Helper function to add text with proper encoding
+  const addText = (text: string, x: number, y: number, options: any = {}) => {
+    doc.text(text, x, y, options);
+  };
+
+  // Clinic Header
+  doc.setFontSize(22);
+  addText(data.clinic.name, 20, 20);
+  
+  doc.setFontSize(10);
+  addText(data.clinic.address, 20, 30);
+  addText(`Tel: ${data.clinic.phone}`, 20, 35);
+  addText(`Email: ${data.clinic.email}`, 20, 40);
+
+  // Prescription Details
+  doc.setFontSize(16);
+  addText('RECETA MÉDICA', 150, 20);
+  
+  doc.setFontSize(10);
+  addText(`Nº: ${data.prescriptionNumber}`, 150, 30);
+  addText(`Fecha: ${data.date}`, 150, 35);
+
+  // Client and Pet Details
+  doc.setFillColor(240, 240, 240);
+  doc.rect(20, 50, 170, 40, 'F');
+  
+  doc.setFontSize(12);
+  addText('Datos del Propietario', 25, 60);
+  
+  doc.setFontSize(10);
+  addText(`Nombre: ${data.patientName}`, 25, 70);
+  
+  doc.setFontSize(12);
+  addText('Datos del Paciente', 25, 85);
+  
+  doc.setFontSize(10);
+  addText(`Nombre: ${data.petName}`, 25, 95);
+  addText(`Detalles: ${data.petDetails}`, 25, 100);
+
+  // Diagnosis
+  doc.setFillColor(240, 240, 240);
+  doc.rect(20, 100, 170, 20, 'F');
+  
+  doc.setFontSize(12);
+  addText('Diagnóstico', 25, 110);
+  
+  doc.setFontSize(10);
+  addText(data.diagnosis, 25, 120);
+
+  // Medications
+  let yPos = 130;
+  doc.setFontSize(12);
+  addText('Medicamentos Prescritos', 20, yPos);
+  
+  yPos += 10;
+  data.medications.forEach((medication, index) => {
+    doc.setFillColor(250, 250, 250);
+    doc.rect(20, yPos, 170, 30, 'F');
+    
+    doc.setFontSize(11);
+    addText(`${index + 1}. ${medication.name}`, 25, yPos + 10);
+    
+    doc.setFontSize(10);
+    addText(`Dosis: ${medication.dosage}`, 25, yPos + 18);
+    addText(`Frecuencia: ${medication.frequency}`, 80, yPos + 18);
+    addText(`Duración: ${medication.duration}`, 140, yPos + 18);
+    
+    if (medication.notes) {
+      addText(`Notas: ${medication.notes}`, 25, yPos + 26);
+    }
+    
+    yPos += 35;
+  });
+
+  // Notes
+  if (data.notes) {
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, yPos, 170, 20, 'F');
+    
+    doc.setFontSize(12);
+    addText('Notas Adicionales', 25, yPos + 10);
+    
+    doc.setFontSize(10);
+    addText(data.notes, 25, yPos + 20);
+    
+    yPos += 25;
+  }
+
+  // Doctor Signature
+  yPos = Math.max(yPos + 20, 230);
+  doc.setFontSize(10);
+  addText(data.doctor, 25, yPos);
+  addText('Veterinario Colegiado', 25, yPos + 5);
+  addText('Nº Colegiado: 12345', 25, yPos + 10);
+  
+  // Signature box
+  doc.rect(130, yPos - 15, 60, 30);
+  doc.setFontSize(8);
+  addText('Firma y sello', 145, yPos + 5);
+
+  // QR Code placeholder
+  // In a real implementation, you would generate a QR code image and add it to the PDF
+  doc.rect(20, yPos + 20, 40, 40);
+  doc.setFontSize(8);
+  addText('Código QR', 30, yPos + 45);
+
+  // Footer
+  doc.setFontSize(8);
+  addText('Esta receta tiene validez de 10 días desde la fecha de emisión.', 20, 270);
+  addText('Conserve esta receta para futuras consultas.', 20, 275);
+
+  return doc;
+};
+
+export const generateTicketPDF = (data: TicketData): jsPDF => {
+  // Create PDF in a smaller format suitable for tickets
+  const doc = new jsPDF({
+    format: [80, 200], // 80mm width
+    unit: 'mm'
+  });
+
+  // Helper function to add centered text
+  const addCenteredText = (text: string, y: number, size: number = 10) => {
+    doc.setFontSize(size);
+    const textWidth = doc.getStringUnitWidth(text) * size / doc.internal.scaleFactor;
+    const x = (80 - textWidth) / 2;
+    doc.text(text, x, y);
+  };
+
+  // Helper function to add left-aligned text
+  const addText = (text: string, x: number, y: number, size: number = 10) => {
+    doc.setFontSize(size);
+    doc.text(text, x, y);
+  };
+
+  // Header
+  addCenteredText('ClinicPro', 10, 14);
+  addCenteredText('Calle de Beatriz de Bobadilla, 9', 15, 8);
+  addCenteredText('28040 Madrid', 19, 8);
+  addCenteredText('CIF: B12345678', 23, 8);
+  addCenteredText('Tel: +34 912 345 678', 27, 8);
+
+  // Divider
+  doc.line(5, 30, 75, 30);
+
+  // Ticket Details
+  let yPos = 35;
+  addText(`Fecha: ${data.date}`, 5, yPos, 8);
+  yPos += 4;
+  addText(`Cliente: ${data.clientName}`, 5, yPos, 8);
+  yPos += 4;
+  addText(`Atendido por: ${data.professional}`, 5, yPos, 8);
+
+  // Divider
+  yPos += 4;
+  doc.line(5, yPos, 75, yPos);
+  yPos += 6;
+
+  // Items
+  addText('CONCEPTO', 5, yPos, 8);
+  addText('IMPORTE', 60, yPos, 8);
+  yPos += 4;
+  doc.line(5, yPos, 75, yPos);
+  yPos += 6;
+
+  let total = 0;
+  data.items.forEach(item => {
+    // Handle long descriptions
+    const description = item.description;
+    if (doc.getStringUnitWidth(description) * 8 / doc.internal.scaleFactor > 40) {
+      const words = description.split(' ');
+      let line = '';
+      words.forEach(word => {
+        if (doc.getStringUnitWidth((line + ' ' + word).trim()) * 8 / doc.internal.scaleFactor <= 40) {
+          line = (line + ' ' + word).trim();
+        } else {
+          addText(line, 5, yPos, 8);
+          yPos += 4;
+          line = word;
+        }
+      });
+      if (line) {
+        addText(line, 5, yPos, 8);
+      }
+    } else {
+      addText(description, 5, yPos, 8);
+    }
+
+    const amount = item.amount.toLocaleString('es-ES', {
+      style: 'currency',
+      currency: 'EUR'
+    });
+    addText(amount, 60, yPos, 8);
+    yPos += 6;
+
+    total += item.amount;
+  });
+
+  // Divider
+  doc.line(5, yPos, 75, yPos);
+  yPos += 6;
+
+  // Total
+  const totalText = total.toLocaleString('es-ES', {
+    style: 'currency',
+    currency: 'EUR'
+  });
+  addText('TOTAL:', 5, yPos, 10);
+  addText(totalText, 60, yPos, 10);
+
+  // Payment Method
+  yPos += 8;
+  addText(`Forma de pago: ${data.paymentMethod}`, 5, yPos, 8);
+
+  // Footer
+  yPos += 8;
+  doc.line(5, yPos, 75, yPos);
+  yPos += 4;
+  addCenteredText('¡Gracias por su visita!', yPos, 8);
+  yPos += 4;
+  addCenteredText('www.clinicpro.com', yPos, 8);
+
+  return doc;
+};
