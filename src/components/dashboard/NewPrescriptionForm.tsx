@@ -772,7 +772,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                             <Pill className="text-blue-600 mr-2" size={20} />
                             <h4 className="text-lg font-medium text-gray-900">{medication.name}</h4>
                           </div>
-                          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4```text
+                          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                               <p className="text-sm text-gray-500">Dosis</p>
                               <p className="text-sm font-medium">{medication.dosage}</p>
