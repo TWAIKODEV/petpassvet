@@ -22,8 +22,10 @@ import Orders from './pages/clinic/Orders';
 import GroomingAppointments from './pages/peluqueria/GroomingAppointments';
 import GroomingHistory from './pages/peluqueria/GroomingHistory';
 import GroomingTreatments from './pages/peluqueria/GroomingTreatments';
+import ConsultationAppointments from './pages/consultorio/ConsultationAppointments';
 import Consultation from './pages/consultorio/Consultation';
 import MedicalHistory from './pages/consultorio/MedicalHistory';
+import Medicamentos from './pages/consultorio/Medications';
 import Tratamientos from './pages/consultorio/Tratamientos';
 import Inbox from './pages/Inbox';
 import PageLayout from './components/layout/PageLayout';
@@ -103,6 +105,7 @@ function App() {
 
             {/* Consultorio routes */}
             <Route path="consultorio" element={<Consultation />} />
+            <Route path="consultorio/citas" element={<ConsultationAppointments />} />
             <Route path="consultorio/historiales" element={<MedicalHistory />} />
             <Route path="consultorio/tratamientos" element={<Tratamientos />} />
             <Route path="consultorio/medicamentos" element={<Medications />} />
