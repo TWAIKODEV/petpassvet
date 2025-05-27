@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import print styles */
+@import './styles/print.css';
+
 @font-face {
   font-family: 'Fonarto';
   src: url('https://fonts.cdnfonts.com/s/16671/Fonarto.woff') format('woff');

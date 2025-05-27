@@ -436,22 +436,52 @@ export const generatePrescriptionPDF = (data: PrescriptionData): jsPDF => {
   doc.setFontSize(8);
   addText('Firma y sello', 145, yPos + 5);
 
-  // QR Code section
+  // Doctor Signature section
+  yPos = Math.max(yPos + 20, 230);
   doc.setFontSize(10);
-  addText('Código QR para farmacia:', 20, yPos + 20);
+  addText(data.doctor, 25, yPos);
+  addText('Veterinario Colegiado', 25, yPos + 5);
+  addText('Nº Colegiado: 12345', 25, yPos + 10);
+  
+  // Signature box
+  doc.rect(130, yPos - 15, 60, 30);
+  doc.setFontSize(8);
+  addText('Firma y sello', 145, yPos + 5);
+
+  // QR Code section
+  yPos += 25;
+  doc.setFontSize(10);
+  addText('Código QR para farmacia:', 20, yPos);
   
   // QR Code placeholder - in a real implementation, you would use a library like qrcode to generate an image
-  doc.rect(20, yPos + 25, 40, 40);
+  doc.rect(20, yPos + 5, 40, 40);
   doc.setFontSize(8);
-  addText('QR Code', 30, yPos + 50);
+  addText('QR Code', 30, yPos + 30);
+  addText('120x120px', 27, yPos + 35);
   
-  if (data.qrData) {
-    // Add QR data as text for reference (in a real implementation, this would be encoded in the QR image)
-    doc.setFontSize(6);
-    addText('Datos QR:', 70, yPos + 30);
-    const qrDataLines = data.qrData.substring(0, 100) + '...'; // Truncate for display
-    addText(qrDataLines, 70, yPos + 35);
-  }
+  // Generate QR data for reference
+  const qrDataObj = {
+    prescriptionNumber: data.prescriptionNumber,
+    date: data.date,
+    patientName: data.patientName,
+    petName: data.petName,
+    diagnosis: data.diagnosis,
+    medications: data.medications.map(med => ({
+      name: med.name,
+      dosage: med.dosage,
+      frequency: med.frequency,
+      duration: med.duration
+    })),
+    clinic: data.clinic.name
+  };
+  
+  // Add QR data reference
+  doc.setFontSize(6);
+  addText('Datos QR verificables:', 70, yPos + 10);
+  addText(`Receta: ${data.prescriptionNumber}`, 70, yPos + 15);
+  addText(`Fecha: ${data.date}`, 70, yPos + 20);
+  addText(`Paciente: ${data.petName}`, 70, yPos + 25);
+  addText('Escaneable en farmacias', 70, yPos + 35);
 
   // Footer
   doc.setFontSize(8);

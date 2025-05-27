@@ -6,6 +6,7 @@ import Input from '../common/Input';
 import { mockPatients } from '../../data/mockData';
 import { generatePrescriptionPDF } from '../../utils/pdfGenerator';
 import { QRCodeSVG } from 'qrcode.react';
+import '../../styles/print.css';
 
 interface NewPrescriptionFormProps {
   onClose: () => void;
@@ -709,8 +710,8 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
               </div>
 
               <div className="p-6 overflow-y-auto flex-1">
-                <div className="bg-white p-8 shadow-sm border rounded-lg">
-                  <div className="flex justify-between items-start">
+                <div className="prescription-print-content bg-white p-8 shadow-sm border rounded-lg" id="prescription-content">
+                  <div className="prescription-header flex justify-between items-start mb-8">
                     <div>
                       <div className="flex items-center space-x-2">
                         <Stethoscope size={32} className="text-blue-600" />
@@ -763,7 +764,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                     <p className="text-gray-900">{diagnosis}</p>
                   </div>
 
-                  <div className="mt-6">
+                  <div className="prescription-medications mt-6">
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Medicamentos Prescritos</h3>
                     <div className="space-y-4">
                       {selectedMedications.map((medication, index) => (
@@ -819,18 +820,31 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Código QR</h4>
-                        <div className="bg-white p-3 rounded-lg border border-gray-200 inline-block">
-                          <QRCodeSVG 
-                            value={generateQRData(prescriptionData, selectedPatient, diagnosis, selectedMedications)}
-                            size={120}
-                            level="H"
-                            includeMargin={true}
-                          />
+                        <p className="font-medium text-gray-900">Dr. Alejandro Ramírez</p>
+                        <p className="text-gray-600">Veterinario Colegiado</p>
+                        <p className="text-gray-600">Nº Colegiado: 12345</p>
+                      </div>
+                      <div className="w-32 h-16 border border-gray-300 rounded flex items-center justify-center text-gray-400">
+                        [Firma]
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="qr-code-container">
+                          <h4 className="text-sm font-medium text-gray-500 mb-2">Código QR</h4>
+                          <div className="bg-white p-3 rounded-lg border border-gray-200 inline-block">
+                            <QRCodeSVG 
+                              value={generateQRData(prescriptionData, selectedPatient, diagnosis, selectedMedications)}
+                              size={120}
+                              level="H"
+                              includeMargin={true}
+                            />
+                          </div>
+                          <p className="mt-2 text-xs text-gray-500">
+                            Escaneable en farmacias según protocolo español
+                          </p>
                         </div>
-                        <p className="mt-2 text-xs text-gray-500">
-                          Escaneable en farmacias según protocolo español
-                        </p>
                       </div>
                     </div>
                   </div>
@@ -838,7 +852,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
               </div>
               </div>
 
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 no-print">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Compartir receta</h4>
@@ -848,6 +862,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                         size="sm"
                         icon={<Mail size={16} />}
                         onClick={() => handleSharePrescription('email')}
+                        className="no-print"
                       >
                         Email
                       </Button>
@@ -856,6 +871,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                         size="sm"
                         icon={<MessageSquare size={16} />}
                         onClick={() => handleSharePrescription('whatsapp')}
+                        className="no-print"
                       >
                         WhatsApp
                       </Button>
@@ -864,6 +880,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                         size="sm"
                         icon={<Phone size={16} />}
                         onClick={() => handleSharePrescription('sms')}
+                        className="no-print"
                       >
                         SMS
                       </Button>
@@ -874,6 +891,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                       variant="outline"
                       icon={<Printer size={18} />}
                       onClick={handlePrintPrescription}
+                      className="no-print"
                     >
                       Imprimir
                     </Button>
@@ -881,12 +899,14 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ onClose, onSu
                       variant="outline"
                       icon={<Download size={18} />}
                       onClick={handleDownloadPrescription}
+                      className="no-print"
                     >
                       Descargar PDF
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setShowPrescriptionPreview(false)}
+                      className="no-print"
                     >
                       Cerrar
                     </Button>

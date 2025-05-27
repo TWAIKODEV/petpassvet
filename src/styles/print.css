@@ -1,0 +1,133 @@
+
+/* Print styles for prescription documents */
+@media print {
+  /* Hide all UI elements */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show only the prescription content */
+  .prescription-print-content,
+  .prescription-print-content * {
+    visibility: visible;
+  }
+  
+  /* Position the prescription content */
+  .prescription-print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 20mm !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+  }
+  
+  /* Hide navigation, headers, footers, and buttons */
+  nav,
+  header,
+  footer,
+  .sidebar,
+  .navbar,
+  .navigation,
+  .btn,
+  .button,
+  .modal-header,
+  .modal-footer,
+  .print-hide,
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure QR code is visible and properly sized */
+  .qr-code-container {
+    page-break-inside: avoid;
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  .qr-code-container svg {
+    width: 120px !important;
+    height: 120px !important;
+    display: block !important;
+  }
+  
+  /* Adjust text for print */
+  .prescription-print-content h1,
+  .prescription-print-content h2,
+  .prescription-print-content h3 {
+    color: black !important;
+    page-break-after: avoid;
+  }
+  
+  .prescription-print-content p,
+  .prescription-print-content div {
+    color: black !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .prescription-header {
+    page-break-after: avoid;
+  }
+  
+  .prescription-medications {
+    page-break-inside: avoid;
+  }
+  
+  /* Remove shadows and borders for print */
+  .prescription-print-content .shadow,
+  .prescription-print-content .shadow-sm,
+  .prescription-print-content .shadow-lg {
+    box-shadow: none !important;
+  }
+  
+  .prescription-print-content .border,
+  .prescription-print-content .border-gray-200 {
+    border: 1px solid #ccc !important;
+  }
+  
+  /* Ensure proper spacing */
+  .prescription-print-content .mt-6 {
+    margin-top: 1.5rem !important;
+  }
+  
+  .prescription-print-content .mb-4 {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Style the grid layout for print */
+  .prescription-print-content .grid {
+    display: block !important;
+  }
+  
+  .prescription-print-content .grid-cols-2 > div {
+    display: inline-block !important;
+    width: 48% !important;
+    vertical-align: top !important;
+    margin-right: 2% !important;
+  }
+}
+
+/* Additional utility classes */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block !important;
+  }
+}
+
+.no-print {
+  display: block;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
