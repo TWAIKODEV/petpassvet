@@ -138,30 +138,68 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatient || medications.length === 0) return;
+    
+    try {
+      if (!selectedPatient) {
+        console.error('No patient selected for prescription');
+        alert('Por favor seleccione un paciente');
+        return;
+      }
+      
+      if (medications.length === 0) {
+        console.error('No medications added to prescription');
+        alert('Por favor añada al menos un medicamento');
+        return;
+      }
 
-    const prescription = {
-      id: Date.now().toString(),
-      number: prescriptionNumber || `RX-${Date.now()}`,
-      date: prescriptionDate,
-      patient: selectedPatient,
-      veterinarian,
-      medications,
-      notes,
-      status: 'active'
-    };
+      const finalPrescriptionNumber = prescriptionNumber || `RX-${Date.now()}`;
+      
+      const prescription = {
+        id: Date.now().toString(),
+        number: finalPrescriptionNumber,
+        date: prescriptionDate,
+        patient: selectedPatient,
+        veterinarian,
+        medications,
+        notes,
+        status: 'active'
+      };
 
-    onSubmit(prescription);
+      console.log('Submitting prescription:', prescription);
+      onSubmit(prescription);
+    } catch (error) {
+      console.error('Error submitting prescription:', error);
+      alert('Error al crear la receta');
+    }
   };
 
   const handlePreview = () => {
-    if (!selectedPatient || medications.length === 0) return;
-    
-    if (!prescriptionNumber) {
-      setPrescriptionNumber(`RX-${Date.now()}`);
+    try {
+      if (!selectedPatient) {
+        console.error('No patient selected');
+        alert('Por favor seleccione un paciente');
+        return;
+      }
+      
+      if (medications.length === 0) {
+        console.error('No medications added');
+        alert('Por favor añada al menos un medicamento');
+        return;
+      }
+      
+      if (!prescriptionNumber) {
+        const newNumber = `RX-${Date.now()}`;
+        setPrescriptionNumber(newNumber);
+        console.log('Generated prescription number:', newNumber);
+      }
+      
+      console.log('Opening preview with patient:', selectedPatient);
+      console.log('Medications:', medications);
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Error opening preview:', error);
+      alert('Error al abrir la vista previa');
     }
-    
-    setShowPreview(true);
   };
 
   return (

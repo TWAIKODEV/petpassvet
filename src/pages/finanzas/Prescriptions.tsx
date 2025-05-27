@@ -4,8 +4,8 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { generatePrescriptionPDF } from '../../utils/pdfGenerator';
-import * as XLSX from 'xlsx';
 import NewPrescriptionForm from '../../components/dashboard/NewPrescriptionForm';
+import * as XLSX from 'xlsx';
 import { QRCodeSVG } from 'qrcode.react';
 
 // Mock data for prescriptions
@@ -181,19 +181,19 @@ const Prescriptions = () => {
 
   const handlePreviewPrescription = (prescription: any) => {
     setPreviewPrescription(prescription);
-    
+
     // Pre-populate sharing forms with client data
     setEmailData({
       to: prescription.client.email || '',
       subject: `Receta Médica ${prescription.number} - ClinicPro`,
       message: `Estimado/a ${prescription.client.name},\n\nAdjunto encontrará la receta médica para ${prescription.pet.name} con número ${prescription.number}.\n\nDiagnóstico: ${prescription.diagnosis}\n\nMedicamentos:\n${prescription.medications.map(med => `- ${med.name}: ${med.dosage} ${med.frequency}, ${med.duration}`).join('\n')}\n\nSi tiene alguna pregunta, no dude en contactarnos.\n\nSaludos cordiales,\n${prescription.doctor}\nClinicPro`
     });
-    
+
     setWhatsappData({
       number: prescription.client.phone || '',
       message: `Hola ${prescription.client.name}, le enviamos la receta médica para ${prescription.pet.name} con número ${prescription.number}.\n\nDiagnóstico: ${prescription.diagnosis}\n\nMedicamentos:\n${prescription.medications.map(med => `- ${med.name}: ${med.dosage} ${med.frequency}, ${med.duration}`).join('\n')}\n\nSaludos, ${prescription.doctor} - ClinicPro.`
     });
-    
+
     setSmsData({
       number: prescription.client.phone || '',
       message: `ClinicPro: Receta ${prescription.number} para ${prescription.pet.name}. Diagnóstico: ${prescription.diagnosis}. Medicamentos: ${prescription.medications.map(m => m.name).join(', ')}.`
@@ -214,10 +214,10 @@ const Prescriptions = () => {
   const handleSendEmail = () => {
     // In a real app, this would send an email with the prescription attached
     console.log('Sending email:', emailData);
-    
+
     // Close the form
     setShowEmailForm(false);
-    
+
     // Update the prescription status to indicate it was shared
     if (previewPrescription) {
       const updatedPrescription = { ...previewPrescription, shared: true, shareMethod: 'email' };
@@ -229,15 +229,15 @@ const Prescriptions = () => {
   const handleSendWhatsapp = () => {
     // In a real app, this would send a WhatsApp message with the prescription
     console.log('Sending WhatsApp:', whatsappData);
-    
+
     // For demo purposes, we'll open a WhatsApp web link
     const encodedMessage = encodeURIComponent(whatsappData.message);
     const whatsappUrl = `https://wa.me/${whatsappData.number.replace(/\D/g, '')}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
-    
+
     // Close the form
     setShowWhatsappForm(false);
-    
+
     // Update the prescription status to indicate it was shared
     if (previewPrescription) {
       const updatedPrescription = { ...previewPrescription, shared: true, shareMethod: 'whatsapp' };
@@ -249,15 +249,15 @@ const Prescriptions = () => {
   const handleSendSms = () => {
     // In a real app, this would send an SMS with the prescription
     console.log('Sending SMS:', smsData);
-    
+
     // For demo purposes, we'll try to open the native SMS app
     const encodedMessage = encodeURIComponent(smsData.message);
     const smsUrl = `sms:${smsData.number}?body=${encodedMessage}`;
     window.location.href = smsUrl;
-    
+
     // Close the form
     setShowSmsForm(false);
-    
+
     // Update the prescription status to indicate it was shared
     if (previewPrescription) {
       const updatedPrescription = { ...previewPrescription, shared: true, shareMethod: 'sms' };
@@ -310,7 +310,7 @@ const Prescriptions = () => {
       clinic: "ClinicPro",
       clinicId: "B12345678"
     };
-    
+
     // Convert to JSON string
     return JSON.stringify(qrData);
   };
@@ -618,7 +618,7 @@ const Prescriptions = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Código QR</h4>
                     <div className="mt-2 flex items-center">
@@ -631,7 +631,7 @@ const Prescriptions = () => {
                         {showQRCode ? 'Ocultar QR' : 'Mostrar QR'}
                       </Button>
                     </div>
-                    
+
                     {showQRCode && (
                       <div className="mt-4">
                         <div className="bg-white p-2 rounded-lg border border-gray-200 inline-block">
@@ -759,7 +759,7 @@ const Prescriptions = () => {
                 type="email"
                 value={emailData.to}
                 onChange={(e) => setEmailData({...emailData, to: e.target.value})}
-                placeholder="email@ejemplo.com"
+                placeholder="email@ejemplo.com"```
                 icon={<Mail size={18} />}
                 required
               />
