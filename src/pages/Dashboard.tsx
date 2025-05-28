@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Clock,
   Activity,
@@ -16,19 +17,19 @@ import NewAppointmentForm from '../components/dashboard/NewAppointmentForm';
 import NewPatientForm from '../components/patients/NewPatientForm';
 import NewSaleForm from '../components/dashboard/NewSaleForm';
 import NewBudgetForm from '../components/dashboard/NewBudgetForm';
-import NewPrescriptionForm from '../components/dashboard/NewPrescriptionForm';
+
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { mockAppointments, mockPatients, mockDoctors, mockDashboardSummary } from '../data/mockData';
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [showNewSaleForm, setShowNewSaleForm] = useState(false);
   const [showNewBudgetForm, setShowNewBudgetForm] = useState(false);
-  const [showNewPrescriptionForm, setShowNewPrescriptionForm] = useState(false);
   const [dateRange, setDateRange] = useState({
     from: new Date().toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
@@ -75,11 +76,7 @@ const Dashboard: React.FC = () => {
     setShowNewBudgetForm(false);
   };
 
-  const handleNewPrescription = (prescriptionData: any) => {
-    // Here you would typically make an API call to save the new prescription
-    console.log('New prescription data:', prescriptionData);
-    setShowNewPrescriptionForm(false);
-  };
+  
 
   if (!mounted) {
     return (
@@ -118,7 +115,7 @@ const Dashboard: React.FC = () => {
       title: 'Nueva Receta',
       icon: <Pill size={20} />,
       color: 'text-teal-600 bg-teal-100',
-      onClick: () => setShowNewPrescriptionForm(true)
+      onClick: () => navigate('/dashboard/new-prescription')
     }
   ];
 
@@ -332,13 +329,7 @@ const Dashboard: React.FC = () => {
         />
       )}
 
-      {/* New Prescription Form Modal */}
-      {showNewPrescriptionForm && (
-        <NewPrescriptionForm
-          onClose={() => setShowNewPrescriptionForm(false)}
-          onSubmit={handleNewPrescription}
-        />
-      )}
+      
     </div>
   );
 };

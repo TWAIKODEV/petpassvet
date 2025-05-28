@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Download, Calendar, RefreshCw, FileText, Eye, Printer, X, Mail, MessageSquare, Phone, Plus, Pill, QrCode } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -84,6 +85,7 @@ const mockPrescriptions = [
 ];
 
 const Prescriptions = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState({
     from: new Date().toISOString().split('T')[0],
@@ -357,8 +359,8 @@ const Prescriptions = () => {
             icon={<Plus size={18} />}
             className="flex-1 sm:flex-none"
             onClick={() => {
-              console.log('Opening new prescription form');
-              setShowNewPrescriptionForm(true);
+              console.log('Navigating to new prescription page');
+              navigate('/dashboard/new-prescription');
             }}
           >
             Nueva Receta

@@ -122,7 +122,8 @@ const navItems: NavItem[] = [
       { title: 'Historiales', href: '/consultorio/historiales' },
       { title: 'Tratamientos', href: '/consultorio/tratamientos' },
       { title: 'Medicamentos', href: '/consultorio/medicamentos' },
-      { title: 'Recetas', href: '/consultorio/recetas' }
+      { title: 'Recetas', href: '/consultorio/recetas' },
+      { title: 'Nueva Receta', href: '/dashboard/new-prescription' }
     ]
   },
   {
