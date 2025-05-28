@@ -53,6 +53,7 @@ import RegistrarEntradaSalida from './pages/rrhh/RegistrarEntradaSalida';
 import Configuracion from './pages/administracion/configuracion';
 import Usuarios from './pages/administracion/usuarios';
 import GroomingAppointment from './pages/peluqueria/GroomingAppointment';
+import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -86,7 +87,13 @@ function App() {
             </ProtectedRoute>
           }>
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/new-prescription" element={<NewPrescriptionPage />} />
+            <Route path="/inbox" element={<Inbox />} />
+            <Route path="/opportunities" element={<Leads />} />
+            <Route path="/patients" element={<Patients />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/reports" element={<Reports />} />
 
             {/* Agenda routes */}
             <Route path="agenda" element={<Calendar />} />
