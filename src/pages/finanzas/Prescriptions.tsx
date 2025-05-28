@@ -356,7 +356,10 @@ const Prescriptions = () => {
             variant="primary"
             icon={<Plus size={18} />}
             className="flex-1 sm:flex-none"
-            onClick={() => setShowNewPrescriptionForm(true)}
+            onClick={() => {
+              console.log('Opening new prescription form');
+              setShowNewPrescriptionForm(true);
+            }}
           >
             Nueva Receta
           </Button>

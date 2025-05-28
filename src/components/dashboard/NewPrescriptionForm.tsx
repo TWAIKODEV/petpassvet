@@ -240,19 +240,20 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
               <select
                 value={selectedPatient?.id || ''}
                 onChange={(e) => {
-                  const patient = patients.find(p => p.id === e.target.value);
+                  const patient = patients?.find(p => p.id === e.target.value);
                   setSelectedPatient(patient || null);
                 }}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 required
               >
                 <option value="">Seleccionar paciente...</option>
-                {patients.map(patient => (
+                {patients && patients.length > 0 ? patients.map(patient => (
                   <option key={patient.id} value={patient.id}>
                     {patient.name} - {patient.owner}
                   </option>
-                ))}
-              </select>
+                )) : (
+                  <option value="" disabled>No hay pacientes disponibles</option>
+                )}</select>
             </div>
 
             {/* Veterinario */}
