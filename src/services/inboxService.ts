@@ -1,17 +1,15 @@
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 
-// For development in webcontainer, we need to use the current origin
+// For Replit environment, use REPLIT_APP_URL or window.location.origin
 const getWebSocketUrl = () => {
   if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    return `${protocol}//${host}`;
+    return window.location.origin;
   }
-  return import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
+  return import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_REPLIT_APP_URL || 'http://localhost:4000';
 };
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_REPLIT_APP_URL || 'http://localhost:4000';
 const SOCKET_URL = getWebSocketUrl();
 
 // Define message types
@@ -491,11 +489,11 @@ class InboxService {
 
       this.socket = io(this.socketUrl, {
         path: '/socket.io',
-        transports: ['websocket', 'polling'],
-        reconnectionAttempts: this.maxReconnectAttempts,
-        reconnectionDelay: this.reconnectDelay,
-        reconnectionDelayMax: this.reconnectDelay * 5,
-        timeout: 10000,
+        transports: ['websocket'],
+        timeout: 20000,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
         auth: {
           token: this.token
         },

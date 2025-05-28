@@ -16,7 +16,17 @@ const socketService = require('./core/socketService');
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.IO
+// Initialize Socket.IO with proper CORS and path
+const io = require('socket.io')(server, {
+  path: '/socket.io',
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Initialize Socket.IO service
 socketService.initialize(server);
 
 // Middleware
