@@ -921,10 +921,46 @@ const Prescriptions = () => {
 
       {/* New Prescription Form Modal */}
       {showNewPrescriptionForm && (
-        <NewPrescriptionForm
-          onClose={() => setShowNewPrescriptionForm(false)}
-          onSubmit={handleNewPrescription}
-        />
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
+            <NewPrescriptionForm
+              onSubmit={handleNewPrescription}
+              onCancel={() => setShowNewPrescriptionForm(false)}
+              patients={[
+                {
+                  id: '1',
+                  name: 'Luna',
+                  species: 'Perro',
+                  breed: 'Labrador',
+                  age: 3,
+                  weight: 25,
+                  owner: 'María García',
+                  ownerPhone: '+34 666 777 888'
+                },
+                {
+                  id: '2',
+                  name: 'Rocky',
+                  species: 'Perro',
+                  breed: 'Pastor Alemán',
+                  age: 5,
+                  weight: 30,
+                  owner: 'Carlos Rodríguez',
+                  ownerPhone: '+34 666 888 999'
+                },
+                {
+                  id: '3',
+                  name: 'Miau',
+                  species: 'Gato',
+                  breed: 'Siamés',
+                  age: 2,
+                  weight: 4,
+                  owner: 'Ana López',
+                  ownerPhone: '+34 666 999 111'
+                }
+              ]}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
