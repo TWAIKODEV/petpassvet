@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { InboxProvider } from './context/InboxContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Patients from './pages/Patients';
@@ -182,12 +183,12 @@ function App() {
                 {/* Administration routes */}
                 <Route path="administracion" element={<Placeholder pageName="Administración" />} />
                 <Route path="administracion/configuracion" element={
-                  <ProtectedRoute requiredPermission="admin_view">
+                  <ProtectedRoute>
                     <Configuracion />
                   </ProtectedRoute>
                 } />
                 <Route path="administracion/usuarios" element={
-                  <ProtectedRoute requiredPermission="users_manage">
+                  <ProtectedRoute>
                     <Usuarios />
                   </ProtectedRoute>
                 } />
