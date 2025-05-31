@@ -6,6 +6,8 @@ import Input from '../common/Input';
 import QRCode from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { generatePrescriptionPDF } from '../../utils/pdfGenerator';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 interface Medication {
   id: string;
@@ -38,6 +40,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
   onCancel,
   patients
 }) => {
+  const createPrescription = useMutation(api.prescriptions.createPrescription);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [newMedication, setNewMedication] = useState<Medication>({
@@ -135,7 +138,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
     setMedications(medications.filter(med => med.id !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
@@ -165,6 +168,20 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
       };
 
       console.log('Submitting prescription:', prescription);
+
+      await createPrescription({
+        patientId: selectedPatient.id as any,
+        veterinarian: veterinarian,
+        medications: medications.map(med => ({
+          name: med.name,
+          dosage: med.dosage,
+          frequency: med.frequency,
+          duration: med.duration,
+          instructions: med.instructions || undefined,
+        })),
+        diagnosis: notes || undefined,
+        notes: notes || undefined,
+      });
       onSubmit(prescription);
     } catch (error) {
       console.error('Error submitting prescription:', error);

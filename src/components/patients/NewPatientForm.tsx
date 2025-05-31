@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { X, Plus, Trash, ChevronDown, ChevronRight, Check } from 'lucide-react';
-import Input from '../common/Input';
 import Button from '../common/Button';
+import Input from '../common/Input';
 
 interface NewPatientFormProps {
   onClose: () => void;
@@ -9,6 +11,7 @@ interface NewPatientFormProps {
 }
 
 const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) => {
+  const createPatient = useMutation(api.patients.createPatient);
   const [formData, setFormData] = useState({
     // Owner information
     firstName: '',
@@ -22,7 +25,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
     couponCode: '',
     affiliateClub: '',
     address: 'Calle de Beatriz de Bobadilla, 9. Madrid',
-    
+
     // Marketing and communications
     marketing: {
       signedAt: null,
@@ -30,13 +33,13 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
       smsConsent: false,
       whatsappConsent: false
     },
-    
+
     // PetPass information
     petPass: {
       hasPetPass: false,
       product: '' // Changed from 'plan' to 'product' for clarity
     },
-    
+
     // Additional services
     services: {
       wantsGrooming: false,
@@ -44,7 +47,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
       wantsHotelService: false,
       wantsTraining: false
     },
-    
+
     // Pet information
     pet: {
       name: '',
@@ -120,9 +123,59 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    try {
+      const patientId = await createPatient({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+		birth_date: formData.birth_date || undefined,
+        idNumber: formData.idNumber || undefined,
+		language: formData.language || undefined,
+		preferredContact: formData.preferredContact || undefined,
+		couponCode: formData.couponCode || undefined,
+		affiliateClub: formData.affiliateClub || undefined,
+        address: formData.address || undefined,
+		marketing: formData.marketing ? {
+			signedAt: formData.marketing.signedAt || undefined,
+			emailConsent: formData.marketing.emailConsent || undefined,
+			smsConsent: formData.marketing.smsConsent || undefined,
+			whatsappConsent: formData.marketing.whatsappConsent || undefined
+		} : undefined,
+		petPass: formData.petPass ? {
+			hasPetPass: formData.petPass.hasPetPass || undefined,
+			product: formData.petPass.product || undefined
+		} : undefined,
+		services: formData.services ? {
+			wantsGrooming: formData.services.wantsGrooming || undefined,
+			wantsFoodDelivery: formData.services.wantsFoodDelivery || undefined,
+			wantsHotelService: formData.services.wantsHotelService || undefined,
+			wantsTraining: formData.services.wantsTraining || undefined
+		} : undefined,
+		pet: formData.pet ? {
+			name: formData.pet.name || undefined,
+			species: formData.pet.species || undefined,
+			breed: formData.pet.breed || undefined,
+			sex: formData.pet.sex || undefined,
+			birthDate: formData.pet.birthDate || undefined,
+			microchipNumber: formData.pet.microchipNumber || undefined,
+			isNeutered: formData.pet.isNeutered || undefined,
+			coatColor: formData.pet.coatColor || undefined,
+			observations: formData.pet.observations || undefined,
+			hasInsurance: formData.pet.hasInsurance || undefined,
+			insurerName: formData.pet.insurerName || undefined,
+			policyNumber: formData.pet.policyNumber || undefined
+		} : undefined,
+      });
+
+      console.log('Paciente creado con ID:', patientId);
+      onSubmit(formData);
+      onClose();
+    } catch (error) {
+      console.error('Error creando paciente:', error);
+    }
   };
 
   const SectionHeader = ({ title, section }: { title: string; section: string }) => (
@@ -412,7 +465,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                     <span className="text-sm text-gray-700">Acepto recibir comunicaciones por WhatsApp</span>
                   </label>
                 </div>
-                
+
                 {/* Authorization Link */}
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                   <div className="flex items-start space-x-4">
@@ -492,7 +545,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                               <option value="vetcare">PetPass Vetcare</option>
                             </select>
                           </div>
-                          
+
                           {formData.petPass.product && (
                             <div className="mt-2 p-2 bg-white rounded border border-gray-200 text-sm">
                               {formData.petPass.product === 'track' && (
