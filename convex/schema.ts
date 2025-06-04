@@ -1,3 +1,4 @@
+
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
@@ -251,27 +252,45 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_patient", ["patientId"]),
 
-  products: defineTable({
+  // Categories for products
+  categories: defineTable({
     name: v.string(),
-    category: v.string(),
-    subcategory: v.string(),
-    description: v.string(),
-    price: v.number(),
-    stock: v.number(),
-    featured: v.boolean(),
-    image: v.string(),
-    brand: v.optional(v.string()),
-    weight: v.optional(v.string()),
-    dimensions: v.optional(v.string()),
-    sku: v.string(),
-    barcode: v.optional(v.string()),
-    minStock: v.number(),
-    supplier: v.optional(v.string()),
-    tags: v.array(v.string()),
+    description: v.optional(v.string()),
+    parentCategoryId: v.optional(v.id("categories")),
+    isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_category", ["category"]).index("by_sku", ["sku"]),
+  }).index("by_parent", ["parentCategoryId"]),
 
+  // Updated products table with category references
+  products: defineTable({
+    name: v.string(),
+    categoryId: v.id("categories"),
+    subcategoryId: v.optional(v.id("categories")),
+    description: v.optional(v.string()),
+    price: v.number(),
+    cost: v.optional(v.number()),
+    discountPrice: v.optional(v.number()),
+    stock: v.optional(v.number()),
+    minStock: v.optional(v.number()),
+    sku: v.optional(v.string()),
+    barcode: v.optional(v.string()),
+    brand: v.optional(v.string()),
+    supplier: v.optional(v.string()),
+    location: v.optional(v.string()),
+    lastUpdated: v.optional(v.string()),
+    featured: v.optional(v.boolean()),
+    rating: v.optional(v.number()),
+    reviews: v.optional(v.number()),
+    images: v.optional(v.array(v.string())),
+    status: v.string(),
+    area: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_category", ["categoryId"]).index("by_sku", ["sku"]),
+
+  // Campaigns with proper enums
   campaigns: defineTable({
     name: v.string(),
     type: v.union(v.literal("email"), v.literal("social"), v.literal("web"), v.literal("event"), v.literal("referral"), v.literal("sem")),
@@ -384,31 +403,93 @@ export default defineSchema({
     professional: v.string(),
     amount: v.number(),
     paymentMethod: v.string(),
-    status: v.string()
+    status: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   }),
-
-  // From inboxService.ts
 
   // From ContaPlus.tsx
   accountGroups: defineTable({
-    name: v.string()
+    name: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   }),
 
   accounts: defineTable({
     code: v.string(),
     name: v.string(),
-    groupId: v.string(),
+    groupId: v.id("accountGroups"),
     type: v.string(),
     balance: v.number(),
-    status: v.string()
-  }),
+    status: v.string(),
+    color: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_group", ["groupId"]).index("by_code", ["code"]),
+
+  // Journal entries for ContaPlus
+  journalEntries: defineTable({
+    entryNumber: v.string(),
+    date: v.string(),
+    concept: v.string(),
+    debitEntries: v.array(v.object({
+      accountCode: v.string(),
+      accountName: v.string(),
+      amount: v.number(),
+    })),
+    creditEntries: v.array(v.object({
+      accountCode: v.string(),
+      accountName: v.string(),
+      amount: v.number(),
+    })),
+    reference: v.string(),
+    status: v.string(),
+    type: v.string(),
+    document: v.optional(v.string()),
+    tags: v.array(v.string()),
+    checked: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_date", ["date"]).index("by_type", ["type"]),
+
+  // Balance sheet for ContaPlus
+  balanceSheet: defineTable({
+    period: v.string(),
+    year: v.number(),
+    assets: v.array(v.object({
+      accountCode: v.string(),
+      accountName: v.string(),
+      amount: v.number(),
+      category: v.string(),
+    })),
+    liabilities: v.array(v.object({
+      accountCode: v.string(),
+      accountName: v.string(),
+      amount: v.number(),
+      category: v.string(),
+    })),
+    equity: v.array(v.object({
+      accountCode: v.string(),
+      accountName: v.string(),
+      amount: v.number(),
+      category: v.string(),
+    })),
+    totalAssets: v.number(),
+    totalLiabilitiesEquity: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_period", ["period", "year"]),
 
   profitAndLoss: defineTable({
     account: v.string(),
     name: v.string(),
     amount: v.number(),
-    type: v.string() // 'income' or 'expense'
-  }),
+    type: v.string(), // 'income' or 'expense'
+    period: v.string(),
+    year: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_period", ["period", "year"]).index("by_type", ["type"]),
 
   assets: defineTable({
     purchaseDate: v.string(),
@@ -423,7 +504,9 @@ export default defineSchema({
     initialValue: v.number(),
     amortized: v.number(),
     currentValue: v.number(),
-    status: v.string()
+    status: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   }),
 
   // From Impuestos.tsx
@@ -434,7 +517,9 @@ export default defineSchema({
     frequency: v.string(),
     dueDates: v.string(),
     lastFiled: v.optional(v.string()),
-    nextDue: v.string()
+    nextDue: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   }),
 
   taxDeclarations: defineTable({
@@ -444,55 +529,73 @@ export default defineSchema({
     dueDate: v.string(),
     amount: v.number(),
     status: v.string(),
-    result: v.string()
+    result: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   }),
 
-  // From tienda/Dashboard.tsx and Products.tsx
-  products: defineTable({
-    name: v.string(),
-    category: v.string(),
-    subcategory: v.optional(v.string()),
-    description: v.optional(v.string()),
-    price: v.number(),
-    cost: v.optional(v.number()),
-    discountPrice: v.optional(v.number()),
-    stock: v.optional(v.number()),
-    minStock: v.optional(v.number()),
-    sku: v.optional(v.string()),
-    barcode: v.optional(v.string()),
-    brand: v.optional(v.string()),
-    supplier: v.optional(v.string()),
-    location: v.optional(v.string()),
-    lastUpdated: v.optional(v.string()),
-    featured: v.optional(v.boolean()),
-    rating: v.optional(v.number()),
-    reviews: v.optional(v.number()),
-    images: v.optional(v.array(v.string())),
-    status: v.string(),
-    area: v.optional(v.string()),
-    tags: v.optional(v.array(v.string()))
-  }),
+  // Tax calendar for Impuestos
+  taxCalendar: defineTable({
+    date: v.string(),
+    models: v.array(v.string()),
+    description: v.string(),
+    status: v.union(v.literal("upcoming"), v.literal("completed"), v.literal("future")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_date", ["date"]).index("by_status", ["status"]),
 
-  salesByCategory: defineTable({
-    category: v.string(),
-    amount: v.number(),
-    percentage: v.number()
-  }),
-
-  // From WebDashboard.tsx
+  // Updated keyword suggestions with missing fields for WebDashboard
   keywordSuggestions: defineTable({
     keyword: v.string(),
     volume: v.number(),
     difficulty: v.number(),
-    relevance: v.number()
+    relevance: v.number(),
+    position: v.optional(v.number()),
+    change: v.optional(v.number()),
+    isPositive: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   }),
+
+  // Form definitions for WebDashboard
+  formData: defineTable({
+    name: v.string(),
+    location: v.string(),
+    fields: v.array(v.object({
+      name: v.string(),
+      type: v.string(),
+      required: v.boolean(),
+      label: v.string(),
+    })),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
+
+  // Form submissions for WebDashboard
+  formSubmissions: defineTable({
+    formDataId: v.id("formData"),
+    submissionData: v.any(), // Dynamic object based on form fields
+    submitterInfo: v.object({
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      ipAddress: v.optional(v.string()),
+      userAgent: v.optional(v.string()),
+    }),
+    status: v.union(v.literal("new"), v.literal("processed"), v.literal("archived")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_form", ["formDataId"]).index("by_status", ["status"]),
 
   competitors: defineTable({
     name: v.string(),
     distance: v.string(),
     rating: v.number(),
     reviews: v.number(),
-    website: v.string()
+    website: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   }),
 
   demographics: defineTable({
@@ -502,28 +605,13 @@ export default defineSchema({
     ageGroups: v.array(v.object({
       group: v.string(),
       percentage: v.number()
-    }))
+    })),
+    area: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   }),
 
-  // From CampañasMK.tsx
-  campaigns: defineTable({
-    name: v.string(),
-    type: v.string(),
-    status: v.string(),
-    startDate: v.string(),
-    endDate: v.string(),
-    budget: v.number(),
-    spent: v.number(),
-    leads: v.number(),
-    conversions: v.number(),
-    roi: v.number(),
-    channels: v.array(v.string()),
-    owner: v.string(),
-    description: v.optional(v.string()),
-    tags: v.optional(v.array(v.string()))
-  }),
-
-  // From GroomingAppointments.tsx
+  // Updated grooming appointments without services and price fields
   groomingAppointments: defineTable({
     petName: v.string(),
     breed: v.string(),
@@ -531,7 +619,6 @@ export default defineSchema({
     sex: v.string(),
     petProfileUrl: v.string(),
     serviceType: v.string(),
-    services: v.array(v.string()),
     patientId: v.string(),
     groomerId: v.string(),
     date: v.string(),
@@ -539,16 +626,7 @@ export default defineSchema({
     duration: v.number(),
     status: v.string(),
     notes: v.string(),
-    price: v.number()
-  }),
-
-  // Dashboard summary
-  dashboardSummary: defineTable({
-    appointmentsToday: v.number(),
-    appointmentsWeek: v.number(),
-    patientsTotal: v.number(),
-    revenueToday: v.number(),
-    revenueWeek: v.number(),
-    revenueMonth: v.number()
-  })
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_date", ["date"]).index("by_groomer", ["groomerId"]),
 });
