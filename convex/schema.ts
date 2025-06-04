@@ -1,4 +1,3 @@
-
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
@@ -365,4 +364,191 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_thread", ["threadId"]).index("by_channel", ["channel"]),
+
+  // From Invoices.tsx
+  invoices: defineTable({
+    number: v.string(),
+    date: v.string(),
+    client: v.object({
+      name: v.string(),
+      nif: v.string()
+    }),
+    pet: v.object({
+      name: v.string(),
+      species: v.string(),
+      breed: v.string(),
+      age: v.number()
+    }),
+    area: v.string(),
+    concept: v.string(),
+    professional: v.string(),
+    amount: v.number(),
+    paymentMethod: v.string(),
+    status: v.string()
+  }),
+
+  // From inboxService.ts
+
+  // From ContaPlus.tsx
+  accountGroups: defineTable({
+    name: v.string()
+  }),
+
+  accounts: defineTable({
+    code: v.string(),
+    name: v.string(),
+    groupId: v.string(),
+    type: v.string(),
+    balance: v.number(),
+    status: v.string()
+  }),
+
+  profitAndLoss: defineTable({
+    account: v.string(),
+    name: v.string(),
+    amount: v.number(),
+    type: v.string() // 'income' or 'expense'
+  }),
+
+  assets: defineTable({
+    purchaseDate: v.string(),
+    amortizationStartDate: v.string(),
+    account: v.string(),
+    accountName: v.string(),
+    tags: v.array(v.string()),
+    serialNumber: v.string(),
+    contact: v.string(),
+    concept: v.string(),
+    document: v.string(),
+    initialValue: v.number(),
+    amortized: v.number(),
+    currentValue: v.number(),
+    status: v.string()
+  }),
+
+  // From Impuestos.tsx
+  taxModels: defineTable({
+    model: v.string(),
+    name: v.string(),
+    description: v.string(),
+    frequency: v.string(),
+    dueDates: v.string(),
+    lastFiled: v.optional(v.string()),
+    nextDue: v.string()
+  }),
+
+  taxDeclarations: defineTable({
+    model: v.string(),
+    name: v.string(),
+    period: v.string(),
+    dueDate: v.string(),
+    amount: v.number(),
+    status: v.string(),
+    result: v.string()
+  }),
+
+  // From tienda/Dashboard.tsx and Products.tsx
+  products: defineTable({
+    name: v.string(),
+    category: v.string(),
+    subcategory: v.optional(v.string()),
+    description: v.optional(v.string()),
+    price: v.number(),
+    cost: v.optional(v.number()),
+    discountPrice: v.optional(v.number()),
+    stock: v.optional(v.number()),
+    minStock: v.optional(v.number()),
+    sku: v.optional(v.string()),
+    barcode: v.optional(v.string()),
+    brand: v.optional(v.string()),
+    supplier: v.optional(v.string()),
+    location: v.optional(v.string()),
+    lastUpdated: v.optional(v.string()),
+    featured: v.optional(v.boolean()),
+    rating: v.optional(v.number()),
+    reviews: v.optional(v.number()),
+    images: v.optional(v.array(v.string())),
+    status: v.string(),
+    area: v.optional(v.string()),
+    tags: v.optional(v.array(v.string()))
+  }),
+
+  salesByCategory: defineTable({
+    category: v.string(),
+    amount: v.number(),
+    percentage: v.number()
+  }),
+
+  // From WebDashboard.tsx
+  keywordSuggestions: defineTable({
+    keyword: v.string(),
+    volume: v.number(),
+    difficulty: v.number(),
+    relevance: v.number()
+  }),
+
+  competitors: defineTable({
+    name: v.string(),
+    distance: v.string(),
+    rating: v.number(),
+    reviews: v.number(),
+    website: v.string()
+  }),
+
+  demographics: defineTable({
+    population: v.number(),
+    petOwners: v.number(),
+    averageIncome: v.string(),
+    ageGroups: v.array(v.object({
+      group: v.string(),
+      percentage: v.number()
+    }))
+  }),
+
+  // From CampañasMK.tsx
+  campaigns: defineTable({
+    name: v.string(),
+    type: v.string(),
+    status: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+    budget: v.number(),
+    spent: v.number(),
+    leads: v.number(),
+    conversions: v.number(),
+    roi: v.number(),
+    channels: v.array(v.string()),
+    owner: v.string(),
+    description: v.optional(v.string()),
+    tags: v.optional(v.array(v.string()))
+  }),
+
+  // From GroomingAppointments.tsx
+  groomingAppointments: defineTable({
+    petName: v.string(),
+    breed: v.string(),
+    age: v.number(),
+    sex: v.string(),
+    petProfileUrl: v.string(),
+    serviceType: v.string(),
+    services: v.array(v.string()),
+    patientId: v.string(),
+    groomerId: v.string(),
+    date: v.string(),
+    time: v.string(),
+    duration: v.number(),
+    status: v.string(),
+    notes: v.string(),
+    price: v.number()
+  }),
+
+  // Dashboard summary
+  dashboardSummary: defineTable({
+    appointmentsToday: v.number(),
+    appointmentsWeek: v.number(),
+    patientsTotal: v.number(),
+    revenueToday: v.number(),
+    revenueWeek: v.number(),
+    revenueMonth: v.number()
+  })
 });
