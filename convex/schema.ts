@@ -46,7 +46,6 @@ export default defineSchema({
     email: v.string(),
     phone: v.string(),
     birthDate: v.string(),
-    gender: v.union(v.literal("male"), v.literal("female"), v.literal("other")),
     address: v.string(),
     preferredContact: v.union(v.literal("phone"), v.literal("email"), v.literal("whatsapp"), v.literal("sms")),
     bankAccount: v.optional(v.string()),

@@ -1,43 +1,46 @@
-import React, { useState } from 'react';
-import { useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
-import { X, Plus, Trash, ChevronDown, ChevronRight, Check } from 'lucide-react';
-import Button from '../common/Button';
-import Input from '../common/Input';
+import React, { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { X, Plus, Trash, ChevronDown, ChevronRight, Check } from "lucide-react";
+import Button from "../common/Button";
+import Input from "../common/Input";
 
 interface NewPatientFormProps {
   onClose: () => void;
   onSubmit: (patientData: any) => void;
 }
 
-const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) => {
+const NewPatientForm: React.FC<NewPatientFormProps> = ({
+  onClose,
+  onSubmit,
+}) => {
   const createPatient = useMutation(api.patients.createPatient);
   const [formData, setFormData] = useState({
     // Owner information
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    birth_date: '',
-    idNumber: '', // DNI/NIE
-    language: '',
-    preferredContact: '',
-    couponCode: '',
-    affiliateClub: '',
-    address: 'Calle de Beatriz de Bobadilla, 9. Madrid',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    birthDate: "",
+    idNumber: "", // DNI/NIE
+    language: "",
+    preferredContact: "",
+    couponCode: "",
+    affiliateClub: "",
+    address: "Calle de Beatriz de Bobadilla, 9. Madrid",
 
     // Marketing and communications
     marketing: {
       signedAt: null,
       emailConsent: false,
       smsConsent: false,
-      whatsappConsent: false
+      whatsappConsent: false,
     },
 
     // PetPass information
     petPass: {
       hasPetPass: false,
-      product: '' // Changed from 'plan' to 'product' for clarity
+      product: "", // Changed from 'plan' to 'product' for clarity
     },
 
     // Additional services
@@ -45,24 +48,24 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
       wantsGrooming: false,
       wantsFoodDelivery: false,
       wantsHotelService: false,
-      wantsTraining: false
+      wantsTraining: false,
     },
 
     // Pet information
     pet: {
-      name: '',
-      species: '',
-      breed: '',
-      sex: '',
-      birthDate: '',
-      microchipNumber: '',
+      name: "",
+      species: "",
+      breed: "",
+      sex: "",
+      birthDate: "",
+      microchipNumber: "",
       isNeutered: false,
-      coatColor: '',
-      observations: '',
+      coatColor: "",
+      observations: "",
       hasInsurance: false,
-      insurerName: '',
-      policyNumber: ''
-    }
+      insurerName: "",
+      policyNumber: "",
+    },
   });
 
   const [expandedSections, setExpandedSections] = useState({
@@ -70,17 +73,17 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
     marketing: true,
     petPass: true,
     services: true,
-    pet: true
+    pet: true,
   });
 
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
+  const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
@@ -91,34 +94,36 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
   const handleVerifyOTP = () => {
     if (otpCode.length === 6) {
       setShowSignatureModal(false);
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         marketing: {
           ...prev.marketing,
-          signedAt: new Date().toISOString()
-        }
+          signedAt: new Date().toISOString(),
+        },
       }));
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
 
     // Handle nested object updates
-    if (name.includes('.')) {
-      const [section, field] = name.split('.');
-      setFormData(prev => ({
+    if (name.includes(".")) {
+      const [section, field] = name.split(".");
+      setFormData((prev) => ({
         ...prev,
         [section]: {
           ...prev[section],
-          [field]: type === 'checkbox' ? checked : value
-        }
+          [field]: type === "checkbox" ? checked : value,
+        },
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: type === 'checkbox' ? checked : value
+        [name]: type === "checkbox" ? checked : value,
       }));
     }
   };
@@ -131,60 +136,80 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
         lastName: formData.lastName,
         email: formData.email || undefined,
         phone: formData.phone || undefined,
-		birth_date: formData.birth_date || undefined,
+        birthDate: formData.birthDate || undefined,
         idNumber: formData.idNumber || undefined,
-		language: formData.language || undefined,
-		preferredContact: formData.preferredContact || undefined,
-		couponCode: formData.couponCode || undefined,
-		affiliateClub: formData.affiliateClub || undefined,
+        language: formData.language || undefined,
+        preferredContact: formData.preferredContact || undefined,
+        couponCode: formData.couponCode || undefined,
+        affiliateClub: formData.affiliateClub || undefined,
         address: formData.address || undefined,
-		marketing: formData.marketing ? {
-			signedAt: formData.marketing.signedAt || undefined,
-			emailConsent: formData.marketing.emailConsent || undefined,
-			smsConsent: formData.marketing.smsConsent || undefined,
-			whatsappConsent: formData.marketing.whatsappConsent || undefined
-		} : undefined,
-		petPass: formData.petPass ? {
-			hasPetPass: formData.petPass.hasPetPass || undefined,
-			product: formData.petPass.product || undefined
-		} : undefined,
-		services: formData.services ? {
-			wantsGrooming: formData.services.wantsGrooming || undefined,
-			wantsFoodDelivery: formData.services.wantsFoodDelivery || undefined,
-			wantsHotelService: formData.services.wantsHotelService || undefined,
-			wantsTraining: formData.services.wantsTraining || undefined
-		} : undefined,
-		pet: formData.pet ? {
-			name: formData.pet.name || undefined,
-			species: formData.pet.species || undefined,
-			breed: formData.pet.breed || undefined,
-			sex: formData.pet.sex || undefined,
-			birthDate: formData.pet.birthDate || undefined,
-			microchipNumber: formData.pet.microchipNumber || undefined,
-			isNeutered: formData.pet.isNeutered || undefined,
-			coatColor: formData.pet.coatColor || undefined,
-			observations: formData.pet.observations || undefined,
-			hasInsurance: formData.pet.hasInsurance || undefined,
-			insurerName: formData.pet.insurerName || undefined,
-			policyNumber: formData.pet.policyNumber || undefined
-		} : undefined,
+        marketing: formData.marketing
+          ? {
+              signedAt: formData.marketing.signedAt || undefined,
+              emailConsent: formData.marketing.emailConsent || undefined,
+              smsConsent: formData.marketing.smsConsent || undefined,
+              whatsappConsent: formData.marketing.whatsappConsent || undefined,
+            }
+          : undefined,
+        petPass: formData.petPass
+          ? {
+              hasPetPass: formData.petPass.hasPetPass || undefined,
+              product: formData.petPass.product || undefined,
+            }
+          : undefined,
+        services: formData.services
+          ? {
+              wantsGrooming: formData.services.wantsGrooming || undefined,
+              wantsFoodDelivery:
+                formData.services.wantsFoodDelivery || undefined,
+              wantsHotelService:
+                formData.services.wantsHotelService || undefined,
+              wantsTraining: formData.services.wantsTraining || undefined,
+            }
+          : undefined,
+        pet: formData.pet
+          ? {
+              name: formData.pet.name || undefined,
+              species: formData.pet.species || undefined,
+              breed: formData.pet.breed || undefined,
+              sex: formData.pet.sex || undefined,
+              birthDate: formData.pet.birthDate || undefined,
+              microchipNumber: formData.pet.microchipNumber || undefined,
+              isNeutered: formData.pet.isNeutered || undefined,
+              coatColor: formData.pet.coatColor || undefined,
+              observations: formData.pet.observations || undefined,
+              hasInsurance: formData.pet.hasInsurance || undefined,
+              insurerName: formData.pet.insurerName || undefined,
+              policyNumber: formData.pet.policyNumber || undefined,
+            }
+          : undefined,
       });
 
-      console.log('Paciente creado con ID:', patientId);
+      console.log("Paciente creado con ID:", patientId);
       onSubmit(formData);
       onClose();
     } catch (error) {
-      console.error('Error creando paciente:', error);
+      console.error("Error creando paciente:", error);
     }
   };
 
-  const SectionHeader = ({ title, section }: { title: string; section: string }) => (
+  const SectionHeader = ({
+    title,
+    section,
+  }: {
+    title: string;
+    section: string;
+  }) => (
     <div
       className="flex items-center justify-between bg-gray-50 p-4 rounded-t-lg cursor-pointer"
       onClick={() => toggleSection(section)}
     >
       <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-      {expandedSections[section] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+      {expandedSections[section] ? (
+        <ChevronDown size={20} />
+      ) : (
+        <ChevronRight size={20} />
+      )}
     </div>
   );
 
@@ -193,7 +218,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8">
         <div className="sticky top-0 z-10 bg-white rounded-t-lg border-b border-gray-200">
           <div className="flex justify-between items-center px-6 py-4">
-            <h2 className="text-xl font-semibold text-gray-900">Nuevo Paciente</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Nuevo Paciente
+            </h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500"
@@ -206,7 +233,10 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Owner Information Section */}
           <div className="border rounded-lg shadow-sm">
-            <SectionHeader title="Información del Propietario" section="owner" />
+            <SectionHeader
+              title="Información del Propietario"
+              section="owner"
+            />
             {expandedSections.owner && (
               <div className="p-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -259,8 +289,8 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                   <Input
                     label="Fecha de Nacimiento"
                     type="date"
-                    name="birth_date"
-                    value={formData.birth_date}
+                    name="birthDate"
+                    value={formData.birthDate}
                     onChange={handleChange}
                   />
                   <select
@@ -280,8 +310,11 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                     Método de contacto preferido
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {['phone', 'email', 'sms', 'whatsapp'].map(method => (
-                      <label key={method} className="flex items-center space-x-2">
+                    {["phone", "email", "sms", "whatsapp"].map((method) => (
+                      <label
+                        key={method}
+                        className="flex items-center space-x-2"
+                      >
                         <input
                           type="radio"
                           name="preferredContact"
@@ -290,7 +323,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                           onChange={handleChange}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                         />
-                        <span className="text-sm text-gray-700 capitalize">{method}</span>
+                        <span className="text-sm text-gray-700 capitalize">
+                          {method}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -395,7 +430,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                       onChange={handleChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="text-sm text-gray-700">Esterilizado/a</span>
+                    <span className="text-sm text-gray-700">
+                      Esterilizado/a
+                    </span>
                   </label>
                   <label className="flex items-center space-x-2">
                     <input
@@ -430,7 +467,10 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
 
           {/* Marketing Section */}
           <div className="border rounded-lg shadow-sm">
-            <SectionHeader title="Marketing y Comunicaciones" section="marketing" />
+            <SectionHeader
+              title="Marketing y Comunicaciones"
+              section="marketing"
+            />
             {expandedSections.marketing && (
               <div className="p-4 space-y-4">
                 <div className="space-y-2">
@@ -442,7 +482,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                       onChange={handleChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="text-sm text-gray-700">Acepto recibir comunicaciones por email</span>
+                    <span className="text-sm text-gray-700">
+                      Acepto recibir comunicaciones por email
+                    </span>
                   </label>
                   <label className="flex items-center space-x-2">
                     <input
@@ -452,7 +494,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                       onChange={handleChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="text-sm text-gray-700">Acepto recibir comunicaciones por SMS</span>
+                    <span className="text-sm text-gray-700">
+                      Acepto recibir comunicaciones por SMS
+                    </span>
                   </label>
                   <label className="flex items-center space-x-2">
                     <input
@@ -462,7 +506,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                       onChange={handleChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="text-sm text-gray-700">Acepto recibir comunicaciones por WhatsApp</span>
+                    <span className="text-sm text-gray-700">
+                      Acepto recibir comunicaciones por WhatsApp
+                    </span>
                   </label>
                 </div>
 
@@ -485,7 +531,8 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                         Autorización de Protección de Datos y Marketing
                       </h4>
                       <p className="mt-1 text-sm text-blue-700">
-                        Es necesario firmar la autorización para el tratamiento de datos personales y comunicaciones comerciales
+                        Es necesario firmar la autorización para el tratamiento
+                        de datos personales y comunicaciones comerciales
                       </p>
                       {!formData.marketing.signedAt && (
                         <Button
@@ -524,7 +571,8 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                         Tiene PetPass
                       </label>
                       <p className="mt-1 text-sm text-gray-500">
-                        Seleccione esta opción si el paciente cuenta con un plan PetPass
+                        Seleccione esta opción si el paciente cuenta con un plan
+                        PetPass
                       </p>
 
                       {formData.petPass.hasPetPass && (
@@ -548,22 +596,35 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
 
                           {formData.petPass.product && (
                             <div className="mt-2 p-2 bg-white rounded border border-gray-200 text-sm">
-                              {formData.petPass.product === 'track' && (
+                              {formData.petPass.product === "track" && (
                                 <div className="flex flex-col gap-1">
-                                  <span className="font-medium text-blue-600">PetPass Track</span>
-                                  <p className="text-gray-600">Seguimiento básico de la salud de tu mascota</p>
+                                  <span className="font-medium text-blue-600">
+                                    PetPass Track
+                                  </span>
+                                  <p className="text-gray-600">
+                                    Seguimiento básico de la salud de tu mascota
+                                  </p>
                                 </div>
                               )}
-                              {formData.petPass.product === 'protect' && (
+                              {formData.petPass.product === "protect" && (
                                 <div className="flex flex-col gap-1">
-                                  <span className="font-medium text-blue-600">PetPass Protect</span>
-                                  <p className="text-gray-600">Protección completa con servicios adicionales</p>
+                                  <span className="font-medium text-blue-600">
+                                    PetPass Protect
+                                  </span>
+                                  <p className="text-gray-600">
+                                    Protección completa con servicios
+                                    adicionales
+                                  </p>
                                 </div>
                               )}
-                              {formData.petPass.product === 'vetcare' && (
+                              {formData.petPass.product === "vetcare" && (
                                 <div className="flex flex-col gap-1">
-                                  <span className="font-medium text-blue-600">PetPass Vetcare</span>
-                                  <p className="text-gray-600">Cuidado veterinario integral y preventivo</p>
+                                  <span className="font-medium text-blue-600">
+                                    PetPass Vetcare
+                                  </span>
+                                  <p className="text-gray-600">
+                                    Cuidado veterinario integral y preventivo
+                                  </p>
                                 </div>
                               )}
                             </div>
@@ -590,7 +651,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                     onChange={handleChange}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <span className="text-sm text-gray-700">Servicio de Peluquería</span>
+                  <span className="text-sm text-gray-700">
+                    Servicio de Peluquería
+                  </span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input
@@ -600,7 +663,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                     onChange={handleChange}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <span className="text-sm text-gray-700">Servicio de Comida a Domicilio</span>
+                  <span className="text-sm text-gray-700">
+                    Servicio de Comida a Domicilio
+                  </span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input
@@ -610,7 +675,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                     onChange={handleChange}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <span className="text-sm text-gray-700">Servicio de Hotel para Viajes</span>
+                  <span className="text-sm text-gray-700">
+                    Servicio de Hotel para Viajes
+                  </span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input
@@ -620,7 +687,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                     onChange={handleChange}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <span className="text-sm text-gray-700">Servicio de Entrenamiento</span>
+                  <span className="text-sm text-gray-700">
+                    Servicio de Entrenamiento
+                  </span>
                 </label>
               </div>
             )}
@@ -635,7 +704,8 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
                 Firma Electrónica
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Para confirmar su autorización, recibirá un código OTP en su teléfono móvil.
+                Para confirmar su autorización, recibirá un código OTP en su
+                teléfono móvil.
               </p>
 
               {!otpSent ? (
@@ -684,18 +754,10 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({ onClose, onSubmit }) =>
         {/* Form Footer */}
         <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-lg">
           <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-            >
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              onClick={handleSubmit}
-            >
+            <Button type="submit" variant="primary" onClick={handleSubmit}>
               Guardar Paciente
             </Button>
           </div>
