@@ -1,4 +1,3 @@
-
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -11,11 +10,13 @@ export const createPatient = mutation({
     phone: v.string(),
     birthDate: v.string(),
     address: v.string(),
-    preferredContact: v.union(
-      v.literal("phone"),
-      v.literal("email"),
-      v.literal("whatsapp"),
-      v.literal("sms"),
+    preferredContact: v.optional(
+      v.union(
+        v.literal("phone"),
+        v.literal("email"),
+        v.literal("whatsapp"),
+        v.literal("sms"),
+      ),
     ),
     bankAccount: v.optional(v.string()),
     creditCard: v.optional(v.string()),
@@ -40,22 +41,24 @@ export const createPatient = mutation({
     insuranceNumber: v.optional(v.string()),
     medicalHistory: v.optional(v.array(v.string())),
     // Pet information (optional - will create pet if provided)
-    pet: v.optional(v.object({
-      name: v.string(),
-      species: v.string(),
-      breed: v.string(),
-      sex: v.union(v.literal("male"), v.literal("female")),
-      birthDate: v.string(),
-      isNeutered: v.boolean(),
-      microchipNumber: v.optional(v.string()),
-      color: v.optional(v.string()),
-      observations: v.optional(v.string()),
-    })),
+    pet: v.optional(
+      v.object({
+        name: v.string(),
+        species: v.string(),
+        breed: v.string(),
+        sex: v.union(v.literal("male"), v.literal("female")),
+        birthDate: v.string(),
+        isNeutered: v.boolean(),
+        microchipNumber: v.optional(v.string()),
+        color: v.optional(v.string()),
+        observations: v.optional(v.string()),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
     const { pet, ...patientData } = args;
-    
+
     // Create patient
     const patientId = await ctx.db.insert("patients", {
       ...patientData,
@@ -95,7 +98,7 @@ export const createPatient = mutation({
 export const getPatients = query({
   handler: async (ctx) => {
     const patients = await ctx.db.query("patients").order("desc").collect();
-    
+
     // Get pets for each patient
     const patientsWithPets = await Promise.all(
       patients.map(async (patient) => {
@@ -103,14 +106,14 @@ export const getPatients = query({
           .query("pets")
           .withIndex("by_patient", (q) => q.eq("patientId", patient._id))
           .collect();
-        
+
         return {
           ...patient,
           pets: pets,
           // For backward compatibility, include first pet as 'pet'
           pet: pets[0] || null,
         };
-      })
+      }),
     );
 
     return patientsWithPets;
@@ -145,7 +148,7 @@ export const getPatientByEmail = query({
       .query("patients")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
-    
+
     if (!patient) return null;
 
     const pets = await ctx.db
@@ -230,7 +233,7 @@ export const deletePatient = mutation({
       .query("pets")
       .withIndex("by_patient", (q) => q.eq("patientId", args.id))
       .collect();
-    
+
     for (const pet of pets) {
       await ctx.db.delete(pet._id);
     }

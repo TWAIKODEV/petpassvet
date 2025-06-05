@@ -138,11 +138,13 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
         phone: formData.phone,
         birthDate: formData.birthDate,
         address: formData.address,
-        preferredContact: formData.preferredContact as
-          | "phone"
-          | "email"
-          | "whatsapp"
-          | "sms",
+        preferredContact: formData.preferredContact
+          ? (formData.preferredContact as
+              | "phone"
+              | "email"
+              | "whatsapp"
+              | "sms")
+          : undefined,
         bankAccount: undefined,
         creditCard: undefined,
         marketing: {

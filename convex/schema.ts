@@ -64,11 +64,13 @@ export default defineSchema({
     phone: v.string(),
     birthDate: v.string(),
     address: v.string(),
-    preferredContact: v.union(
-      v.literal("phone"),
-      v.literal("email"),
-      v.literal("whatsapp"),
-      v.literal("sms"),
+    preferredContact: v.optional(
+      v.union(
+        v.literal("phone"),
+        v.literal("email"),
+        v.literal("whatsapp"),
+        v.literal("sms"),
+      ),
     ),
     bankAccount: v.optional(v.string()),
     creditCard: v.optional(v.string()),
