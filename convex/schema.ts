@@ -1,4 +1,3 @@
-
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
@@ -9,14 +8,29 @@ export default defineSchema({
     name: v.string(),
     description: v.string(),
     module: v.string(),
-    action: v.union(v.literal("view"), v.literal("create"), v.literal("edit"), v.literal("delete"), v.literal("manage")),
+    action: v.union(
+      v.literal("view"),
+      v.literal("create"),
+      v.literal("edit"),
+      v.literal("delete"),
+      v.literal("manage"),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_module", ["module"]).index("by_action", ["action"]),
+  })
+    .index("by_module", ["module"])
+    .index("by_action", ["action"]),
 
   userRoles: defineTable({
     id: v.string(),
-    name: v.union(v.literal("admin"), v.literal("manager"), v.literal("veterinarian"), v.literal("vet_assistant"), v.literal("receptionist"), v.literal("groomer")),
+    name: v.union(
+      v.literal("admin"),
+      v.literal("manager"),
+      v.literal("veterinarian"),
+      v.literal("vet_assistant"),
+      v.literal("receptionist"),
+      v.literal("groomer"),
+    ),
     displayName: v.string(),
     permissionIds: v.array(v.string()), // References to permission IDs
     isEditable: v.boolean(),
@@ -38,7 +52,10 @@ export default defineSchema({
     customPermissionIds: v.optional(v.array(v.string())), // Custom permissions override
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_email", ["email"]).index("by_role", ["roleId"]).index("by_status", ["status"]),
+  })
+    .index("by_email", ["email"])
+    .index("by_role", ["roleId"])
+    .index("by_status", ["status"]),
 
   patients: defineTable({
     firstName: v.string(),
@@ -47,17 +64,24 @@ export default defineSchema({
     phone: v.string(),
     birthDate: v.string(),
     address: v.string(),
-    preferredContact: v.union(v.literal("phone"), v.literal("email"), v.literal("whatsapp"), v.literal("sms")),
+    preferredContact: v.union(
+      v.literal("phone"),
+      v.literal("email"),
+      v.literal("whatsapp"),
+      v.literal("sms"),
+    ),
     bankAccount: v.optional(v.string()),
     creditCard: v.optional(v.string()),
     marketing: v.object({
-      acceptsDataProtection: v.boolean(),
-      acceptsEmailMarketing: v.boolean(),
-      acceptsWhatsAppComm: v.boolean(),
+      acceptsEmail: v.boolean(),
+      acceptsSms: v.boolean(),
+      acceptsWhatsApp: v.boolean(),
     }),
     petPass: v.object({
       hasPetPass: v.boolean(),
-      plan: v.optional(v.union(v.literal("track"), v.literal("protect"), v.literal("vetcare"))),
+      plan: v.optional(
+        v.union(v.literal("track"), v.literal("protect"), v.literal("vetcare")),
+      ),
     }),
     services: v.object({
       wantsGrooming: v.boolean(),
@@ -73,31 +97,41 @@ export default defineSchema({
       breed: v.string(),
       isNeutered: v.boolean(),
       microchipNumber: v.optional(v.string()),
-      vaccines: v.array(v.object({
-        name: v.string(),
-        date: v.string(),
-        nextDue: v.optional(v.string()),
-      })),
-      healthPlans: v.array(v.object({
-        name: v.string(),
-        startDate: v.string(),
-        endDate: v.string(),
-      })),
-      accidents: v.array(v.object({
-        date: v.string(),
-        description: v.string(),
-        treatment: v.string(),
-      })),
-      surgeries: v.array(v.object({
-        date: v.string(),
-        type: v.string(),
-        notes: v.string(),
-      })),
-      otherTests: v.array(v.object({
-        date: v.string(),
-        type: v.string(),
-        result: v.string(),
-      })),
+      vaccines: v.array(
+        v.object({
+          name: v.string(),
+          date: v.string(),
+          nextDue: v.optional(v.string()),
+        }),
+      ),
+      healthPlans: v.array(
+        v.object({
+          name: v.string(),
+          startDate: v.string(),
+          endDate: v.string(),
+        }),
+      ),
+      accidents: v.array(
+        v.object({
+          date: v.string(),
+          description: v.string(),
+          treatment: v.string(),
+        }),
+      ),
+      surgeries: v.array(
+        v.object({
+          date: v.string(),
+          type: v.string(),
+          notes: v.string(),
+        }),
+      ),
+      otherTests: v.array(
+        v.object({
+          date: v.string(),
+          type: v.string(),
+          result: v.string(),
+        }),
+      ),
     }),
     insuranceProvider: v.optional(v.string()),
     insuranceNumber: v.optional(v.string()),
@@ -115,11 +149,15 @@ export default defineSchema({
     weight: v.optional(v.number()),
     color: v.optional(v.string()),
     microchip: v.optional(v.string()),
-    vaccinations: v.optional(v.array(v.object({
-      vaccine: v.string(),
-      date: v.string(),
-      nextDue: v.string(),
-    }))),
+    vaccinations: v.optional(
+      v.array(
+        v.object({
+          vaccine: v.string(),
+          date: v.string(),
+          nextDue: v.string(),
+        }),
+      ),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_patient", ["patientId"]),
@@ -140,20 +178,39 @@ export default defineSchema({
       v.literal("dental"),
       v.literal("grooming"),
       v.literal("firstVisit"),
-      v.literal("procedure")
+      v.literal("procedure"),
     ),
-    consultationType: v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency")),
-    serviceType: v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("rehabilitation"), v.literal("hospitalization")),
+    consultationType: v.union(
+      v.literal("normal"),
+      v.literal("insurance"),
+      v.literal("emergency"),
+    ),
+    serviceType: v.union(
+      v.literal("veterinary"),
+      v.literal("grooming"),
+      v.literal("rehabilitation"),
+      v.literal("hospitalization"),
+    ),
     patientId: v.id("patients"),
     doctorId: v.string(),
     date: v.string(),
     time: v.string(),
     duration: v.number(),
-    status: v.union(v.literal("pending"), v.literal("confirmed"), v.literal("waiting"), v.literal("in_progress"), v.literal("completed"), v.literal("no_show"), v.literal("scheduled")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("confirmed"),
+      v.literal("waiting"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("no_show"),
+      v.literal("scheduled"),
+    ),
     notes: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_patient", ["patientId"]).index("by_date", ["date"]),
+  })
+    .index("by_patient", ["patientId"])
+    .index("by_date", ["date"]),
 
   doctors: defineTable({
     name: v.string(),
@@ -161,62 +218,90 @@ export default defineSchema({
     email: v.string(),
     phone: v.string(),
     schedule: v.object({
-      monday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
+      monday: v.optional(
+        v.object({
           start: v.string(),
           end: v.string(),
-        })),
-      })),
-      tuesday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
+          breaks: v.array(
+            v.object({
+              start: v.string(),
+              end: v.string(),
+            }),
+          ),
+        }),
+      ),
+      tuesday: v.optional(
+        v.object({
           start: v.string(),
           end: v.string(),
-        })),
-      })),
-      wednesday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
+          breaks: v.array(
+            v.object({
+              start: v.string(),
+              end: v.string(),
+            }),
+          ),
+        }),
+      ),
+      wednesday: v.optional(
+        v.object({
           start: v.string(),
           end: v.string(),
-        })),
-      })),
-      thursday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
+          breaks: v.array(
+            v.object({
+              start: v.string(),
+              end: v.string(),
+            }),
+          ),
+        }),
+      ),
+      thursday: v.optional(
+        v.object({
           start: v.string(),
           end: v.string(),
-        })),
-      })),
-      friday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
+          breaks: v.array(
+            v.object({
+              start: v.string(),
+              end: v.string(),
+            }),
+          ),
+        }),
+      ),
+      friday: v.optional(
+        v.object({
           start: v.string(),
           end: v.string(),
-        })),
-      })),
-      saturday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
+          breaks: v.array(
+            v.object({
+              start: v.string(),
+              end: v.string(),
+            }),
+          ),
+        }),
+      ),
+      saturday: v.optional(
+        v.object({
           start: v.string(),
           end: v.string(),
-        })),
-      })),
-      sunday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
+          breaks: v.array(
+            v.object({
+              start: v.string(),
+              end: v.string(),
+            }),
+          ),
+        }),
+      ),
+      sunday: v.optional(
+        v.object({
           start: v.string(),
           end: v.string(),
-        })),
-      })),
+          breaks: v.array(
+            v.object({
+              start: v.string(),
+              end: v.string(),
+            }),
+          ),
+        }),
+      ),
     }),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -227,29 +312,50 @@ export default defineSchema({
     patientId: v.id("patients"),
     amount: v.number(),
     date: v.string(),
-    method: v.union(v.literal("cash"), v.literal("credit"), v.literal("debit"), v.literal("insurance"), v.literal("other")),
-    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
-    insuranceClaim: v.optional(v.object({
-      provider: v.string(),
-      claimNumber: v.string(),
-      status: v.union(v.literal("submitted"), v.literal("processing"), v.literal("approved"), v.literal("denied")),
-      approvedAmount: v.optional(v.number()),
-    })),
+    method: v.union(
+      v.literal("cash"),
+      v.literal("credit"),
+      v.literal("debit"),
+      v.literal("insurance"),
+      v.literal("other"),
+    ),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("completed"),
+      v.literal("refunded"),
+    ),
+    insuranceClaim: v.optional(
+      v.object({
+        provider: v.string(),
+        claimNumber: v.string(),
+        status: v.union(
+          v.literal("submitted"),
+          v.literal("processing"),
+          v.literal("approved"),
+          v.literal("denied"),
+        ),
+        approvedAmount: v.optional(v.number()),
+      }),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_patient", ["patientId"]).index("by_appointment", ["appointmentId"]),
+  })
+    .index("by_patient", ["patientId"])
+    .index("by_appointment", ["appointmentId"]),
 
   prescriptions: defineTable({
     patientId: v.id("patients"),
     petId: v.optional(v.id("pets")),
     veterinarian: v.string(),
-    medications: v.array(v.object({
-      name: v.string(),
-      dosage: v.string(),
-      frequency: v.string(),
-      duration: v.string(),
-      instructions: v.optional(v.string()),
-    })),
+    medications: v.array(
+      v.object({
+        name: v.string(),
+        dosage: v.string(),
+        frequency: v.string(),
+        duration: v.string(),
+        instructions: v.optional(v.string()),
+      }),
+    ),
     diagnosis: v.optional(v.string()),
     notes: v.optional(v.string()),
     createdAt: v.number(),
@@ -292,13 +398,27 @@ export default defineSchema({
     tags: v.optional(v.array(v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_category", ["categoryId"]).index("by_sku", ["sku"]),
+  })
+    .index("by_category", ["categoryId"])
+    .index("by_sku", ["sku"]),
 
   // Campaigns with proper enums
   campaigns: defineTable({
     name: v.string(),
-    type: v.union(v.literal("email"), v.literal("social"), v.literal("web"), v.literal("event"), v.literal("referral"), v.literal("sem")),
-    status: v.union(v.literal("active"), v.literal("scheduled"), v.literal("completed"), v.literal("draft")),
+    type: v.union(
+      v.literal("email"),
+      v.literal("social"),
+      v.literal("web"),
+      v.literal("event"),
+      v.literal("referral"),
+      v.literal("sem"),
+    ),
+    status: v.union(
+      v.literal("active"),
+      v.literal("scheduled"),
+      v.literal("completed"),
+      v.literal("draft"),
+    ),
     startDate: v.string(),
     endDate: v.string(),
     budget: v.number(),
@@ -312,48 +432,62 @@ export default defineSchema({
     tags: v.optional(v.array(v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_status", ["status"]).index("by_type", ["type"]),
+  })
+    .index("by_status", ["status"])
+    .index("by_type", ["type"]),
 
   threads: defineTable({
-    channel: v.union(v.literal("whatsapp"), v.literal("facebook"), v.literal("instagram"), v.literal("email"), v.literal("sms")),
+    channel: v.union(
+      v.literal("whatsapp"),
+      v.literal("facebook"),
+      v.literal("instagram"),
+      v.literal("email"),
+      v.literal("sms"),
+    ),
     contact: v.object({
       id: v.string(),
       name: v.string(),
       handle: v.string(),
       avatar: v.optional(v.string()),
       isRegistered: v.boolean(),
-      clientDetails: v.optional(v.object({
-        id: v.string(),
-        pet: v.object({
-          name: v.string(),
-          species: v.string(),
-          breed: v.string(),
-          age: v.number(),
-          sex: v.union(v.literal("male"), v.literal("female")),
-        }),
-        lastVisit: v.string(),
-        nextVisit: v.optional(v.string()),
-        visits: v.number(),
-        petPass: v.boolean(),
-        healthPlan: v.optional(v.string()),
-        insurance: v.optional(v.object({
-          provider: v.string(),
-          number: v.string(),
-        })),
-        billing: v.object({
-          totalSpent: v.number(),
-          lastPayment: v.object({
-            amount: v.number(),
-            date: v.string(),
-            method: v.string(),
+      clientDetails: v.optional(
+        v.object({
+          id: v.string(),
+          pet: v.object({
+            name: v.string(),
+            species: v.string(),
+            breed: v.string(),
+            age: v.number(),
+            sex: v.union(v.literal("male"), v.literal("female")),
           }),
+          lastVisit: v.string(),
+          nextVisit: v.optional(v.string()),
+          visits: v.number(),
+          petPass: v.boolean(),
+          healthPlan: v.optional(v.string()),
+          insurance: v.optional(
+            v.object({
+              provider: v.string(),
+              number: v.string(),
+            }),
+          ),
+          billing: v.object({
+            totalSpent: v.number(),
+            lastPayment: v.object({
+              amount: v.number(),
+              date: v.string(),
+              method: v.string(),
+            }),
+          }),
+          prescriptions: v.array(
+            v.object({
+              date: v.string(),
+              medication: v.string(),
+              duration: v.string(),
+            }),
+          ),
         }),
-        prescriptions: v.array(v.object({
-          date: v.string(),
-          medication: v.string(),
-          duration: v.string(),
-        })),
-      })),
+      ),
     }),
     lastMessage: v.object({
       content: v.string(),
@@ -366,7 +500,13 @@ export default defineSchema({
   }).index("by_channel", ["channel"]),
 
   messages: defineTable({
-    channel: v.union(v.literal("whatsapp"), v.literal("facebook"), v.literal("instagram"), v.literal("email"), v.literal("sms")),
+    channel: v.union(
+      v.literal("whatsapp"),
+      v.literal("facebook"),
+      v.literal("instagram"),
+      v.literal("email"),
+      v.literal("sms"),
+    ),
     threadId: v.id("threads"),
     from: v.object({
       id: v.string(),
@@ -375,7 +515,12 @@ export default defineSchema({
     }),
     to: v.array(v.string()),
     timestamp: v.string(),
-    type: v.union(v.literal("text"), v.literal("image"), v.literal("file"), v.literal("voice")),
+    type: v.union(
+      v.literal("text"),
+      v.literal("image"),
+      v.literal("file"),
+      v.literal("voice"),
+    ),
     content: v.object({
       text: v.optional(v.string()),
       imageUrl: v.optional(v.string()),
@@ -383,10 +528,17 @@ export default defineSchema({
       fileName: v.optional(v.string()),
       voiceUrl: v.optional(v.string()),
     }),
-    status: v.union(v.literal("sent"), v.literal("delivered"), v.literal("read"), v.literal("unread")),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("read"),
+      v.literal("unread"),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_thread", ["threadId"]).index("by_channel", ["channel"]),
+  })
+    .index("by_thread", ["threadId"])
+    .index("by_channel", ["channel"]),
 
   // From Invoices.tsx
   invoices: defineTable({
@@ -394,13 +546,13 @@ export default defineSchema({
     date: v.string(),
     client: v.object({
       name: v.string(),
-      nif: v.string()
+      nif: v.string(),
     }),
     pet: v.object({
       name: v.string(),
       species: v.string(),
       breed: v.string(),
-      age: v.number()
+      age: v.number(),
     }),
     area: v.string(),
     concept: v.string(),
@@ -429,23 +581,29 @@ export default defineSchema({
     color: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_group", ["groupId"]).index("by_code", ["code"]),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_code", ["code"]),
 
   // Journal entries for ContaPlus
   journalEntries: defineTable({
     entryNumber: v.string(),
     date: v.string(),
     concept: v.string(),
-    debitEntries: v.array(v.object({
-      accountCode: v.string(),
-      accountName: v.string(),
-      amount: v.number(),
-    })),
-    creditEntries: v.array(v.object({
-      accountCode: v.string(),
-      accountName: v.string(),
-      amount: v.number(),
-    })),
+    debitEntries: v.array(
+      v.object({
+        accountCode: v.string(),
+        accountName: v.string(),
+        amount: v.number(),
+      }),
+    ),
+    creditEntries: v.array(
+      v.object({
+        accountCode: v.string(),
+        accountName: v.string(),
+        amount: v.number(),
+      }),
+    ),
     reference: v.string(),
     status: v.string(),
     type: v.string(),
@@ -454,30 +612,38 @@ export default defineSchema({
     checked: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_date", ["date"]).index("by_type", ["type"]),
+  })
+    .index("by_date", ["date"])
+    .index("by_type", ["type"]),
 
   // Balance sheet for ContaPlus
   balanceSheet: defineTable({
     period: v.string(),
     year: v.number(),
-    assets: v.array(v.object({
-      accountCode: v.string(),
-      accountName: v.string(),
-      amount: v.number(),
-      category: v.string(),
-    })),
-    liabilities: v.array(v.object({
-      accountCode: v.string(),
-      accountName: v.string(),
-      amount: v.number(),
-      category: v.string(),
-    })),
-    equity: v.array(v.object({
-      accountCode: v.string(),
-      accountName: v.string(),
-      amount: v.number(),
-      category: v.string(),
-    })),
+    assets: v.array(
+      v.object({
+        accountCode: v.string(),
+        accountName: v.string(),
+        amount: v.number(),
+        category: v.string(),
+      }),
+    ),
+    liabilities: v.array(
+      v.object({
+        accountCode: v.string(),
+        accountName: v.string(),
+        amount: v.number(),
+        category: v.string(),
+      }),
+    ),
+    equity: v.array(
+      v.object({
+        accountCode: v.string(),
+        accountName: v.string(),
+        amount: v.number(),
+        category: v.string(),
+      }),
+    ),
     totalAssets: v.number(),
     totalLiabilitiesEquity: v.number(),
     createdAt: v.number(),
@@ -493,7 +659,9 @@ export default defineSchema({
     year: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_period", ["period", "year"]).index("by_type", ["type"]),
+  })
+    .index("by_period", ["period", "year"])
+    .index("by_type", ["type"]),
 
   assets: defineTable({
     purchaseDate: v.string(),
@@ -543,10 +711,16 @@ export default defineSchema({
     date: v.string(),
     models: v.array(v.string()),
     description: v.string(),
-    status: v.union(v.literal("upcoming"), v.literal("completed"), v.literal("future")),
+    status: v.union(
+      v.literal("upcoming"),
+      v.literal("completed"),
+      v.literal("future"),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_date", ["date"]).index("by_status", ["status"]),
+  })
+    .index("by_date", ["date"])
+    .index("by_status", ["status"]),
 
   // Updated keyword suggestions with missing fields for WebDashboard
   keywordSuggestions: defineTable({
@@ -565,12 +739,14 @@ export default defineSchema({
   formData: defineTable({
     name: v.string(),
     location: v.string(),
-    fields: v.array(v.object({
-      name: v.string(),
-      type: v.string(),
-      required: v.boolean(),
-      label: v.string(),
-    })),
+    fields: v.array(
+      v.object({
+        name: v.string(),
+        type: v.string(),
+        required: v.boolean(),
+        label: v.string(),
+      }),
+    ),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -587,10 +763,16 @@ export default defineSchema({
       ipAddress: v.optional(v.string()),
       userAgent: v.optional(v.string()),
     }),
-    status: v.union(v.literal("new"), v.literal("processed"), v.literal("archived")),
+    status: v.union(
+      v.literal("new"),
+      v.literal("processed"),
+      v.literal("archived"),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_form", ["formDataId"]).index("by_status", ["status"]),
+  })
+    .index("by_form", ["formDataId"])
+    .index("by_status", ["status"]),
 
   competitors: defineTable({
     name: v.string(),
@@ -606,10 +788,12 @@ export default defineSchema({
     population: v.number(),
     petOwners: v.number(),
     averageIncome: v.string(),
-    ageGroups: v.array(v.object({
-      group: v.string(),
-      percentage: v.number()
-    })),
+    ageGroups: v.array(
+      v.object({
+        group: v.string(),
+        percentage: v.number(),
+      }),
+    ),
     area: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -632,5 +816,7 @@ export default defineSchema({
     notes: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_date", ["date"]).index("by_groomer", ["groomerId"]),
+  })
+    .index("by_date", ["date"])
+    .index("by_groomer", ["groomerId"]),
 });

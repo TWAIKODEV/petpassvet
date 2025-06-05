@@ -1,4 +1,3 @@
-
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -10,19 +9,25 @@ export const createPatient = mutation({
     email: v.string(),
     phone: v.string(),
     birthDate: v.string(),
-    gender: v.union(v.literal("male"), v.literal("female"), v.literal("other")),
     address: v.string(),
-    preferredContact: v.union(v.literal("phone"), v.literal("email"), v.literal("whatsapp"), v.literal("sms")),
+    preferredContact: v.union(
+      v.literal("phone"),
+      v.literal("email"),
+      v.literal("whatsapp"),
+      v.literal("sms"),
+    ),
     bankAccount: v.optional(v.string()),
     creditCard: v.optional(v.string()),
     marketing: v.object({
-      acceptsDataProtection: v.boolean(),
-      acceptsEmailMarketing: v.boolean(),
-      acceptsWhatsAppComm: v.boolean(),
+      acceptsEmail: v.boolean(),
+      acceptsSms: v.boolean(),
+      acceptsWhatsApp: v.boolean(),
     }),
     petPass: v.object({
       hasPetPass: v.boolean(),
-      plan: v.optional(v.union(v.literal("track"), v.literal("protect"), v.literal("vetcare"))),
+      plan: v.optional(
+        v.union(v.literal("track"), v.literal("protect"), v.literal("vetcare")),
+      ),
     }),
     services: v.object({
       wantsGrooming: v.boolean(),
@@ -38,31 +43,41 @@ export const createPatient = mutation({
       breed: v.string(),
       isNeutered: v.boolean(),
       microchipNumber: v.optional(v.string()),
-      vaccines: v.array(v.object({
-        name: v.string(),
-        date: v.string(),
-        nextDue: v.optional(v.string()),
-      })),
-      healthPlans: v.array(v.object({
-        name: v.string(),
-        startDate: v.string(),
-        endDate: v.string(),
-      })),
-      accidents: v.array(v.object({
-        date: v.string(),
-        description: v.string(),
-        treatment: v.string(),
-      })),
-      surgeries: v.array(v.object({
-        date: v.string(),
-        type: v.string(),
-        notes: v.string(),
-      })),
-      otherTests: v.array(v.object({
-        date: v.string(),
-        type: v.string(),
-        result: v.string(),
-      })),
+      vaccines: v.array(
+        v.object({
+          name: v.string(),
+          date: v.string(),
+          nextDue: v.optional(v.string()),
+        }),
+      ),
+      healthPlans: v.array(
+        v.object({
+          name: v.string(),
+          startDate: v.string(),
+          endDate: v.string(),
+        }),
+      ),
+      accidents: v.array(
+        v.object({
+          date: v.string(),
+          description: v.string(),
+          treatment: v.string(),
+        }),
+      ),
+      surgeries: v.array(
+        v.object({
+          date: v.string(),
+          type: v.string(),
+          notes: v.string(),
+        }),
+      ),
+      otherTests: v.array(
+        v.object({
+          date: v.string(),
+          type: v.string(),
+          result: v.string(),
+        }),
+      ),
     }),
     insuranceProvider: v.optional(v.string()),
     insuranceNumber: v.optional(v.string()),
@@ -114,60 +129,90 @@ export const updatePatient = mutation({
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
     birthDate: v.optional(v.string()),
-    gender: v.optional(v.union(v.literal("male"), v.literal("female"), v.literal("other"))),
     address: v.optional(v.string()),
-    preferredContact: v.optional(v.union(v.literal("phone"), v.literal("email"), v.literal("whatsapp"), v.literal("sms"))),
+    preferredContact: v.optional(
+      v.union(
+        v.literal("phone"),
+        v.literal("email"),
+        v.literal("whatsapp"),
+        v.literal("sms"),
+      ),
+    ),
     bankAccount: v.optional(v.string()),
     creditCard: v.optional(v.string()),
-    marketing: v.optional(v.object({
-      acceptsDataProtection: v.boolean(),
-      acceptsEmailMarketing: v.boolean(),
-      acceptsWhatsAppComm: v.boolean(),
-    })),
-    petPass: v.optional(v.object({
-      hasPetPass: v.boolean(),
-      plan: v.optional(v.union(v.literal("track"), v.literal("protect"), v.literal("vetcare"))),
-    })),
-    services: v.optional(v.object({
-      wantsGrooming: v.boolean(),
-      wantsFoodDelivery: v.boolean(),
-      wantsHotelService: v.boolean(),
-      wantsTraining: v.boolean(),
-    })),
-    pet: v.optional(v.object({
-      name: v.string(),
-      species: v.string(),
-      sex: v.union(v.literal("male"), v.literal("female")),
-      birthDate: v.string(),
-      breed: v.string(),
-      isNeutered: v.boolean(),
-      microchipNumber: v.optional(v.string()),
-      vaccines: v.array(v.object({
+    marketing: v.optional(
+      v.object({
+        acceptsEmail: v.boolean(),
+        acceptsSms: v.boolean(),
+        acceptsWhatsApp: v.boolean(),
+      }),
+    ),
+    petPass: v.optional(
+      v.object({
+        hasPetPass: v.boolean(),
+        plan: v.optional(
+          v.union(
+            v.literal("track"),
+            v.literal("protect"),
+            v.literal("vetcare"),
+          ),
+        ),
+      }),
+    ),
+    services: v.optional(
+      v.object({
+        wantsGrooming: v.boolean(),
+        wantsFoodDelivery: v.boolean(),
+        wantsHotelService: v.boolean(),
+        wantsTraining: v.boolean(),
+      }),
+    ),
+    pet: v.optional(
+      v.object({
         name: v.string(),
-        date: v.string(),
-        nextDue: v.optional(v.string()),
-      })),
-      healthPlans: v.array(v.object({
-        name: v.string(),
-        startDate: v.string(),
-        endDate: v.string(),
-      })),
-      accidents: v.array(v.object({
-        date: v.string(),
-        description: v.string(),
-        treatment: v.string(),
-      })),
-      surgeries: v.array(v.object({
-        date: v.string(),
-        type: v.string(),
-        notes: v.string(),
-      })),
-      otherTests: v.array(v.object({
-        date: v.string(),
-        type: v.string(),
-        result: v.string(),
-      })),
-    })),
+        species: v.string(),
+        sex: v.union(v.literal("male"), v.literal("female")),
+        birthDate: v.string(),
+        breed: v.string(),
+        isNeutered: v.boolean(),
+        microchipNumber: v.optional(v.string()),
+        vaccines: v.array(
+          v.object({
+            name: v.string(),
+            date: v.string(),
+            nextDue: v.optional(v.string()),
+          }),
+        ),
+        healthPlans: v.array(
+          v.object({
+            name: v.string(),
+            startDate: v.string(),
+            endDate: v.string(),
+          }),
+        ),
+        accidents: v.array(
+          v.object({
+            date: v.string(),
+            description: v.string(),
+            treatment: v.string(),
+          }),
+        ),
+        surgeries: v.array(
+          v.object({
+            date: v.string(),
+            type: v.string(),
+            notes: v.string(),
+          }),
+        ),
+        otherTests: v.array(
+          v.object({
+            date: v.string(),
+            type: v.string(),
+            result: v.string(),
+          }),
+        ),
+      }),
+    ),
     insuranceProvider: v.optional(v.string()),
     insuranceNumber: v.optional(v.string()),
     medicalHistory: v.optional(v.array(v.string())),

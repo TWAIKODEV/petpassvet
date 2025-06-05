@@ -145,15 +145,14 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
         address: formData.address || undefined,
         marketing: formData.marketing
           ? {
-              signedAt: formData.marketing.signedAt || undefined,
-              emailConsent: formData.marketing.emailConsent || undefined,
-              smsConsent: formData.marketing.smsConsent || undefined,
-              whatsappConsent: formData.marketing.whatsappConsent || undefined,
+              acceptsEmail: formData.marketing.emailConsent || false,
+              acceptsSms: formData.marketing.smsConsent || false,
+              acceptsWhatsApp: formData.marketing.whatsappConsent || false,
             }
           : undefined,
         petPass: formData.petPass
           ? {
-              hasPetPass: formData.petPass.hasPetPass || undefined,
+              hasPetPass: formData.petPass.hasPetPass || false,
               product: formData.petPass.product || undefined,
             }
           : undefined,
