@@ -16,7 +16,7 @@ interface AppointmentListProps {
 }
 
 const AppointmentList: React.FC<AppointmentListProps> = ({ 
-  appointments, 
+  appointments,
   patients, 
   doctors, 
   title = "Próximas Citas", 
