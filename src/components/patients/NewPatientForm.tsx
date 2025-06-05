@@ -146,17 +146,15 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
         bankAccount: undefined,
         creditCard: undefined,
         marketing: {
-          acceptsEmail: formData.marketing.emailConsent || false,
-          acceptsSms: formData.marketing.smsConsent || false,
-          acceptsWhatsApp: formData.marketing.whatsappConsent || false,
+          acceptsDataProtection: formData.marketing.emailConsent || false,
+          acceptsEmailMarketing: formData.marketing.smsConsent || false,
+          acceptsWhatsAppComm: formData.marketing.whatsappConsent || false,
         },
         petPass: {
           hasPetPass: formData.petPass.hasPetPass || false,
-          plan: formData.petPass.product as
-            | "track"
-            | "protect"
-            | "vetcare"
-            | undefined,
+          plan: formData.petPass.hasPetPass && formData.petPass.product 
+            ? formData.petPass.product as "track" | "protect" | "vetcare"
+            : undefined,
         },
         services: {
           wantsGrooming: formData.services.wantsGrooming || false,
