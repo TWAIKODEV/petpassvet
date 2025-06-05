@@ -138,7 +138,11 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
         phone: formData.phone,
         birthDate: formData.birthDate,
         address: formData.address,
-        preferredContact: formData.preferredContact as 'phone' | 'email' | 'whatsapp' | 'sms',
+        preferredContact: formData.preferredContact as
+          | "phone"
+          | "email"
+          | "whatsapp"
+          | "sms",
         bankAccount: undefined,
         creditCard: undefined,
         marketing: {
@@ -148,7 +152,11 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
         },
         petPass: {
           hasPetPass: formData.petPass.hasPetPass || false,
-          plan: formData.petPass.product as 'track' | 'protect' | 'vetcare' | undefined,
+          plan: formData.petPass.product as
+            | "track"
+            | "protect"
+            | "vetcare"
+            | undefined,
         },
         services: {
           wantsGrooming: formData.services.wantsGrooming || false,
@@ -156,8 +164,12 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
           wantsHotelService: formData.services.wantsHotelService || false,
           wantsTraining: formData.services.wantsTraining || false,
         },
-        insuranceProvider: formData.pet.hasInsurance ? formData.pet.insurerName : undefined,
-        insuranceNumber: formData.pet.hasInsurance ? formData.pet.policyNumber : undefined,
+        insuranceProvider: formData.pet.hasInsurance
+          ? formData.pet.insurerName
+          : undefined,
+        insuranceNumber: formData.pet.hasInsurance
+          ? formData.pet.policyNumber
+          : undefined,
         medicalHistory: undefined,
       };
 
@@ -166,9 +178,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
         patientData.pet = {
           name: formData.pet.name,
           species: formData.pet.species,
-          breed: formData.pet.breed || '',
-          sex: formData.pet.sex as 'male' | 'female',
-          birthDate: formData.pet.birthDate || '',
+          breed: formData.pet.breed || "",
+          sex: formData.pet.sex as "male" | "female",
+          birthDate: formData.pet.birthDate || "",
           isNeutered: formData.pet.isNeutered || false,
           microchipNumber: formData.pet.microchipNumber,
           color: formData.pet.coatColor,
@@ -580,7 +592,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                               onChange={handleChange}
                               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white"
                             >
-                              <option value="">Seleccionar producto</option>
+                              <option value="undefined">
+                                Seleccionar producto
+                              </option>
                               <option value="track">PetPass Track</option>
                               <option value="protect">PetPass Protect</option>
                               <option value="vetcare">PetPass Vetcare</option>
