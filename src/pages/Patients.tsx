@@ -34,7 +34,7 @@ const Patients: React.FC = () => {
         .includes(searchTerm.toLowerCase()) ||
       patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.phone.includes(searchTerm) ||
-      patient.pet.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      (patient.pet && patient.pet.name.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   const handleNewPatient = async (patientData: any) => {
@@ -185,19 +185,26 @@ const Patients: React.FC = () => {
                         <div className="text-sm text-gray-500">
                           {new Date(patient.birthDate).toLocaleDateString(
                             "es-ES",
-                          )}{" "}
-                          • {patient.gender === "female" ? "F" : "M"}
+                          )}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {patient.pet.name}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {patient.pet.species} • {patient.pet.breed}
-                    </div>
+                    {patient.pet ? (
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {patient.pet.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {patient.pet.species} • {patient.pet.breed}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        Sin mascota registrada
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{patient.email}</div>
@@ -478,80 +485,87 @@ const Patients: React.FC = () => {
                     <h3 className="text-lg font-medium text-gray-900 mb-4">
                       Información de la Mascota
                     </h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Nombre
-                          </label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                            {selectedPatient.pet.name}
-                          </p>
+                    {selectedPatient.pet ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Nombre
+                            </label>
+                            <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              {selectedPatient.pet.name}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Especie
+                            </label>
+                            <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              {selectedPatient.pet.species}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Especie
-                          </label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                            {selectedPatient.pet.species}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Raza
-                          </label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                            {selectedPatient.pet.breed}
-                          </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Raza
+                            </label>
+                            <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              {selectedPatient.pet.breed}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Sexo
+                            </label>
+                            <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              {selectedPatient.pet.sex === "male"
+                                ? "Macho"
+                                : "Hembra"}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Sexo
-                          </label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                            {selectedPatient.pet.sex === "male"
-                              ? "Macho"
-                              : "Hembra"}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Fecha de Nacimiento
-                          </label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                            {new Date(
-                              selectedPatient.pet.birthDate,
-                            ).toLocaleDateString("es-ES")}
-                          </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Fecha de Nacimiento
+                            </label>
+                            <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              {selectedPatient.pet.birthDate ? 
+                                new Date(selectedPatient.pet.birthDate).toLocaleDateString("es-ES") :
+                                "No registrada"
+                              }
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Microchip
+                            </label>
+                            <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              {selectedPatient.pet.microchipNumber ||
+                                "No registrado"}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Microchip
-                          </label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                            {selectedPatient.pet.microchipNumber ||
-                              "No registrado"}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Estado
-                        </label>
-                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                          {selectedPatient.pet.isNeutered
-                            ? "Esterilizado/a"
-                            : "No esterilizado/a"}
-                        </p>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Estado
+                          </label>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                            {selectedPatient.pet.isNeutered
+                              ? "Esterilizado/a"
+                              : "No esterilizado/a"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">No hay mascota registrada para este paciente</p>
+                      </div>
+                    )}
                   </div>
 
                   <div>

@@ -89,50 +89,6 @@ export default defineSchema({
       wantsHotelService: v.boolean(),
       wantsTraining: v.boolean(),
     }),
-    pet: v.object({
-      name: v.string(),
-      species: v.string(),
-      sex: v.union(v.literal("male"), v.literal("female")),
-      birthDate: v.string(),
-      breed: v.string(),
-      isNeutered: v.boolean(),
-      microchipNumber: v.optional(v.string()),
-      vaccines: v.array(
-        v.object({
-          name: v.string(),
-          date: v.string(),
-          nextDue: v.optional(v.string()),
-        }),
-      ),
-      healthPlans: v.array(
-        v.object({
-          name: v.string(),
-          startDate: v.string(),
-          endDate: v.string(),
-        }),
-      ),
-      accidents: v.array(
-        v.object({
-          date: v.string(),
-          description: v.string(),
-          treatment: v.string(),
-        }),
-      ),
-      surgeries: v.array(
-        v.object({
-          date: v.string(),
-          type: v.string(),
-          notes: v.string(),
-        }),
-      ),
-      otherTests: v.array(
-        v.object({
-          date: v.string(),
-          type: v.string(),
-          result: v.string(),
-        }),
-      ),
-    }),
     insuranceProvider: v.optional(v.string()),
     insuranceNumber: v.optional(v.string()),
     medicalHistory: v.optional(v.array(v.string())),
@@ -144,19 +100,48 @@ export default defineSchema({
     patientId: v.id("patients"),
     name: v.string(),
     species: v.string(),
-    breed: v.optional(v.string()),
-    age: v.optional(v.number()),
-    weight: v.optional(v.number()),
+    breed: v.string(),
+    sex: v.union(v.literal("male"), v.literal("female")),
+    birthDate: v.string(),
+    isNeutered: v.boolean(),
+    microchipNumber: v.optional(v.string()),
     color: v.optional(v.string()),
-    microchip: v.optional(v.string()),
-    vaccinations: v.optional(
-      v.array(
-        v.object({
-          vaccine: v.string(),
-          date: v.string(),
-          nextDue: v.string(),
-        }),
-      ),
+    weight: v.optional(v.number()),
+    observations: v.optional(v.string()),
+    vaccines: v.array(
+      v.object({
+        name: v.string(),
+        date: v.string(),
+        nextDue: v.optional(v.string()),
+      }),
+    ),
+    healthPlans: v.array(
+      v.object({
+        name: v.string(),
+        startDate: v.string(),
+        endDate: v.string(),
+      }),
+    ),
+    accidents: v.array(
+      v.object({
+        date: v.string(),
+        description: v.string(),
+        treatment: v.string(),
+      }),
+    ),
+    surgeries: v.array(
+      v.object({
+        date: v.string(),
+        type: v.string(),
+        notes: v.string(),
+      }),
+    ),
+    otherTests: v.array(
+      v.object({
+        date: v.string(),
+        type: v.string(),
+        result: v.string(),
+      }),
     ),
     createdAt: v.number(),
     updatedAt: v.number(),

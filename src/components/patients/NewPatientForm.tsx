@@ -131,58 +131,52 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const patientId = await createPatient({
+      const patientData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        email: formData.email || undefined,
-        phone: formData.phone || undefined,
-        birthDate: formData.birthDate || undefined,
-        idNumber: formData.idNumber || undefined,
-        language: formData.language || undefined,
-        preferredContact: formData.preferredContact || undefined,
-        couponCode: formData.couponCode || undefined,
-        affiliateClub: formData.affiliateClub || undefined,
-        address: formData.address || undefined,
-        marketing: formData.marketing
-          ? {
-              acceptsEmail: formData.marketing.emailConsent || false,
-              acceptsSms: formData.marketing.smsConsent || false,
-              acceptsWhatsApp: formData.marketing.whatsappConsent || false,
-            }
-          : undefined,
-        petPass: formData.petPass
-          ? {
-              hasPetPass: formData.petPass.hasPetPass || false,
-              product: formData.petPass.product || undefined,
-            }
-          : undefined,
-        services: formData.services
-          ? {
-              wantsGrooming: formData.services.wantsGrooming || undefined,
-              wantsFoodDelivery:
-                formData.services.wantsFoodDelivery || undefined,
-              wantsHotelService:
-                formData.services.wantsHotelService || undefined,
-              wantsTraining: formData.services.wantsTraining || undefined,
-            }
-          : undefined,
-        pet: formData.pet
-          ? {
-              name: formData.pet.name || undefined,
-              species: formData.pet.species || undefined,
-              breed: formData.pet.breed || undefined,
-              sex: formData.pet.sex || undefined,
-              birthDate: formData.pet.birthDate || undefined,
-              microchipNumber: formData.pet.microchipNumber || undefined,
-              isNeutered: formData.pet.isNeutered || undefined,
-              coatColor: formData.pet.coatColor || undefined,
-              observations: formData.pet.observations || undefined,
-              hasInsurance: formData.pet.hasInsurance || undefined,
-              insurerName: formData.pet.insurerName || undefined,
-              policyNumber: formData.pet.policyNumber || undefined,
-            }
-          : undefined,
-      });
+        email: formData.email,
+        phone: formData.phone,
+        birthDate: formData.birthDate,
+        address: formData.address,
+        preferredContact: formData.preferredContact as 'phone' | 'email' | 'whatsapp' | 'sms',
+        bankAccount: undefined,
+        creditCard: undefined,
+        marketing: {
+          acceptsEmail: formData.marketing.emailConsent || false,
+          acceptsSms: formData.marketing.smsConsent || false,
+          acceptsWhatsApp: formData.marketing.whatsappConsent || false,
+        },
+        petPass: {
+          hasPetPass: formData.petPass.hasPetPass || false,
+          plan: formData.petPass.product as 'track' | 'protect' | 'vetcare' | undefined,
+        },
+        services: {
+          wantsGrooming: formData.services.wantsGrooming || false,
+          wantsFoodDelivery: formData.services.wantsFoodDelivery || false,
+          wantsHotelService: formData.services.wantsHotelService || false,
+          wantsTraining: formData.services.wantsTraining || false,
+        },
+        insuranceProvider: formData.pet.hasInsurance ? formData.pet.insurerName : undefined,
+        insuranceNumber: formData.pet.hasInsurance ? formData.pet.policyNumber : undefined,
+        medicalHistory: undefined,
+      };
+
+      // Add pet data if provided
+      if (formData.pet.name && formData.pet.species) {
+        patientData.pet = {
+          name: formData.pet.name,
+          species: formData.pet.species,
+          breed: formData.pet.breed || '',
+          sex: formData.pet.sex as 'male' | 'female',
+          birthDate: formData.pet.birthDate || '',
+          isNeutered: formData.pet.isNeutered || false,
+          microchipNumber: formData.pet.microchipNumber,
+          color: formData.pet.coatColor,
+          observations: formData.pet.observations,
+        };
+      }
+
+      const patientId = await createPatient(patientData);
 
       console.log("Paciente creado con ID:", patientId);
       onSubmit(formData);
