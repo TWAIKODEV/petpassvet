@@ -4,8 +4,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import NewPatientForm from '../components/patients/NewPatientForm';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { mockPatients } from '../data/mockData';
 
 const Patients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,11 +12,7 @@ const Patients: React.FC = () => {
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
 
-  // Fetch patients from Convex
-  const patients = useQuery(api.patients.getPatients) || [];
-  const deletePatient = useMutation(api.patients.deletePatient);
-
-  const filteredPatients = patients.filter(patient => 
+  const filteredPatients = mockPatients.filter(patient => 
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.phone.includes(searchTerm) ||
@@ -32,16 +27,6 @@ const Patients: React.FC = () => {
 
   const handleViewPatientDetails = (patient: any) => {
     setSelectedPatient(patient);
-  };
-
-  const handleDeletePatient = async (patientId: string) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este paciente?')) {
-      try {
-        await deletePatient({ id: patientId as any });
-      } catch (error) {
-        console.error('Error deleting patient:', error);
-      }
-    }
   };
 
   return (
@@ -210,12 +195,6 @@ const Patients: React.FC = () => {
                       >
                         <Download size={18} />
                       </button>
-                      <button
-                        onClick={() => handleDeletePatient(patient._id)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Eliminar"
-                      >
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -223,7 +202,7 @@ const Patients: React.FC = () => {
             </tbody>
           </table>
         </div>
-
+        
         {filteredPatients.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-2">
@@ -294,7 +273,7 @@ const Patients: React.FC = () => {
                 </svg>
               </button>
             </div>
-
+            
             <div className="overflow-y-auto p-6 flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Owner Information */}
@@ -314,29 +293,29 @@ const Patients: React.FC = () => {
                           </p>
                         </div>
                       </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Email</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPatient.email}</p>
                       </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Teléfono</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPatient.phone}</p>
                       </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Dirección</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPatient.address}</p>
                       </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Contacto Preferido</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200 capitalize">{selectedPatient.preferredContact}</p>
                       </div>
                     </div>
                   </div>
-
+                  
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Marketing y Comunicaciones</h3>
                     <div className="space-y-2">
@@ -355,7 +334,7 @@ const Patients: React.FC = () => {
                     </div>
                   </div>
                 </div>
-
+                
                 {/* Pet Information */}
                 <div className="space-y-6">
                   <div>
@@ -371,7 +350,7 @@ const Patients: React.FC = () => {
                           <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPatient.pet.species}</p>
                         </div>
                       </div>
-
+                      
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Raza</label>
@@ -384,7 +363,7 @@ const Patients: React.FC = () => {
                           </p>
                         </div>
                       </div>
-
+                      
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
@@ -399,7 +378,7 @@ const Patients: React.FC = () => {
                           </p>
                         </div>
                       </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Estado</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
@@ -408,7 +387,7 @@ const Patients: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
+                  
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Planes y Seguros</h3>
                     <div className="space-y-4">
@@ -418,7 +397,7 @@ const Patients: React.FC = () => {
                           {selectedPatient.petPass.hasPetPass ? `Activo - Plan ${selectedPatient.petPass.plan || 'Básico'}` : 'No tiene'}
                         </p>
                       </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Seguro</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
@@ -427,7 +406,7 @@ const Patients: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
+                  
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Servicios Adicionales</h3>
                     <div className="space-y-2">
@@ -451,7 +430,7 @@ const Patients: React.FC = () => {
                   </div>
                 </div>
               </div>
-
+              
               {selectedPatient.medicalHistory && selectedPatient.medicalHistory.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Historial Médico</h3>
@@ -463,7 +442,7 @@ const Patients: React.FC = () => {
                 </div>
               )}
             </div>
-
+            
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
               <Button
                 variant="outline"
