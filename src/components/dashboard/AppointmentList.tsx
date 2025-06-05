@@ -8,7 +8,6 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 interface AppointmentListProps {
-  appointments: Appointment[];
   patients: Patient[];
   doctors: Doctor[];
   title?: string;
@@ -16,7 +15,6 @@ interface AppointmentListProps {
 }
 
 const AppointmentList: React.FC<AppointmentListProps> = ({ 
-  appointments,
   patients, 
   doctors, 
   title = "Próximas Citas", 
@@ -163,10 +161,6 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   };
 
   const appointments = useQuery(api.appointments.getAppointments) || [];
-  const todayAppointments = appointments.filter(appointment => {
-    const today = new Date().toISOString().split('T')[0];
-    return appointment.date === today;
-  });
 
   return (
     <Card title={title} icon={<Calendar size={20} />}>
