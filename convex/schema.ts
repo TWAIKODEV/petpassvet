@@ -239,39 +239,6 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_patient", ["patientId"]).index("by_appointment", ["appointmentId"]),
 
-  users: defineTable({
-    name: v.string(),
-    email: v.string(),
-    phone: v.string(),
-    role: v.object({
-      id: v.string(),
-      name: v.union(v.literal("admin"), v.literal("manager"), v.literal("veterinarian"), v.literal("vet_assistant"), v.literal("receptionist"), v.literal("groomer")),
-      displayName: v.string(),
-      permissions: v.array(v.object({
-        id: v.string(),
-        name: v.string(),
-        description: v.string(),
-        module: v.string(),
-        action: v.union(v.literal("view"), v.literal("create"), v.literal("edit"), v.literal("delete"), v.literal("manage")),
-      })),
-      isEditable: v.boolean(),
-    }),
-    department: v.string(),
-    position: v.string(),
-    status: v.union(v.literal("active"), v.literal("inactive")),
-    lastLogin: v.optional(v.string()),
-    avatar: v.optional(v.string()),
-    customPermissions: v.optional(v.array(v.object({
-      id: v.string(),
-      name: v.string(),
-      description: v.string(),
-      module: v.string(),
-      action: v.union(v.literal("view"), v.literal("create"), v.literal("edit"), v.literal("delete"), v.literal("manage")),
-    }))),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_email", ["email"]),
-
   prescriptions: defineTable({
     patientId: v.id("patients"),
     petId: v.optional(v.id("pets")),
