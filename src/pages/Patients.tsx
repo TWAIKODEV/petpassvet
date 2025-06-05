@@ -4,7 +4,8 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import NewPatientForm from '../components/patients/NewPatientForm';
-import { mockPatients } from '../data/mockData';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 const Patients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,17 +13,24 @@ const Patients: React.FC = () => {
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
 
-  const filteredPatients = mockPatients.filter(patient => 
+  // Get patients from Convex
+  const patients = useQuery(api.patients.getPatients) || [];
+  const createPatient = useMutation(api.patients.createPatient);
+
+  const filteredPatients = patients.filter(patient => 
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.phone.includes(searchTerm) ||
     patient.pet.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleNewPatient = (patientData: any) => {
-    // Here you would typically make an API call to save the new patient
-    console.log('New patient data:', patientData);
-    setShowNewPatientForm(false);
+  const handleNewPatient = async (patientData: any) => {
+    try {
+      await createPatient(patientData);
+      setShowNewPatientForm(false);
+    } catch (error) {
+      console.error('Error creating patient:', error);
+    }
   };
 
   const handleViewPatientDetails = (patient: any) => {

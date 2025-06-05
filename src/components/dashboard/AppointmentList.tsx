@@ -4,6 +4,8 @@ import Card from '../common/Card';
 import Button from '../common/Button';
 import { Appointment, Patient, Doctor } from '../../types';
 import PetHistoryModal from './PetHistoryModal';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 interface AppointmentListProps {
   appointments: Appointment[];
@@ -25,7 +27,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   // Get patient and doctor info for each appointment
   const getPatientById = (id: string) => patients.find(patient => patient.id === id);
   const getDoctorById = (id: string) => doctors.find(doctor => doctor.id === id);
-  
+
   // Status indicator styles with background opacity for better readability
   const statusStyles = {
     'pending': 'bg-orange-100 text-orange-800 hover:bg-orange-200',
@@ -35,7 +37,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
     'completed': 'bg-green-100 text-green-800 hover:bg-green-200',
     'no_show': 'bg-red-100 text-red-800 hover:bg-red-200'
   };
-  
+
   // Status labels in Spanish
   const statusLabels = {
     'pending': 'Pte Confirmación',
@@ -156,19 +158,25 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
         }
       ]
     };
-    
+
     setSelectedPet(mockPet);
   };
-  
+
+  const appointments = useQuery(api.appointments.getAppointments) || [];
+  const todayAppointments = appointments.filter(appointment => {
+    const today = new Date().toISOString().split('T')[0];
+    return appointment.date === today;
+  });
+
   return (
     <Card title={title} icon={<Calendar size={20} />}>
       <div className="divide-y divide-gray-200">
         {appointments.slice(0, limit).map((appointment) => {
           const patient = getPatientById(appointment.patientId);
           const doctor = getDoctorById(appointment.doctorId);
-          
+
           if (!patient || !doctor) return null;
-          
+
           return (
             <div key={appointment.id} className="py-4 first:pt-0 last:pb-0">
               <div className="flex justify-between items-start">
@@ -232,7 +240,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-2 flex items-center text-xs text-gray-500">
                 <User size={14} className="mr-1" />
                 <span>Dr. {doctor.name.split(' ')[doctor.name.split(' ').length - 1]}</span>
@@ -249,7 +257,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
                 <Clock size={14} className="mr-1" />
                 <span>{appointment.time} ({appointment.duration} min)</span>
               </div>
-              
+
               {appointment.notes && (
                 <p className="mt-2 text-xs text-gray-600 italic">"{appointment.notes}"</p>
               )}
@@ -280,12 +288,12 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
             </div>
           );
         })}
-        
+
         {appointments.length === 0 && (
           <p className="py-4 text-sm text-gray-500 text-center">No hay citas programadas.</p>
         )}
       </div>
-      
+
       {appointments.length > limit && (
         <div className="mt-4 text-center">
           <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
