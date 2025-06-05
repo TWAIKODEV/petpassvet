@@ -148,8 +148,8 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
         bankAccount: undefined,
         creditCard: undefined,
         marketing: {
-          acceptsSms: formData.marketing.smsConsent || false,
           acceptsEmail: formData.marketing.emailConsent || false,
+          acceptsSms: formData.marketing.smsConsent || false,
           acceptsWhatsApp: formData.marketing.whatsappConsent || false,
         },
         petPass: {
