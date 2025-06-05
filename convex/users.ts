@@ -12,7 +12,6 @@ export const createUser = mutation({
     department: v.string(),
     position: v.string(),
     status: v.union(v.literal("active"), v.literal("inactive")),
-    lastLogin: v.optional(v.string()),
     avatar: v.optional(v.string()),
     customPermissionIds: v.optional(v.array(v.string())),
   },
@@ -53,28 +52,6 @@ export const getUserByEmail = query({
   },
 });
 
-// Get users by role
-export const getUsersByRole = query({
-  args: { roleId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_role", (q) => q.eq("roleId", args.roleId))
-      .collect();
-  },
-});
-
-// Get users by status
-export const getUsersByStatus = query({
-  args: { status: v.union(v.literal("active"), v.literal("inactive")) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_status", (q) => q.eq("status", args.status))
-      .collect();
-  },
-});
-
 // Update user
 export const updateUser = mutation({
   args: {
@@ -104,5 +81,26 @@ export const deleteUser = mutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+  },
+});
+
+// Get users by role
+export const getUsersByRole = query({
+  args: { roleId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("roleId", args.roleId))
+      .collect();
+  },
+});
+
+// Get active users
+export const getActiveUsers = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
   },
 });

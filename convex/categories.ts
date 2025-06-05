@@ -24,7 +24,7 @@ export const createCategory = mutation({
 // Get all categories
 export const getCategories = query({
   handler: async (ctx) => {
-    return await ctx.db.query("categories").order("desc").collect();
+    return await ctx.db.query("categories").order("asc").collect();
   },
 });
 
@@ -36,8 +36,18 @@ export const getCategory = query({
   },
 });
 
+// Get root categories (no parent)
+export const getRootCategories = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("categories")
+      .filter((q) => q.eq(q.field("parentCategoryId"), undefined))
+      .collect();
+  },
+});
+
 // Get subcategories by parent
-export const getSubcategories = query({
+export const getSubcategoriesByParent = query({
   args: { parentCategoryId: v.id("categories") },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -47,12 +57,12 @@ export const getSubcategories = query({
   },
 });
 
-// Get root categories (no parent)
-export const getRootCategories = query({
+// Get active categories
+export const getActiveCategories = query({
   handler: async (ctx) => {
     return await ctx.db
       .query("categories")
-      .filter((q) => q.eq(q.field("parentCategoryId"), undefined))
+      .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
   },
 });

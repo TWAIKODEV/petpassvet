@@ -66,14 +66,22 @@ export const getPaymentsByAppointment = query({
   },
 });
 
+// Get payments by status
+export const getPaymentsByStatus = query({
+  args: { status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")) },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("payments")
+      .filter((q) => q.eq(q.field("status"), args.status))
+      .collect();
+  },
+});
+
 // Update payment
 export const updatePayment = mutation({
   args: {
     id: v.id("payments"),
-    appointmentId: v.optional(v.string()),
-    patientId: v.optional(v.id("patients")),
     amount: v.optional(v.number()),
-    date: v.optional(v.string()),
     method: v.optional(v.union(v.literal("cash"), v.literal("credit"), v.literal("debit"), v.literal("insurance"), v.literal("other"))),
     status: v.optional(v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded"))),
     insuranceClaim: v.optional(v.object({
@@ -97,5 +105,27 @@ export const deletePayment = mutation({
   args: { id: v.id("payments") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+  },
+});
+
+// Get revenue for a date range
+export const getRevenueByDateRange = query({
+  args: { 
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const payments = await ctx.db
+      .query("payments")
+      .filter((q) => 
+        q.and(
+          q.gte(q.field("date"), args.startDate),
+          q.lte(q.field("date"), args.endDate),
+          q.eq(q.field("status"), "completed")
+        )
+      )
+      .collect();
+    
+    return payments.reduce((total, payment) => total + payment.amount, 0);
   },
 });

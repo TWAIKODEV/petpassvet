@@ -19,7 +19,6 @@ export const createProduct = mutation({
     brand: v.optional(v.string()),
     supplier: v.optional(v.string()),
     location: v.optional(v.string()),
-    lastUpdated: v.optional(v.string()),
     featured: v.optional(v.boolean()),
     rating: v.optional(v.number()),
     reviews: v.optional(v.number()),
@@ -32,6 +31,7 @@ export const createProduct = mutation({
     const now = Date.now();
     const productId = await ctx.db.insert("products", {
       ...args,
+      lastUpdated: new Date().toISOString(),
       createdAt: now,
       updatedAt: now,
     });
@@ -76,6 +76,32 @@ export const getProductBySku = query({
   },
 });
 
+// Get featured products
+export const getFeaturedProducts = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("products")
+      .filter((q) => q.eq(q.field("featured"), true))
+      .collect();
+  },
+});
+
+// Get low stock products
+export const getLowStockProducts = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("products")
+      .filter((q) => 
+        q.and(
+          q.neq(q.field("stock"), undefined),
+          q.neq(q.field("minStock"), undefined),
+          q.lte(q.field("stock"), q.field("minStock"))
+        )
+      )
+      .collect();
+  },
+});
+
 // Update product
 export const updateProduct = mutation({
   args: {
@@ -94,7 +120,6 @@ export const updateProduct = mutation({
     brand: v.optional(v.string()),
     supplier: v.optional(v.string()),
     location: v.optional(v.string()),
-    lastUpdated: v.optional(v.string()),
     featured: v.optional(v.boolean()),
     rating: v.optional(v.number()),
     reviews: v.optional(v.number()),
@@ -107,6 +132,7 @@ export const updateProduct = mutation({
     const { id, ...updateData } = args;
     await ctx.db.patch(id, {
       ...updateData,
+      lastUpdated: new Date().toISOString(),
       updatedAt: Date.now(),
     });
   },
@@ -117,5 +143,20 @@ export const deleteProduct = mutation({
   args: { id: v.id("products") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+  },
+});
+
+// Update product stock
+export const updateProductStock = mutation({
+  args: {
+    id: v.id("products"),
+    stock: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      stock: args.stock,
+      lastUpdated: new Date().toISOString(),
+      updatedAt: Date.now(),
+    });
   },
 });

@@ -2,6 +2,65 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+const scheduleSchema = v.object({
+  monday: v.optional(v.object({
+    start: v.string(),
+    end: v.string(),
+    breaks: v.array(v.object({
+      start: v.string(),
+      end: v.string(),
+    })),
+  })),
+  tuesday: v.optional(v.object({
+    start: v.string(),
+    end: v.string(),
+    breaks: v.array(v.object({
+      start: v.string(),
+      end: v.string(),
+    })),
+  })),
+  wednesday: v.optional(v.object({
+    start: v.string(),
+    end: v.string(),
+    breaks: v.array(v.object({
+      start: v.string(),
+      end: v.string(),
+    })),
+  })),
+  thursday: v.optional(v.object({
+    start: v.string(),
+    end: v.string(),
+    breaks: v.array(v.object({
+      start: v.string(),
+      end: v.string(),
+    })),
+  })),
+  friday: v.optional(v.object({
+    start: v.string(),
+    end: v.string(),
+    breaks: v.array(v.object({
+      start: v.string(),
+      end: v.string(),
+    })),
+  })),
+  saturday: v.optional(v.object({
+    start: v.string(),
+    end: v.string(),
+    breaks: v.array(v.object({
+      start: v.string(),
+      end: v.string(),
+    })),
+  })),
+  sunday: v.optional(v.object({
+    start: v.string(),
+    end: v.string(),
+    breaks: v.array(v.object({
+      start: v.string(),
+      end: v.string(),
+    })),
+  })),
+});
+
 // Create a new doctor
 export const createDoctor = mutation({
   args: {
@@ -9,64 +68,7 @@ export const createDoctor = mutation({
     specialization: v.string(),
     email: v.string(),
     phone: v.string(),
-    schedule: v.object({
-      monday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      tuesday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      wednesday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      thursday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      friday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      saturday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      sunday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-    }),
+    schedule: scheduleSchema,
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -82,7 +84,7 @@ export const createDoctor = mutation({
 // Get all doctors
 export const getDoctors = query({
   handler: async (ctx) => {
-    return await ctx.db.query("doctors").order("desc").collect();
+    return await ctx.db.query("doctors").order("asc").collect();
   },
 });
 
@@ -94,6 +96,17 @@ export const getDoctor = query({
   },
 });
 
+// Get doctors by specialization
+export const getDoctorsBySpecialization = query({
+  args: { specialization: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("doctors")
+      .filter((q) => q.eq(q.field("specialization"), args.specialization))
+      .collect();
+  },
+});
+
 // Update doctor
 export const updateDoctor = mutation({
   args: {
@@ -102,64 +115,7 @@ export const updateDoctor = mutation({
     specialization: v.optional(v.string()),
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
-    schedule: v.optional(v.object({
-      monday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      tuesday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      wednesday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      thursday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      friday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      saturday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-      sunday: v.optional(v.object({
-        start: v.string(),
-        end: v.string(),
-        breaks: v.array(v.object({
-          start: v.string(),
-          end: v.string(),
-        })),
-      })),
-    })),
+    schedule: v.optional(scheduleSchema),
   },
   handler: async (ctx, args) => {
     const { id, ...updateData } = args;

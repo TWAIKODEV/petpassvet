@@ -25,7 +25,7 @@ export const createUserRole = mutation({
 // Get all user roles
 export const getUserRoles = query({
   handler: async (ctx) => {
-    return await ctx.db.query("userRoles").order("desc").collect();
+    return await ctx.db.query("userRoles").order("asc").collect();
   },
 });
 
@@ -45,6 +45,16 @@ export const getUserRoleByName = query({
       .query("userRoles")
       .withIndex("by_name", (q) => q.eq("name", args.name))
       .first();
+  },
+});
+
+// Get editable user roles
+export const getEditableUserRoles = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("userRoles")
+      .filter((q) => q.eq(q.field("isEditable"), true))
+      .collect();
   },
 });
 

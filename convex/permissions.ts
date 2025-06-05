@@ -25,7 +25,7 @@ export const createPermission = mutation({
 // Get all permissions
 export const getPermissions = query({
   handler: async (ctx) => {
-    return await ctx.db.query("permissions").order("desc").collect();
+    return await ctx.db.query("permissions").order("asc").collect();
   },
 });
 

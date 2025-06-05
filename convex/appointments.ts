@@ -80,6 +80,28 @@ export const getAppointmentsByDate = query({
   },
 });
 
+// Get appointments by status
+export const getAppointmentsByStatus = query({
+  args: { status: v.union(v.literal("pending"), v.literal("confirmed"), v.literal("waiting"), v.literal("in_progress"), v.literal("completed"), v.literal("no_show"), v.literal("scheduled")) },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("appointments")
+      .filter((q) => q.eq(q.field("status"), args.status))
+      .collect();
+  },
+});
+
+// Get today's appointments
+export const getTodaysAppointments = query({
+  handler: async (ctx) => {
+    const today = new Date().toISOString().split('T')[0];
+    return await ctx.db
+      .query("appointments")
+      .withIndex("by_date", (q) => q.eq("date", today))
+      .collect();
+  },
+});
+
 // Update appointment
 export const updateAppointment = mutation({
   args: {
@@ -103,7 +125,6 @@ export const updateAppointment = mutation({
     )),
     consultationType: v.optional(v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency"))),
     serviceType: v.optional(v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("rehabilitation"), v.literal("hospitalization"))),
-    patientId: v.optional(v.id("patients")),
     doctorId: v.optional(v.string()),
     date: v.optional(v.string()),
     time: v.optional(v.string()),

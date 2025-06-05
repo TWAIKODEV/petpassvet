@@ -103,3 +103,13 @@ export const deleteCampaign = mutation({
     await ctx.db.delete(args.id);
   },
 });
+
+// Get active campaigns
+export const getActiveCampaigns = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("campaigns")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+  },
+});
