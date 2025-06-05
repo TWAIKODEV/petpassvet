@@ -12,6 +12,8 @@ import {
   Euro,
   RefreshCw
 } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import AppointmentList from '../components/dashboard/AppointmentList';
 import NewAppointmentForm from '../components/dashboard/NewAppointmentForm';
 import NewPatientForm from '../components/patients/NewPatientForm';
@@ -21,7 +23,7 @@ import NewBudgetForm from '../components/dashboard/NewBudgetForm';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
-import { mockAppointments, mockPatients, mockDoctors, mockDashboardSummary } from '../data/mockData';
+// import { mockAppointments, mockPatients, mockDoctors, mockDashboardSummary } from '../data/mockData';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -76,7 +78,46 @@ const Dashboard: React.FC = () => {
     setShowNewBudgetForm(false);
   };
 
-  
+  // Fetch data from Convex
+  const appointments = useQuery(api.appointments.getAppointments) || [];
+  const patients = useQuery(api.patients.getPatients) || [];
+  const todaysAppointments = useQuery(api.appointments.getTodaysAppointments) || [];
+  const payments = useQuery(api.payments.getPayments) || [];
+
+  // Calculate weekly appointments
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+
+  const weekAppointments = appointments.filter(appointment => {
+    const appointmentDate = new Date(appointment.date);
+    return appointmentDate >= weekStart && appointmentDate <= weekEnd;
+  });
+
+  // Calculate revenue
+  const today = new Date().toISOString().split('T')[0];
+  const todaysRevenue = payments
+    .filter(payment => payment.date === today && payment.status === 'completed')
+    .reduce((total, payment) => total + payment.amount, 0);
+
+  const weekRevenue = payments
+    .filter(payment => {
+      const paymentDate = new Date(payment.date);
+      return paymentDate >= weekStart && paymentDate <= weekEnd && payment.status === 'completed';
+    })
+    .reduce((total, payment) => total + payment.amount, 0);
+
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthRevenue = payments
+    .filter(payment => {
+      const paymentDate = new Date(payment.date);
+      return paymentDate.getMonth() === currentMonth && 
+             paymentDate.getFullYear() === currentYear && 
+             payment.status === 'completed';
+    })
+    .reduce((total, payment) => total + payment.amount, 0);
 
   if (!mounted) {
     return (
@@ -184,33 +225,33 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <AppointmentList 
-            appointments={mockAppointments}
-            patients={mockPatients}
-            doctors={mockDoctors}
+            appointments={appointments}
+            patients={patients}
+            doctors={[]} // No se usan mocks de doctores, se deja vacío
             title="Próximas Citas"
           />
         </div>
-        
+
         <div className="space-y-6">
           <Card title="Citas de Hoy" icon={<Clock size={20} />}>
             <div className="text-center py-8">
               <div className="text-5xl font-bold text-blue-600 flex items-center justify-center">
                 <Calendar size={36} className="mr-2 text-blue-500" />
-                {mockAppointments.length}
+                {todaysAppointments.length}
               </div>
               <p className="mt-2 text-sm text-gray-600">citas programadas para hoy</p>
-              
+
               <div className="mt-6 grid grid-cols-2 gap-4 text-center">
                 {appointmentStatusConfig.map((config) => (
                   <div key={config.status} className="border rounded-lg p-3">
                     <p className="text-gray-500 text-xs">{config.label}</p>
                     <p className={`text-xl font-semibold ${config.color}`}>
-                      {mockAppointments.filter(a => a.status === config.status).length}
+                      {appointments.filter(a => a.status === config.status).length}
                     </p>
                   </div>
                 ))}
               </div>
-              
+
               <button className="mt-6 text-sm font-medium text-blue-600 hover:text-blue-500">
                 Ver agenda completa →
               </button>
@@ -221,18 +262,19 @@ const Dashboard: React.FC = () => {
             <div className="text-center py-8">
               <div className="text-5xl font-bold text-green-600 flex items-center justify-center">
                 <Euro size={36} className="mr-2 text-green-500" />
-                {mockDashboardSummary.revenueToday.toLocaleString('es-ES', {
+                {todaysRevenue.toLocaleString('es-ES', {
                   style: 'currency',
                   currency: 'EUR'
                 }).replace('EUR', '€')}
               </div>
               <p className="mt-2 text-sm text-gray-600">ingresos del día</p>
-              
+
               <div className="mt-6 grid grid-cols-2 gap-4 text-center">
+                {/* TODO:  Habría que sacar los métodos de pago de la base de datos */}
                 <div className="border rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Efectivo</p>
                   <p className="text-xl font-semibold text-green-600">
-                    {(mockDashboardSummary.revenueToday * 0.6).toLocaleString('es-ES', {
+                    {(todaysRevenue * 0.6).toLocaleString('es-ES', {
                       style: 'currency',
                       currency: 'EUR'
                     }).replace('EUR', '€')}
@@ -241,20 +283,20 @@ const Dashboard: React.FC = () => {
                 <div className="border rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Tarjeta</p>
                   <p className="text-xl font-semibold text-blue-600">
-                    {(mockDashboardSummary.revenueToday * 0.4).toLocaleString('es-ES', {
+                    {(todaysRevenue * 0.4).toLocaleString('es-ES', {
                       style: 'currency',
                       currency: 'EUR'
                     }).replace('EUR', '€')}
                   </p>
                 </div>
               </div>
-              
+
               <button className="mt-6 text-sm font-medium text-blue-600 hover:text-blue-500">
                 Ver detalles →
               </button>
             </div>
           </Card>
-          
+
           <Card title="Actividad Reciente" icon={<Activity size={20} />}>
             <div className="space-y-4">
               <div className="flex items-start">
@@ -266,7 +308,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-gray-500">Hace 23 minutos</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                   <Calendar size={16} />
@@ -276,7 +318,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-gray-500">Hace 1 hora</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
                   <Euro size={16} />
@@ -287,7 +329,7 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-4 text-center">
               <button className="text-sm font-medium text-blue-600 hover:text-blue-500">
                 Ver todo →
@@ -329,7 +371,7 @@ const Dashboard: React.FC = () => {
         />
       )}
 
-      
+
     </div>
   );
 };
