@@ -18,7 +18,7 @@ const Patients: React.FC = () => {
   const createPatient = useMutation(api.patients.createPatient);
 
   const filteredPatients = patients.filter(patient => 
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.phone.includes(searchTerm) ||
     patient.pet.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -143,11 +143,11 @@ const Patients: React.FC = () => {
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                         <span className="text-blue-600 font-medium text-sm">
-                          {patient.name.split(' ').map(n => n[0]).join('')}
+                          {patient.firstName[0]}{patient.lastName[0]}
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{patient.name}</div>
+                        <div className="text-sm font-medium text-gray-900">{patient.firstName} {patient.lastName}</div>
                         <div className="text-sm text-gray-500">
                           {new Date(patient.birthDate).toLocaleDateString('es-ES')} • {patient.gender === 'female' ? 'F' : 'M'}
                         </div>
@@ -292,7 +292,7 @@ const Patients: React.FC = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPatient.name}</p>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPatient.firstName} {selectedPatient.lastName}</p>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>

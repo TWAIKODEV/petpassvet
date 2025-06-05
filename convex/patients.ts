@@ -5,7 +5,8 @@ import { v } from "convex/values";
 // Crear un nuevo paciente
 export const createPatient = mutation({
   args: {
-    name: v.string(),
+    firstName: v.string(),
+    lastName: v.string(),
     email: v.string(),
     phone: v.string(),
     birthDate: v.string(),
@@ -108,7 +109,8 @@ export const getPatientByEmail = query({
 export const updatePatient = mutation({
   args: {
     id: v.id("patients"),
-    name: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
     birthDate: v.optional(v.string()),

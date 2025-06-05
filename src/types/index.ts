@@ -2,7 +2,8 @@ import { NavItem } from './navigation';
 
 export interface Patient {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   birthDate: string;

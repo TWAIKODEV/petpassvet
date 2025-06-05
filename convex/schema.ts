@@ -41,7 +41,8 @@ export default defineSchema({
   }).index("by_email", ["email"]).index("by_role", ["roleId"]).index("by_status", ["status"]),
 
   patients: defineTable({
-    name: v.string(),
+    firstName: v.string(),
+    lastName: v.string(),
     email: v.string(),
     phone: v.string(),
     birthDate: v.string(),
