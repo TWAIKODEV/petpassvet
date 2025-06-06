@@ -31,10 +31,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
 
     // Marketing and communications
     marketing: {
-      signedAt: null,
-      emailConsent: false,
-      smsConsent: false,
-      whatsappConsent: false,
+      acceptsEmail: false,
+      acceptsSms: false,
+      acceptsWhatsApp: false,
     },
 
     // PetPass information
@@ -60,7 +59,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
       birthDate: "",
       microchipNumber: "",
       isNeutered: false,
-      coatColor: "",
+      color: "",
       observations: "",
       hasInsurance: false,
       insurerName: "",
@@ -148,9 +147,9 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
         bankAccount: undefined,
         creditCard: undefined,
         marketing: {
-          acceptsEmail: formData.marketing.emailConsent || false,
-          acceptsSms: formData.marketing.smsConsent || false,
-          acceptsWhatsApp: formData.marketing.whatsappConsent || false,
+          acceptsEmail: formData.marketing.acceptsEmail || false,
+          acceptsSms: formData.marketing.acceptsSms || false,
+          acceptsWhatsApp: formData.marketing.acceptsWhatsApp || false,
         },
         petPass: {
           hasPetPass: formData.petPass.hasPetPass || false,
@@ -184,7 +183,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
           birthDate: formData.pet.birthDate || "",
           isNeutered: formData.pet.isNeutered || false,
           microchipNumber: formData.pet.microchipNumber,
-          color: formData.pet.coatColor,
+          color: formData.pet.color,
           observations: formData.pet.observations,
         };
       }
@@ -405,7 +404,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                   <Input
                     label="Color del pelaje"
                     name="pet.coatColor"
-                    value={formData.pet.coatColor}
+                    value={formData.pet.color}
                     onChange={handleChange}
                   />
                   <Input
@@ -484,7 +483,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                     <input
                       type="checkbox"
                       name="marketing.emailConsent"
-                      checked={formData.marketing.emailConsent}
+                      checked={formData.marketing.acceptsEmail}
                       onChange={handleChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
@@ -496,7 +495,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                     <input
                       type="checkbox"
                       name="marketing.smsConsent"
-                      checked={formData.marketing.smsConsent}
+                      checked={formData.marketing.acceptsSms}
                       onChange={handleChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
@@ -508,7 +507,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                     <input
                       type="checkbox"
                       name="marketing.whatsappConsent"
-                      checked={formData.marketing.whatsappConsent}
+                      checked={formData.marketing.acceptsWhatsApp}
                       onChange={handleChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />

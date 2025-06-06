@@ -109,6 +109,7 @@ export default defineSchema({
     microchipNumber: v.optional(v.string()),
     color: v.optional(v.string()),
     weight: v.optional(v.number()),
+    height: v.optional(v.number()),
     observations: v.optional(v.string()),
     vaccines: v.array(
       v.object({
