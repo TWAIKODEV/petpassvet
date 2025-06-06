@@ -2,6 +2,14 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 // Crear un nuevo paciente
+// Obtener todos los pacientes
+export const getPatients = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("patients").collect();
+  },
+});
+
 export const createPatient = mutation({
   args: {
     firstName: v.string(),

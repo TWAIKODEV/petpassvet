@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { Plus, Search, Filter, Download, PawPrint, RefreshCw, Eye, Edit, Printer } from 'lucide-react';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
-import { mockPatients } from '../data/mockData';
 
 const Pets: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,45 +13,72 @@ const Pets: React.FC = () => {
   const [showNewPetForm, setShowNewPetForm] = useState(false);
   const [selectedPet, setSelectedPet] = useState<any>(null);
 
-  // Transform patient data to focus on pets
-  const pets = mockPatients.map(patient => ({
-    id: patient.id,
-    name: patient.pet.name,
-    species: patient.pet.species,
-    breed: patient.pet.breed,
-    age: new Date().getFullYear() - new Date(patient.pet.birthDate).getFullYear(),
-    sex: patient.pet.sex,
-    owner: {
-      name: patient.name,
-      email: patient.email,
-      phone: patient.phone
-    },
-    microchip: patient.pet.microchipNumber,
-    isNeutered: patient.pet.isNeutered,
-    petPass: patient.petPass?.hasPetPass || false,
-    petPassPlan: patient.petPass?.plan,
-    insurance: {
-      provider: patient.insuranceProvider,
-      number: patient.insuranceNumber
-    },
-    lastVisit: '2025-05-15', // Mock data
-    status: 'active'
-  }));
+  // Fetch pets from Convex
+  const pets = useQuery(api.pets.getAllPets) || [];
+  const createPet = useMutation(api.pets.createPet);
+  const patients = useQuery(api.patients.getPatients) || [];
 
   const filteredPets = pets.filter(pet => 
     pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pet.owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pet.microchip?.includes(searchTerm)
+    (pet.owner?.name && pet.owner.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (pet.microchipNumber && pet.microchipNumber.includes(searchTerm))
   );
 
-  const handleNewPet = (petData: any) => {
-    // Here you would typically make an API call to save the new pet
-    console.log('New pet data:', petData);
-    setShowNewPetForm(false);
+  const handleNewPet = async (petData: any) => {
+    try {
+      await createPet({
+        patientId: petData.ownerId,
+        name: petData.petName,
+        species: petData.petSpecies,
+        breed: petData.petBreed || undefined,
+        sex: petData.petSex || undefined,
+        birthDate: petData.birthDate || undefined,
+        isNeutered: petData.isNeutered || false,
+        microchipNumber: petData.microchip || undefined,
+        color: petData.furColor || undefined,
+        weight: petData.weight ? parseFloat(petData.weight) : undefined,
+        height: petData.height ? parseFloat(petData.height) : undefined,
+        furType: petData.furType || undefined,
+        observations: petData.observations || undefined,
+        currentTreatments: petData.currentTreatments || undefined,
+        allergies: petData.allergies || undefined,
+        bloodTest: petData.test_blood ? {
+          done: true,
+          date: petData.test_blood_date || undefined,
+        } : undefined,
+        xrayTest: petData.test_xray ? {
+          done: true,
+          date: petData.test_xray_date || undefined,
+        } : undefined,
+        ultrasoundTest: petData.test_ultrasound ? {
+          done: true,
+          date: petData.test_ultrasound_date || undefined,
+        } : undefined,
+        urineTest: petData.test_urine ? {
+          done: true,
+          date: petData.test_urine_date || undefined,
+        } : undefined,
+        otherTests: petData.otherTests || undefined,
+        hasPetPass: petData.hasPetPass || false,
+        hasInsurance: petData.hasInsurance || false,
+        insuranceProvider: petData.hasInsurance ? petData.insuranceProvider : undefined,
+        insuranceNumber: petData.hasInsurance ? petData.insuranceNumber : undefined,
+      });
+      setShowNewPetForm(false);
+    } catch (error) {
+      console.error('Error creating pet:', error);
+    }
   };
 
   const handleViewPetDetails = (pet: any) => {
     setSelectedPet(pet);
+  };
+
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return 'N/A';
+    const today = new Date();
+    const birth = new Date(birthDate);
+    return Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 365));
   };
 
   return (
@@ -157,7 +186,7 @@ const Pets: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredPets.map((pet) => (
-                <tr key={pet.id} className="hover:bg-gray-50">
+                <tr key={pet._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -168,43 +197,43 @@ const Pets: React.FC = () => {
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{pet.name}</div>
                         <div className="text-sm text-gray-500">
-                          {pet.age} años • {pet.sex === 'male' ? 'Macho' : 'Hembra'}
+                          {calculateAge(pet.birthDate)} años • {pet.sex === 'male' ? 'Macho' : pet.sex === 'female' ? 'Hembra' : 'N/A'}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{pet.species}</div>
-                    <div className="text-sm text-gray-500">{pet.breed}</div>
+                    <div className="text-sm text-gray-500">{pet.breed || 'No especificada'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-mono text-gray-900">{pet.microchip || '-'}</div>
+                    <div className="text-sm font-mono text-gray-900">{pet.microchipNumber || '-'}</div>
                     <div className="text-sm text-gray-500">
                       {pet.isNeutered ? 'Esterilizado' : 'No esterilizado'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {pet.petPass ? (
+                    {pet.hasPetPass ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {pet.petPassPlan || 'Activo'}
+                        Activo
                       </span>
                     ) : (
                       <span className="text-sm text-gray-500">No tiene</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {pet.insurance.provider ? (
+                    {pet.hasInsurance ? (
                       <div>
-                        <div className="text-sm text-gray-900">{pet.insurance.provider}</div>
-                        <div className="text-sm text-gray-500">{pet.insurance.number}</div>
+                        <div className="text-sm text-gray-900">{pet.insuranceProvider}</div>
+                        <div className="text-sm text-gray-500">{pet.insuranceNumber}</div>
                       </div>
                     ) : (
                       <span className="text-sm text-gray-500">No asegurado</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{pet.owner.name}</div>
-                    <div className="text-sm text-gray-500">{pet.owner.phone}</div>
+                    <div className="text-sm text-gray-900">{pet.owner?.name || 'N/A'}</div>
+                    <div className="text-sm text-gray-500">{pet.owner?.phone || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
@@ -266,28 +295,9 @@ const Pets: React.FC = () => {
         <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-gray-700">
-              Mostrando <span className="font-medium">1</span> a <span className="font-medium">10</span> de{' '}
-              <span className="font-medium">20</span> resultados
+              Mostrando <span className="font-medium">1</span> a <span className="font-medium">{filteredPets.length}</span> de{' '}
+              <span className="font-medium">{filteredPets.length}</span> resultados
             </p>
-          </div>
-          <div>
-            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-              <button className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
-                <span className="sr-only">Anterior</span>
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">1</button>
-              <button className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 focus:z-20 focus:outline-offset-0">2</button>
-              <button className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">3</button>
-              <button className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
-                <span className="sr-only">Siguiente</span>
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </nav>
           </div>
         </div>
       </div>
@@ -323,7 +333,7 @@ const Pets: React.FC = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Edad</label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.age} años</p>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{calculateAge(selectedPet.birthDate)} años</p>
                         </div>
                       </div>
                       
@@ -334,7 +344,7 @@ const Pets: React.FC = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Raza</label>
-                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.breed}</p>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.breed || 'No especificada'}</p>
                         </div>
                       </div>
                       
@@ -342,7 +352,7 @@ const Pets: React.FC = () => {
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Sexo</label>
                           <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                            {selectedPet.sex === 'male' ? 'Macho' : 'Hembra'}
+                            {selectedPet.sex === 'male' ? 'Macho' : selectedPet.sex === 'female' ? 'Hembra' : 'No especificado'}
                           </p>
                         </div>
                         <div>
@@ -352,32 +362,109 @@ const Pets: React.FC = () => {
                           </p>
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Peso</label>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                            {selectedPet.weight ? `${selectedPet.weight} kg` : 'No registrado'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Altura</label>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                            {selectedPet.height ? `${selectedPet.height} cm` : 'No registrada'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Color</label>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                            {selectedPet.color || 'No especificado'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Tipo de pelaje</label>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                            {selectedPet.furType || 'No especificado'}
+                          </p>
+                        </div>
+                      </div>
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Microchip</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                          {selectedPet.microchip || 'No registrado'}
+                          {selectedPet.microchipNumber || 'No registrado'}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Observaciones</label>
+                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                          {selectedPet.observations || 'Sin observaciones'}
                         </p>
                       </div>
                     </div>
                   </div>
                   
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Planes y Seguros</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Información Médica</h3>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">PetPass</label>
+                        <label className="block text-sm font-medium text-gray-700">Tratamientos en curso</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                          {selectedPet.petPass ? `Activo - Plan ${selectedPet.petPassPlan || 'Básico'}` : 'No tiene'}
+                          {selectedPet.currentTreatments || 'Ningún tratamiento activo'}
                         </p>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Seguro</label>
+                        <label className="block text-sm font-medium text-gray-700">Alergias</label>
                         <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                          {selectedPet.insurance.provider ? `${selectedPet.insurance.provider} - ${selectedPet.insurance.number}` : 'No tiene'}
+                          {selectedPet.allergies || 'Sin alergias conocidas'}
                         </p>
                       </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Pruebas médicas</label>
+                        <div className="mt-1 space-y-2">
+                          {selectedPet.bloodTest?.done && (
+                            <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              Análisis de sangre: {selectedPet.bloodTest.date || 'Fecha no especificada'}
+                            </p>
+                          )}
+                          {selectedPet.xrayTest?.done && (
+                            <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              Radiografía: {selectedPet.xrayTest.date || 'Fecha no especificada'}
+                            </p>
+                          )}
+                          {selectedPet.ultrasoundTest?.done && (
+                            <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              Ecografía: {selectedPet.ultrasoundTest.date || 'Fecha no especificada'}
+                            </p>
+                          )}
+                          {selectedPet.urineTest?.done && (
+                            <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                              Análisis de orina: {selectedPet.urineTest.date || 'Fecha no especificada'}
+                            </p>
+                          )}
+                          {!selectedPet.bloodTest?.done && !selectedPet.xrayTest?.done && !selectedPet.ultrasoundTest?.done && !selectedPet.urineTest?.done && (
+                            <p className="text-sm text-gray-500 bg-gray-50 p-2 rounded border border-gray-200">
+                              No hay pruebas médicas registradas
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {selectedPet.otherTests && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Otras pruebas</label>
+                          <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                            {selectedPet.otherTests}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -389,32 +476,36 @@ const Pets: React.FC = () => {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.owner.name}</p>
+                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.owner?.name || 'N/A'}</p>
                       </div>
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Email</label>
-                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.owner.email}</p>
+                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.owner?.email || 'N/A'}</p>
                       </div>
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Teléfono</label>
-                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.owner.phone}</p>
+                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">{selectedPet.owner?.phone || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
                   
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Historial de Visitas</h3>
-                    <div className="space-y-2">
-                      <div className="bg-gray-50 p-3 rounded border border-gray-200">
-                        <p className="text-sm font-medium text-gray-900">Última visita: {new Date(selectedPet.lastVisit).toLocaleDateString('es-ES')}</p>
-                        <p className="text-xs text-gray-500">Consulta general</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Planes y Seguros</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">PetPass</label>
+                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                          {selectedPet.hasPetPass ? 'Activo' : 'No tiene'}
+                        </p>
                       </div>
                       
-                      <div className="bg-gray-50 p-3 rounded border border-gray-200">
-                        <p className="text-sm font-medium text-gray-900">Próxima visita programada</p>
-                        <p className="text-xs text-gray-500">No hay citas programadas</p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Seguro</label>
+                        <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                          {selectedPet.hasInsurance ? `${selectedPet.insuranceProvider} - ${selectedPet.insuranceNumber}` : 'No tiene'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -425,7 +516,7 @@ const Pets: React.FC = () => {
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                         Activo
                       </span>
-                      <p className="mt-2 text-xs text-gray-500">Última actualización: {new Date().toLocaleDateString('es-ES')}</p>
+                      <p className="mt-2 text-xs text-gray-500">Última actualización: {new Date(selectedPet.updatedAt).toLocaleDateString('es-ES')}</p>
                     </div>
                   </div>
                 </div>
@@ -462,7 +553,15 @@ const Pets: React.FC = () => {
             </div>
             
             <div className="overflow-y-auto p-6 flex-1">
-              <form className="space-y-6">
+              <form 
+                className="space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target as HTMLFormElement);
+                  const data = Object.fromEntries(formData);
+                  handleNewPet(data);
+                }}
+              >
                 {/* Basic Information */}
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Información Básica</h3>
@@ -578,46 +677,6 @@ const Pets: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Vacunas Recibidas
-                      </label>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            name="vaccine_rabies"
-                          />
-                          <span className="text-sm text-gray-700">Rabia</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            name="vaccine_distemper"
-                          />
-                          <span className="text-sm text-gray-700">Moquillo</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            name="vaccine_parvovirus"
-                          />
-                          <span className="text-sm text-gray-700">Parvovirus</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            name="vaccine_leptospirosis"
-                          />
-                          <span className="text-sm text-gray-700">Leptospirosis</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tratamientos en Curso
                       </label>
                       <textarea
@@ -637,6 +696,18 @@ const Pets: React.FC = () => {
                         rows={2}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         placeholder="Alergias a medicamentos, alimentos, etc..."
+                      ></textarea>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Observaciones
+                      </label>
+                      <textarea
+                        name="observations"
+                        rows={3}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        placeholder="Notas adicionales sobre la mascota..."
                       ></textarea>
                     </div>
                   </div>
@@ -752,22 +823,12 @@ const Pets: React.FC = () => {
                         required
                       >
                         <option value="">Seleccionar propietario</option>
-                        {mockPatients.map(patient => (
-                          <option key={patient.id} value={patient.id}>{patient.name}</option>
+                        {patients.map(patient => (
+                          <option key={patient._id} value={patient._id}>
+                            {patient.firstName} {patient.lastName}
+                          </option>
                         ))}
                       </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Observaciones
-                      </label>
-                      <textarea
-                        name="observations"
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Notas adicionales sobre la mascota..."
-                      ></textarea>
                     </div>
                     
                     <div>
@@ -791,6 +852,22 @@ const Pets: React.FC = () => {
                         <span className="text-sm text-gray-700">Tiene seguro</span>
                       </label>
                     </div>
+
+                    <div>
+                      <Input
+                        label="Compañía de seguros"
+                        name="insuranceProvider"
+                        placeholder="Nombre de la aseguradora"
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        label="Número de póliza"
+                        name="insuranceNumber"
+                        placeholder="Número de la póliza"
+                      />
+                    </div>
                   </div>
                 </div>
               </form>
@@ -805,7 +882,14 @@ const Pets: React.FC = () => {
               </Button>
               <Button
                 variant="primary"
-                onClick={() => handleNewPet({})}
+                onClick={() => {
+                  const form = document.querySelector('form') as HTMLFormElement;
+                  if (form) {
+                    const formData = new FormData(form);
+                    const data = Object.fromEntries(formData);
+                    handleNewPet(data);
+                  }
+                }}
               >
                 Guardar Mascota
               </Button>

@@ -175,17 +175,22 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
 
       // Add pet data if provided
       if (formData.pet.name && formData.pet.species) {
-        patientData.pet = {
+        const petData = {
           name: formData.pet.name,
           species: formData.pet.species,
-          breed: formData.pet.breed || "",
-          sex: formData.pet.sex as "male" | "female",
-          birthDate: formData.pet.birthDate || "",
+          breed: formData.pet.breed || undefined,
+          sex: formData.pet.sex ? (formData.pet.sex as "male" | "female") : undefined,
+          birthDate: formData.pet.birthDate || undefined,
           isNeutered: formData.pet.isNeutered || false,
-          microchipNumber: formData.pet.microchipNumber,
-          color: formData.pet.color,
-          observations: formData.pet.observations,
+          microchipNumber: formData.pet.microchipNumber || undefined,
+          color: formData.pet.color || undefined,
+          observations: formData.pet.observations || undefined,
+          hasInsurance: formData.pet.hasInsurance || false,
+          insuranceProvider: formData.pet.hasInsurance ? formData.pet.insurerName : undefined,
+          insuranceNumber: formData.pet.hasInsurance ? formData.pet.policyNumber : undefined,
         };
+
+        patientData.pet = petData;
       }
 
       const patientId = await createPatient(patientData);
@@ -403,7 +408,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Color del pelaje"
-                    name="pet.coatColor"
+                    name="pet.color"
                     value={formData.pet.color}
                     onChange={handleChange}
                   />
