@@ -30,3 +30,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev -- --host 0.0.0.0"
+
+[[workflows.workflow]]
+name = "Convex"
+mode = "sequential"
+author = 43297637
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx convex dev"
