@@ -155,11 +155,7 @@ export default defineSchema({
   }).index("by_patient", ["patientId"]),
 
   appointments: defineTable({
-    petName: v.string(),
-    breed: v.string(),
-    age: v.number(),
-    sex: v.union(v.literal("male"), v.literal("female")),
-    petProfileUrl: v.string(),
+    petId: v.id("pets"),
     consultationKind: v.union(
       v.literal("annualReview"),
       v.literal("followUp"),
@@ -183,7 +179,6 @@ export default defineSchema({
       v.literal("rehabilitation"),
       v.literal("hospitalization"),
     ),
-    patientId: v.id("patients"),
     doctorId: v.id("doctors"),
     date: v.string(),
     time: v.string(),
@@ -201,8 +196,9 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_patient", ["patientId"])
-    .index("by_date", ["date"]),
+    .index("by_pet", ["petId"])
+    .index("by_date", ["date"])
+    .index("by_doctor", ["doctorId"]),
 
   doctors: defineTable({
     name: v.string(),

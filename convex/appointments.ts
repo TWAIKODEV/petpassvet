@@ -1,14 +1,11 @@
+
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 // Crear una nueva cita
 export const createAppointment = mutation({
   args: {
-    petName: v.string(),
-    breed: v.string(),
-    age: v.number(),
-    sex: v.union(v.literal("male"), v.literal("female")),
-    petProfileUrl: v.string(),
+    petId: v.id("pets"),
     consultationKind: v.union(
       v.literal("annualReview"),
       v.literal("followUp"),
@@ -23,8 +20,7 @@ export const createAppointment = mutation({
     ),
     consultationType: v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency")),
     serviceType: v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("rehabilitation"), v.literal("hospitalization")),
-    patientId: v.id("patients"),
-    doctorId: v.string(),
+    doctorId: v.id("doctors"),
     date: v.string(),
     time: v.string(),
     duration: v.number(),
@@ -42,20 +38,66 @@ export const createAppointment = mutation({
   },
 });
 
-// Obtener todas las citas
+// Obtener todas las citas con información completa
 export const getAppointments = query({
   handler: async (ctx) => {
-    return await ctx.db.query("appointments").order("desc").collect();
+    const appointments = await ctx.db.query("appointments").order("desc").collect();
+    
+    const appointmentsWithDetails = await Promise.all(
+      appointments.map(async (appointment) => {
+        // Obtener información de la mascota
+        const pet = await ctx.db.get(appointment.petId);
+        if (!pet) return null;
+        
+        // Obtener información del paciente (propietario)
+        const patient = await ctx.db.get(pet.patientId);
+        if (!patient) return null;
+        
+        // Obtener información del doctor
+        const doctor = await ctx.db.get(appointment.doctorId);
+        if (!doctor) return null;
+        
+        // Calcular edad de la mascota
+        const age = pet.birthDate 
+          ? new Date().getFullYear() - new Date(pet.birthDate).getFullYear()
+          : 0;
+        
+        return {
+          ...appointment,
+          pet: {
+            id: pet._id,
+            name: pet.name,
+            species: pet.species,
+            breed: pet.breed || '',
+            sex: pet.sex || 'male',
+            age: age,
+          },
+          patient: {
+            id: patient._id,
+            name: `${patient.firstName} ${patient.lastName}`,
+            email: patient.email,
+            phone: patient.phone,
+          },
+          doctor: {
+            id: doctor._id,
+            name: doctor.name,
+            specialization: doctor.specialization,
+          }
+        };
+      })
+    );
+    
+    return appointmentsWithDetails.filter(appointment => appointment !== null);
   },
 });
 
-// Obtener citas por paciente
-export const getAppointmentsByPatient = query({
-  args: { patientId: v.id("patients") },
+// Obtener citas por mascota
+export const getAppointmentsByPet = query({
+  args: { petId: v.id("pets") },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("appointments")
-      .withIndex("by_patient", (q) => q.eq("patientId", args.patientId))
+      .withIndex("by_pet", (q) => q.eq("petId", args.petId))
       .collect();
   },
 });
@@ -64,10 +106,52 @@ export const getAppointmentsByPatient = query({
 export const getAppointmentsByDate = query({
   args: { date: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const appointments = await ctx.db
       .query("appointments")
       .withIndex("by_date", (q) => q.eq("date", args.date))
       .collect();
+    
+    const appointmentsWithDetails = await Promise.all(
+      appointments.map(async (appointment) => {
+        const pet = await ctx.db.get(appointment.petId);
+        if (!pet) return null;
+        
+        const patient = await ctx.db.get(pet.patientId);
+        if (!patient) return null;
+        
+        const doctor = await ctx.db.get(appointment.doctorId);
+        if (!doctor) return null;
+        
+        const age = pet.birthDate 
+          ? new Date().getFullYear() - new Date(pet.birthDate).getFullYear()
+          : 0;
+        
+        return {
+          ...appointment,
+          pet: {
+            id: pet._id,
+            name: pet.name,
+            species: pet.species,
+            breed: pet.breed || '',
+            sex: pet.sex || 'male',
+            age: age,
+          },
+          patient: {
+            id: patient._id,
+            name: `${patient.firstName} ${patient.lastName}`,
+            email: patient.email,
+            phone: patient.phone,
+          },
+          doctor: {
+            id: doctor._id,
+            name: doctor.name,
+            specialization: doctor.specialization,
+          }
+        };
+      })
+    );
+    
+    return appointmentsWithDetails.filter(appointment => appointment !== null);
   },
 });
 
@@ -83,11 +167,7 @@ export const getAppointment = query({
 export const updateAppointment = mutation({
   args: {
     id: v.id("appointments"),
-    petName: v.optional(v.string()),
-    breed: v.optional(v.string()),
-    age: v.optional(v.number()),
-    sex: v.optional(v.union(v.literal("male"), v.literal("female"))),
-    petProfileUrl: v.optional(v.string()),
+    petId: v.optional(v.id("pets")),
     consultationKind: v.optional(v.union(
       v.literal("annualReview"),
       v.literal("followUp"),
@@ -102,8 +182,7 @@ export const updateAppointment = mutation({
     )),
     consultationType: v.optional(v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency"))),
     serviceType: v.optional(v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("rehabilitation"), v.literal("hospitalization"))),
-    patientId: v.optional(v.id("patients")),
-    doctorId: v.optional(v.string()),
+    doctorId: v.optional(v.id("doctors")),
     date: v.optional(v.string()),
     time: v.optional(v.string()),
     duration: v.optional(v.number()),
@@ -138,5 +217,72 @@ export const deleteAppointment = mutation({
   args: { id: v.id("appointments") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+  },
+});
+
+// Buscar pacientes y mascotas para el buscador de citas
+export const searchPatientsAndPets = query({
+  args: { searchTerm: v.string() },
+  handler: async (ctx, args) => {
+    const patients = await ctx.db.query("patients").collect();
+    const pets = await ctx.db.query("pets").collect();
+    
+    const results = [];
+    
+    // Buscar en pacientes
+    for (const patient of patients) {
+      const fullName = `${patient.firstName} ${patient.lastName}`.toLowerCase();
+      if (
+        fullName.includes(args.searchTerm.toLowerCase()) ||
+        patient.email.toLowerCase().includes(args.searchTerm.toLowerCase()) ||
+        patient.phone.includes(args.searchTerm)
+      ) {
+        // Obtener mascotas del paciente
+        const patientPets = pets.filter(pet => pet.patientId === patient._id);
+        
+        for (const pet of patientPets) {
+          results.push({
+            id: `${patient._id}-${pet._id}`,
+            patientId: patient._id,
+            petId: pet._id,
+            patientName: fullName,
+            petName: pet.name,
+            petSpecies: pet.species,
+            petBreed: pet.breed || '',
+            email: patient.email,
+            phone: patient.phone,
+            displayText: `${pet.name} (${pet.species}) - ${fullName}`
+          });
+        }
+      }
+    }
+    
+    // Buscar en mascotas
+    for (const pet of pets) {
+      if (pet.name.toLowerCase().includes(args.searchTerm.toLowerCase())) {
+        const patient = await ctx.db.get(pet.patientId);
+        if (patient) {
+          const fullName = `${patient.firstName} ${patient.lastName}`;
+          const existingResult = results.find(r => r.petId === pet._id);
+          
+          if (!existingResult) {
+            results.push({
+              id: `${patient._id}-${pet._id}`,
+              patientId: patient._id,
+              petId: pet._id,
+              patientName: fullName,
+              petName: pet.name,
+              petSpecies: pet.species,
+              petBreed: pet.breed || '',
+              email: patient.email,
+              phone: patient.phone,
+              displayText: `${pet.name} (${pet.species}) - ${fullName}`
+            });
+          }
+        }
+      }
+    }
+    
+    return results.slice(0, 10); // Limitar a 10 resultados
   },
 });

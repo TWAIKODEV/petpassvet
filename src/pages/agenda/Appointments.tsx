@@ -1,10 +1,13 @@
+
 import React, { useState } from 'react';
 import { Search, Filter, Download, Calendar, RefreshCw, FileText, Eye, Printer, X, Euro, Camera as VideoCamera } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import NewAppointmentForm from '../../components/dashboard/NewAppointmentForm';
-import { mockAppointments, mockPatients, mockDoctors } from '../../data/mockData';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { Id } from '../../../convex/_generated/dataModel';
 
 const Appointments = () => {
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
@@ -26,10 +29,12 @@ const Appointments = () => {
   const [isAllDay, setIsAllDay] = useState(false);
   const [appointmentCompleted, setAppointmentCompleted] = useState(false);
 
-  // Get patient and doctor info for each appointment
-  const getPatientById = (id: string) => mockPatients.find(patient => patient.id === id);
-  const getDoctorById = (id: string) => mockDoctors.find(doctor => doctor.id === id);
-  
+  // Convex queries and mutations
+  const appointments = useQuery(api.appointments.getAppointments) || [];
+  const doctors = useQuery(api.doctors.getDoctors) || [];
+  const updateAppointmentStatus = useMutation(api.appointments.updateAppointmentStatus);
+  const updateAppointment = useMutation(api.appointments.updateAppointment);
+
   // Status styles with background opacity for better readability
   const statusStyles = {
     'pending': 'bg-orange-100 text-orange-800',
@@ -37,7 +42,8 @@ const Appointments = () => {
     'waiting': 'bg-pink-100 text-pink-800',
     'in_progress': 'bg-blue-100 text-blue-800',
     'completed': 'bg-green-100 text-green-800',
-    'no_show': 'bg-red-100 text-red-800'
+    'no_show': 'bg-red-100 text-red-800',
+    'scheduled': 'bg-blue-100 text-blue-800'
   };
   
   // Status labels in Spanish
@@ -47,7 +53,8 @@ const Appointments = () => {
     'waiting': 'Sala de Espera',
     'in_progress': 'En Curso',
     'completed': 'Terminada',
-    'no_show': 'No Asistencia'
+    'no_show': 'No Asistencia',
+    'scheduled': 'Programada'
   };
 
   // Service areas
@@ -60,10 +67,8 @@ const Appointments = () => {
   ];
 
   // Filter appointments
-  const filteredAppointments = mockAppointments.filter(appointment => {
-    const patient = getPatientById(appointment.patientId);
-    const doctor = getDoctorById(appointment.doctorId);
-    const searchString = `${appointment.petName} ${patient?.name} ${doctor?.name}`.toLowerCase();
+  const filteredAppointments = appointments.filter(appointment => {
+    const searchString = `${appointment.pet?.name} ${appointment.patient?.name} ${appointment.doctor?.name}`.toLowerCase();
     
     return (
       searchString.includes(searchTerm.toLowerCase()) &&
@@ -73,19 +78,24 @@ const Appointments = () => {
   });
 
   const handleNewAppointment = (appointmentData: any) => {
-    // Here you would typically make an API call to save the new appointment
     console.log('New appointment data:', appointmentData);
     setShowNewAppointmentForm(false);
   };
 
-  const handleStatusChange = (appointmentId: string, newStatus: string) => {
-    // Here you would typically make an API call to update the appointment status
-    console.log('Updating appointment', appointmentId, 'to status:', newStatus);
+  const handleStatusChange = async (appointmentId: Id<"appointments">, newStatus: string) => {
+    try {
+      await updateAppointmentStatus({
+        id: appointmentId,
+        status: newStatus as any
+      });
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+    }
   };
 
   const handleRefresh = () => {
-    // Here you would typically fetch new data
-    console.log('Refreshing data...');
+    // Convex automatically refreshes data, but we can trigger a manual refresh if needed
+    console.log('Data automatically refreshed by Convex...');
   };
 
   const toggleRow = (appointmentId: string) => {
@@ -96,16 +106,20 @@ const Appointments = () => {
     setSelectedAppointment(appointment);
     
     // Initialize modal form with appointment data
-    const patient = getPatientById(appointment.patientId);
-    const doctor = getDoctorById(appointment.doctorId);
+    const consultationKindLabels = {
+      'annualReview': 'Revisión Anual',
+      'followUp': 'Seguimiento',
+      'checkUp': 'Chequeo',
+      'emergency': 'Emergencia',
+      'vaccination': 'Vacunación',
+      'surgery': 'Cirugía',
+      'dental': 'Dental',
+      'grooming': 'Peluquería',
+      'firstVisit': 'Primera Visita',
+      'procedure': 'Procedimiento'
+    };
     
-    setAppointmentTitle(`${appointment.consultationKind === 'annualReview' ? 'Revisión Anual' : 
-                          appointment.consultationKind === 'followUp' ? 'Seguimiento' : 
-                          appointment.consultationKind === 'checkUp' ? 'Chequeo' : 
-                          appointment.consultationKind === 'emergency' ? 'Emergencia' : 
-                          appointment.consultationKind === 'vaccination' ? 'Vacunación' : 
-                          appointment.consultationKind === 'surgery' ? 'Cirugía' : 
-                          appointment.consultationKind === 'dental' ? 'Dental' : 'Peluquería'} - ${appointment.petName}`);
+    setAppointmentTitle(`${consultationKindLabels[appointment.consultationKind] || appointment.consultationKind} - ${appointment.pet?.name}`);
     
     setAppointmentDate(appointment.date);
     setAppointmentStartTime(appointment.time);
@@ -125,23 +139,31 @@ const Appointments = () => {
     setAppointmentCompleted(appointment.status === 'completed');
   };
 
-  const handleSaveAppointment = () => {
-    // Here you would typically make an API call to update the appointment
-    console.log('Saving appointment with data:', {
-      id: selectedAppointment?.id,
-      title: appointmentTitle,
-      date: appointmentDate,
-      startTime: appointmentStartTime,
-      endTime: appointmentEndTime,
-      type: appointmentType,
-      notes: appointmentNotes,
-      isAllDay,
-      completed: appointmentCompleted
-    });
-    
-    // Close the modal
-    setSelectedAppointment(null);
+  const handleSaveAppointment = async () => {
+    if (!selectedAppointment) return;
+
+    try {
+      await updateAppointment({
+        id: selectedAppointment._id,
+        notes: appointmentNotes,
+        date: appointmentDate,
+        time: appointmentStartTime,
+        status: appointmentCompleted ? 'completed' : selectedAppointment.status
+      });
+      
+      setSelectedAppointment(null);
+    } catch (error) {
+      console.error('Error saving appointment:', error);
+    }
   };
+
+  if (!appointments) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Cargando citas...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -193,8 +215,8 @@ const Appointments = () => {
               onChange={(e) => setSelectedSpecialist(e.target.value)}
             >
               <option value="all">Todos los especialistas</option>
-              {mockDoctors.map(doctor => (
-                <option key={doctor.id} value={doctor.id}>{doctor.name}</option>
+              {doctors.map(doctor => (
+                <option key={doctor._id} value={doctor._id}>{doctor.name}</option>
               ))}
             </select>
           </div>
@@ -249,71 +271,66 @@ const Appointments = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAppointments.map((appointment) => {
-                const patient = getPatientById(appointment.patientId);
-                const doctor = getDoctorById(appointment.doctorId);
-                
-                return (
-                  <tr key={appointment.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(appointment.date).toLocaleDateString('es-ES', {
-                          weekday: 'long',
-                          day: 'numeric',
-                          month: 'long'
-                        })}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {appointment.time} ({appointment.duration} min)
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{appointment.petName}</div>
-                      <div className="text-sm text-gray-500">
-                        {appointment.breed}, {appointment.age} años
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{patient?.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{doctor?.name}</div>
-                      <div className="text-sm text-gray-500">{doctor?.specialization}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {appointment.serviceType}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={appointment.status}
-                        onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
-                        className={`text-xs px-3 py-1.5 rounded-full font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${statusStyles[appointment.status]}`}
-                      >
-                        {Object.entries(statusLabels).map(([value, label]) => (
-                          <option 
-                            key={value} 
-                            value={value}
-                            className="text-gray-900 bg-white"
-                          >
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleManageAppointment(appointment)}
-                      >
-                        Gestionar
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredAppointments.map((appointment) => (
+                <tr key={appointment._id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {new Date(appointment.date).toLocaleDateString('es-ES', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long'
+                      })}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {appointment.time} ({appointment.duration} min)
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{appointment.pet?.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {appointment.pet?.breed}, {appointment.pet?.age} años
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{appointment.patient?.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{appointment.doctor?.name}</div>
+                    <div className="text-sm text-gray-500">{appointment.doctor?.specialization}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {appointment.serviceType}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <select
+                      value={appointment.status}
+                      onChange={(e) => handleStatusChange(appointment._id, e.target.value)}
+                      className={`text-xs px-3 py-1.5 rounded-full font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${statusStyles[appointment.status]}`}
+                    >
+                      {Object.entries(statusLabels).map(([value, label]) => (
+                        <option 
+                          key={value} 
+                          value={value}
+                          className="text-gray-900 bg-white"
+                        >
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleManageAppointment(appointment)}
+                    >
+                      Gestionar
+                    </Button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -321,20 +338,18 @@ const Appointments = () => {
         {/* Mobile List View */}
         <div className="md:hidden divide-y divide-gray-200">
           {filteredAppointments.map((appointment) => {
-            const patient = getPatientById(appointment.patientId);
-            const doctor = getDoctorById(appointment.doctorId);
-            const isExpanded = expandedRow === appointment.id;
+            const isExpanded = expandedRow === appointment._id;
             
             return (
-              <div key={appointment.id} className="p-4">
+              <div key={appointment._id} className="p-4">
                 <div 
                   className="flex items-start justify-between cursor-pointer"
-                  onClick={() => toggleRow(appointment.id)}
+                  onClick={() => toggleRow(appointment._id)}
                 >
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-gray-900">
-                        {appointment.time} - {appointment.petName}
+                        {appointment.time} - {appointment.pet?.name}
                       </div>
                     </div>
                     <div className="mt-1 text-sm text-gray-500">
@@ -359,20 +374,20 @@ const Appointments = () => {
                   <div className="mt-4 space-y-4">
                     <div className="border-t pt-4">
                       <div className="text-sm font-medium text-gray-700">Propietario</div>
-                      <div className="mt-1 text-sm text-gray-900">{patient?.name}</div>
+                      <div className="mt-1 text-sm text-gray-900">{appointment.patient?.name}</div>
                     </div>
 
                     <div className="border-t pt-4">
                       <div className="text-sm font-medium text-gray-700">Especialista</div>
-                      <div className="mt-1 text-sm text-gray-900">{doctor?.name}</div>
-                      <div className="text-sm text-gray-500">{doctor?.specialization}</div>
+                      <div className="mt-1 text-sm text-gray-900">{appointment.doctor?.name}</div>
+                      <div className="text-sm text-gray-500">{appointment.doctor?.specialization}</div>
                     </div>
 
                     <div className="border-t pt-4">
                       <div className="text-sm font-medium text-gray-700">Estado</div>
                       <select
                         value={appointment.status}
-                        onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
+                        onChange={(e) => handleStatusChange(appointment._id, e.target.value)}
                         className={`mt-1 text-xs px-3 py-1.5 rounded-full font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${statusStyles[appointment.status]}`}
                       >
                         {Object.entries(statusLabels).map(([value, label]) => (
@@ -553,58 +568,6 @@ const Appointments = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Programar alerta vía email
-                  </label>
-                  <div className="flex items-center bg-blue-50 p-3 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                    </svg>
-                    <span className="text-sm text-blue-700">30 minutos antes</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Asignado a
-                  </label>
-                  <div className="flex items-center">
-                    <div className="h-8 w-8 rounded-full bg-pink-500 flex items-center justify-center text-white font-medium">
-                      JM
-                    </div>
-                    <button className="ml-2 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 hover:bg-blue-200">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Invitar personas
-                  </label>
-                  <div className="flex items-center bg-blue-50 p-3 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                    </svg>
-                    <span className="text-sm text-blue-700">Añadir invitados</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Enlazar contacto
-                  </label>
-                  <div className="flex items-center bg-blue-50 p-3 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm text-blue-700">Seleccionar contacto</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Añadir notas
                   </label>
                   <textarea
@@ -636,7 +599,7 @@ const Appointments = () => {
                 variant="primary"
                 onClick={handleSaveAppointment}
               >
-                Crear
+                Guardar
               </Button>
             </div>
           </div>
