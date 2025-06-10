@@ -40,18 +40,7 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
   const [showImageModal, setShowImageModal] = useState<boolean>(false);
   const [currentImage, setCurrentImage] = useState<string>('');
 
-  // Example visit with complete medical case
-  const exampleVisit: Visit = {
-    id: 'example-1',
-    date: '2025-05-22',
-    time: '10:00',
-    doctor: 'Dra. Laura Gómez',
-    area: 'Veterinaria',
-    service: 'Consulta Dermatológica',
-    amount: 85.00,
-    status: 'completed',
-    notes: 'Se recomienda tratamiento antiparasitario mensual para prevenir recidivas.',
-  };
+  
 
   const getMucousLabel = (mucous: string) => {
     const labels = {
@@ -152,7 +141,7 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {[exampleVisit, ...pet.visits].map((visit, index) => (
+                  {pet.visits.map((visit, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
