@@ -1,15 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-// Crear un nuevo paciente
-// Obtener todos los pacientes
-export const getPatients = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("patients").collect();
-  },
-});
-
 export const createPatient = mutation({
   args: {
     firstName: v.string(),
@@ -45,8 +36,6 @@ export const createPatient = mutation({
       wantsHotelService: v.boolean(),
       wantsTraining: v.boolean(),
     }),
-    insuranceProvider: v.optional(v.string()),
-    insuranceNumber: v.optional(v.string()),
     medicalHistory: v.optional(v.array(v.string())),
     // Pet information (optional - will create pet if provided)
     pet: v.optional(
@@ -60,6 +49,9 @@ export const createPatient = mutation({
         microchipNumber: v.optional(v.string()),
         color: v.optional(v.string()),
         observations: v.optional(v.string()),
+        hasInsurance: v.optional(v.boolean()),
+        insuranceProvider: v.optional(v.string()),
+        insuranceNumber: v.optional(v.string()),
       }),
     ),
   },
@@ -89,10 +81,10 @@ export const createPatient = mutation({
         weight: undefined,
         observations: pet.observations,
         vaccines: [],
-        healthPlans: [],
-        accidents: [],
-        surgeries: [],
-        otherTests: [],
+        otherTests: undefined,
+        hasInsurance: pet.hasInsurance,
+        insuranceProvider: pet.insuranceProvider,
+        insuranceNumber: pet.insuranceNumber,
         createdAt: now,
         updatedAt: now,
       });

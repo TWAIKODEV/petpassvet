@@ -27,7 +27,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
     preferredContact: "",
     couponCode: "",
     affiliateClub: "",
-    address: "Calle de Beatriz de Bobadilla, 9. Madrid",
+    address: "",
 
     // Marketing and communications
     marketing: {
@@ -52,8 +52,8 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
 
     // Pet information
     pet: {
-      name: "",
-      species: "",
+      name: undefined,
+      species: undefined,
       breed: "",
       sex: "",
       birthDate: "",
@@ -62,8 +62,8 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
       color: "",
       observations: "",
       hasInsurance: false,
-      insurerName: "",
-      policyNumber: "",
+      insuranceProvider: "",
+      insuranceNumber: "",
     },
   });
 
@@ -164,30 +164,30 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
           wantsHotelService: formData.services.wantsHotelService || false,
           wantsTraining: formData.services.wantsTraining || false,
         },
-        insuranceProvider: formData.pet.hasInsurance
-          ? formData.pet.insurerName
-          : undefined,
-        insuranceNumber: formData.pet.hasInsurance
-          ? formData.pet.policyNumber
-          : undefined,
         medicalHistory: undefined,
       };
 
       // Add pet data if provided
-      if (formData.pet.name && formData.pet.species) {
+      if (formData.pet.name) {
         const petData = {
           name: formData.pet.name,
           species: formData.pet.species,
           breed: formData.pet.breed || undefined,
-          sex: formData.pet.sex ? (formData.pet.sex as "male" | "female") : undefined,
+          sex: formData.pet.sex
+            ? (formData.pet.sex as "male" | "female")
+            : undefined,
           birthDate: formData.pet.birthDate || undefined,
           isNeutered: formData.pet.isNeutered || false,
           microchipNumber: formData.pet.microchipNumber || undefined,
           color: formData.pet.color || undefined,
           observations: formData.pet.observations || undefined,
           hasInsurance: formData.pet.hasInsurance || false,
-          insuranceProvider: formData.pet.hasInsurance ? formData.pet.insurerName : undefined,
-          insuranceNumber: formData.pet.hasInsurance ? formData.pet.policyNumber : undefined,
+          insuranceProvider: formData.pet.hasInsurance
+            ? formData.pet.insuranceProvider
+            : undefined,
+          insuranceNumber: formData.pet.hasInsurance
+            ? formData.pet.insuranceNumber
+            : undefined,
         };
 
         patientData.pet = petData;
@@ -459,14 +459,14 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input
                       label="Nombre de la aseguradora"
-                      name="pet.insurerName"
-                      value={formData.pet.insurerName}
+                      name="pet.insuranceProvider"
+                      value={formData.pet.insuranceProvider}
                       onChange={handleChange}
                     />
                     <Input
                       label="Número de póliza"
-                      name="pet.policyNumber"
-                      value={formData.pet.policyNumber}
+                      name="pet.insuranceNumber"
+                      value={formData.pet.insuranceNumber}
                       onChange={handleChange}
                     />
                   </div>

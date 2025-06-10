@@ -91,8 +91,6 @@ export default defineSchema({
       wantsHotelService: v.boolean(),
       wantsTraining: v.boolean(),
     }),
-    insuranceProvider: v.optional(v.string()),
-    insuranceNumber: v.optional(v.string()),
     medicalHistory: v.optional(v.array(v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -112,36 +110,42 @@ export default defineSchema({
     height: v.optional(v.number()),
     furType: v.optional(v.string()),
     observations: v.optional(v.string()),
-    // Vacunas
-    vaccines: v.optional(v.array(
-      v.object({
-        name: v.string(),
-        date: v.string(),
-        nextDue: v.optional(v.string()),
-      }),
-    )),
-    // Tratamientos médicos
+    vaccines: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          date: v.string(),
+          nextDue: v.optional(v.string()),
+        }),
+      ),
+    ),
     currentTreatments: v.optional(v.string()),
     allergies: v.optional(v.string()),
-    // Pruebas médicas
-    bloodTest: v.optional(v.object({
-      done: v.boolean(),
-      date: v.optional(v.string()),
-    })),
-    xrayTest: v.optional(v.object({
-      done: v.boolean(),
-      date: v.optional(v.string()),
-    })),
-    ultrasoundTest: v.optional(v.object({
-      done: v.boolean(),
-      date: v.optional(v.string()),
-    })),
-    urineTest: v.optional(v.object({
-      done: v.boolean(),
-      date: v.optional(v.string()),
-    })),
+    bloodTest: v.optional(
+      v.object({
+        done: v.boolean(),
+        date: v.optional(v.string()),
+      }),
+    ),
+    xrayTest: v.optional(
+      v.object({
+        done: v.boolean(),
+        date: v.optional(v.string()),
+      }),
+    ),
+    ultrasoundTest: v.optional(
+      v.object({
+        done: v.boolean(),
+        date: v.optional(v.string()),
+      }),
+    ),
+    urineTest: v.optional(
+      v.object({
+        done: v.boolean(),
+        date: v.optional(v.string()),
+      }),
+    ),
     otherTests: v.optional(v.string()),
-    // PetPass e Seguros
     hasPetPass: v.optional(v.boolean()),
     hasInsurance: v.optional(v.boolean()),
     insuranceProvider: v.optional(v.string()),
@@ -180,7 +184,7 @@ export default defineSchema({
       v.literal("hospitalization"),
     ),
     patientId: v.id("patients"),
-    doctorId: v.string(),
+    doctorId: v.id("doctors"),
     date: v.string(),
     time: v.string(),
     duration: v.number(),
