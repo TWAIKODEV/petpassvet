@@ -3,91 +3,15 @@ import { X, UserCheck, UserX, Calendar, Clock, DollarSign, FileText, Printer, Do
 import Button from '../common/Button';
 
 interface Visit {
-  id?: string;
+  id: string;
   date: string;
+  time: string;
   doctor: string;
   area: string;
   service: string;
   amount: number;
-  details?: {
-    symptoms?: string;
-    diagnosis?: string;
-    treatment?: string;
-    notes?: string;
-    nextVisit?: string;
-    physicalExam?: {
-      temperature?: {
-        value: number;
-        unit: 'C' | 'F';
-      };
-      weight?: {
-        value: number;
-        unit: 'kg' | 'lb';
-      };
-      icc?: string;
-      tllc?: string;
-      heartRate?: string;
-      respiratoryRate?: string;
-      reflexes?: string;
-      pulse?: string;
-      saturation?: string;
-      bloodPressure?: string;
-      mucous?: 'normal' | 'pale' | 'hyperemic' | 'cyanotic' | 'icteric';
-      glycemia?: string;
-      palpation?: string;
-    };
-    bloodAnalysis?: {
-      hemogram?: {
-        date?: string;
-        results?: {
-          redBloodCells?: string;
-          hemoglobin?: string;
-          hematocrit?: string;
-          mcv?: string;
-          mch?: string;
-          mchc?: string;
-          platelets?: string;
-          whiteBloodCells?: string;
-          neutrophils?: string;
-          lymphocytes?: string;
-          monocytes?: string;
-          eosinophils?: string;
-          basophils?: string;
-        }
-      };
-      biochemistry?: {
-        date?: string;
-        results?: {
-          glucose?: string;
-          urea?: string;
-          creatinine?: string;
-          alt?: string;
-          ast?: string;
-          alp?: string;
-          totalProtein?: string;
-          albumin?: string;
-          globulin?: string;
-          calcium?: string;
-          phosphorus?: string;
-          sodium?: string;
-          potassium?: string;
-          chloride?: string;
-        }
-      };
-    };
-    tests?: Array<{
-      name: string;
-      result: string;
-      date: string;
-      type?: 'laboratory' | 'radiological' | 'other';
-      imageUrl?: string;
-    }>;
-    prescriptions?: Array<{
-      name: string;
-      dosage: string;
-      duration: string;
-    }>;
-  };
+  status: string;
+  notes?: string;
 }
 
 interface Pet {
@@ -120,70 +44,13 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
   const exampleVisit: Visit = {
     id: 'example-1',
     date: '2025-05-22',
+    time: '10:00',
     doctor: 'Dra. Laura Gómez',
     area: 'Veterinaria',
     service: 'Consulta Dermatológica',
     amount: 85.00,
-    details: {
-      symptoms: 'Prurito intenso, eritema y alopecia en zona dorsolumbar y base de la cola. El propietario reporta que el animal se rasca constantemente desde hace 2 semanas.',
-      diagnosis: 'Dermatitis alérgica por pulgas (DAPP) con infección bacteriana secundaria',
-      treatment: 'Tratamiento antiparasitario con Simparica 80mg para eliminar pulgas y garrapatas. Antibioterapia con Amoxicilina-Clavulánico para tratar la infección secundaria. Baños con champú medicado Malaseb cada 3 días durante 2 semanas.',
-      notes: 'Se recomienda tratamiento antiparasitario mensual para prevenir recidivas. Revisar el ambiente donde vive el animal para eliminar posibles focos de pulgas.',
-      nextVisit: '2025-06-05',
-      physicalExam: {
-        temperature: {
-          value: 38.7,
-          unit: 'C'
-        },
-        weight: {
-          value: 28.4,
-          unit: 'kg'
-        },
-        heartRate: '90 lpm',
-        respiratoryRate: '24 rpm',
-        tllc: '2 segundos',
-        mucous: 'normal',
-        palpation: 'Sin anomalías en la palpación abdominal. Ganglios linfáticos normales.'
-      },
-      tests: [
-        {
-          name: 'Raspado cutáneo',
-          result: 'Negativo para ácaros. Presencia de detritus de pulgas.',
-          date: '2025-05-22',
-          type: 'laboratory'
-        },
-        {
-          name: 'Citología cutánea',
-          result: 'Presencia de cocos y neutrófilos, compatible con infección bacteriana secundaria.',
-          date: '2025-05-22',
-          type: 'laboratory'
-        },
-        {
-          name: 'Fotografía lesiones',
-          result: 'Documentación de lesiones en zona dorsolumbar',
-          date: '2025-05-22',
-          type: 'other',
-          imageUrl: 'https://images.pexels.com/photos/406014/pexels-photo-406014.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
-        }
-      ],
-      prescriptions: [
-        {
-          name: 'Simparica 80mg',
-          dosage: '1 comprimido',
-          duration: 'Mensual (administrar hoy y repetir cada 30 días)'
-        },
-        {
-          name: 'Amoxicilina-Clavulánico 500mg',
-          dosage: '1 comprimido cada 12 horas',
-          duration: '10 días'
-        },
-        {
-          name: 'Champú Malaseb',
-          dosage: 'Baño cada 3 días, dejar actuar 10 minutos',
-          duration: '2 semanas'
-        }
-      ]
-    }
+    status: 'completed',
+    notes: 'Se recomienda tratamiento antiparasitario mensual para prevenir recidivas.',
   };
 
   const getMucousLabel = (mucous: string) => {
@@ -204,7 +71,7 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
 
   const handlePrintVisitSummary = () => {
     if (!selectedVisit) return;
-    
+
     // In a real app, this would generate a PDF of the visit summary
     console.log('Printing visit summary for:', selectedVisit);
     window.print();
@@ -212,7 +79,7 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
 
   const handleDownloadVisitSummary = () => {
     if (!selectedVisit) return;
-    
+
     // In a real app, this would download a PDF of the visit summary
     console.log('Downloading visit summary for:', selectedVisit);
   };
@@ -403,7 +270,7 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                   <FileText className="text-blue-600 mr-3" size={24} />
                   <h4 className="text-xl font-semibold text-gray-900">Ficha Resumen de Consulta</h4>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <div className="flex items-center mb-2">
@@ -413,7 +280,7 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                     <p className="text-sm text-gray-900 ml-6">{pet.owner.name}</p>
                     <p className="text-xs text-gray-500 ml-6">{pet.owner.phone}</p>
                   </div>
-                  
+
                   <div>
                     <div className="flex items-center mb-2">
                       <PawPrint className="text-gray-500 mr-2" size={16} />
@@ -427,18 +294,19 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="mt-4 border-t border-gray-200 pt-4">
                   <div className="flex items-center mb-2">
                     <Stethoscope className="text-gray-500 mr-2" size={16} />
                     <h5 className="text-sm font-medium text-gray-700">Diagnóstico</h5>
                   </div>
                   <p className="text-sm text-gray-900 ml-6">
-                    {selectedVisit.details?.diagnosis || "No se registró diagnóstico"}
+                    {/* {selectedVisit.details?.diagnosis || "No se registró diagnóstico"} */}
+                    No se registró diagnóstico
                   </p>
                 </div>
-                
-                {selectedVisit.details?.tests && selectedVisit.details.tests.length > 0 && (
+
+                {/* {selectedVisit.details?.tests && selectedVisit.details.tests.length > 0 && (
                   <div className="mt-4 border-t border-gray-200 pt-4">
                     <div className="flex items-center mb-2">
                       <Activity className="text-gray-500 mr-2" size={16} />
@@ -452,9 +320,9 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                       ))}
                     </ul>
                   </div>
-                )}
-                
-                {selectedVisit.details?.prescriptions && selectedVisit.details.prescriptions.length > 0 && (
+                )} */}
+
+                {/* {selectedVisit.details?.prescriptions && selectedVisit.details.prescriptions.length > 0 && (
                   <div className="mt-4 border-t border-gray-200 pt-4">
                     <div className="flex items-center mb-2">
                       <Pill className="text-gray-500 mr-2" size={16} />
@@ -468,19 +336,20 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                       ))}
                     </ul>
                   </div>
-                )}
-                
+                )} */}
+
                 <div className="mt-4 border-t border-gray-200 pt-4">
                   <div className="flex items-center mb-2">
                     <CheckCircle className="text-gray-500 mr-2" size={16} />
                     <h5 className="text-sm font-medium text-gray-700">Solución/Tratamiento</h5>
                   </div>
                   <p className="text-sm text-gray-900 ml-6">
-                    {selectedVisit.details?.treatment || "No se registró tratamiento"}
+                    {/* {selectedVisit.details?.treatment || "No se registró tratamiento"} */}
+                    No se registró tratamiento
                   </p>
                 </div>
-                
-                {selectedVisit.details?.nextVisit && (
+
+                {/* {selectedVisit.details?.nextVisit && (
                   <div className="mt-4 border-t border-gray-200 pt-4">
                     <div className="flex items-center mb-2">
                       <CalendarClock className="text-gray-500 mr-2" size={16} />
@@ -495,11 +364,32 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                       })}
                     </p>
                   </div>
-                )}
+                )} */}
+                <div className="mt-4 border-t border-gray-200 pt-4">
+                    <div className="flex items-center mb-2">
+                      <Calendar size={16} className="text-gray-500 mr-2" />
+                      <h5 className="text-sm font-medium text-gray-700">Fecha y hora</h5>
+                    </div>
+                    <p className="text-sm text-gray-900 ml-6">
+                       {new Date(selectedVisit.date).toLocaleDateString('es-ES', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })} - {selectedVisit.time}
+                    </p>
+                  </div>
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <div className="flex items-center mb-2">
+                      <Stethoscope className="text-gray-500 mr-2" size={16} />
+                      <h5 className="text-sm font-medium text-gray-700">Notas</h5>
+                    </div>
+                    <p className="text-sm text-gray-900 ml-6">{selectedVisit.notes}</p>
+                  </div>
               </div>
 
               {/* Clinical Information */}
-              {selectedVisit.details && (
+              {/* {selectedVisit.details && (
                 <div className="bg-white rounded-lg shadow p-4 border border-gray-200 mb-6">
                   <div className="flex items-center mb-3">
                     <Stethoscope className="text-blue-600 mr-2" size={18} />
@@ -544,11 +434,11 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                     )}
                   </div>
                 </div>
-              )}
+              )} */}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
                 {/* Physical Exam */}
-                {selectedVisit.details?.physicalExam && (
+                {/* {selectedVisit.details?.physicalExam && (
                   <div className="bg-white rounded-lg shadow p-4 border border-gray-200">
                     <div className="flex items-center mb-3">
                       <Clipboard className="text-green-600 mr-2" size={18} />
@@ -665,10 +555,10 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                       </div>
                     )}
                   </div>
-                )}
+                )} */}
 
                 {/* Tests */}
-                {selectedVisit.details?.tests && selectedVisit.details.tests.length > 0 && (
+                {/* {selectedVisit.details?.tests && selectedVisit.details.tests.length > 0 && (
                   <div className="bg-white rounded-lg shadow p-4 border border-gray-200">
                     <div className="flex items-center mb-3">
                       <Activity className="text-orange-600 mr-2" size={18} />
@@ -701,11 +591,11 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                       ))}
                     </div>
                   </div>
-                )}
-              </div>
+                )} */}
+              {/* </div> */}
 
               {/* Prescriptions */}
-              {selectedVisit.details?.prescriptions && selectedVisit.details.prescriptions.length > 0 && (
+              {/* {selectedVisit.details?.prescriptions && selectedVisit.details.prescriptions.length > 0 && (
                 <div className="bg-white rounded-lg shadow p-4 border border-gray-200 mt-6">
                   <div className="flex items-center mb-3">
                     <Pill className="text-purple-600 mr-2" size={18} />
@@ -723,10 +613,10 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                     ))}
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Blood Analysis */}
-              {selectedVisit.details?.bloodAnalysis && (
+              {/* {selectedVisit.details?.bloodAnalysis && (
                 <div className="bg-white rounded-lg shadow p-4 border border-gray-200 mt-6">
                   <div className="flex items-center mb-3">
                     <Droplet className="text-red-600 mr-2" size={18} />
@@ -999,7 +889,7 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                     </div>
                   )}
                 </div>
-              )}
+              )} */}
             </div>
 
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">

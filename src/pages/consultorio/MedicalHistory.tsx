@@ -1,77 +1,36 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, Calendar, RefreshCw, FileText, Eye } from 'lucide-react';
+import { Search, Download, Eye } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import PetHistoryModal from '../../components/dashboard/PetHistoryModal';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import * as XLSX from 'xlsx';
-
-// Mock data for medical history
-const mockHistory = [
-  {
-    id: '1',
-    date: '2025-05-21',
-    owner: {
-      name: 'María García',
-      email: 'maria.garcia@example.com',
-      phone: '666777888'
-    },
-    pet: {
-      name: 'Luna',
-      species: 'Perro',
-      breed: 'Labrador',
-      age: 3,
-      sex: 'female',
-      microchip: '941000024680135'
-    },
-    recordCount: 12,
-    petPass: true,
-    healthPlan: 'Premium',
-    insurance: {
-      provider: 'PetSure',
-      number: 'PS-123456'
-    }
-  },
-  {
-    id: '2',
-    date: '2025-05-20',
-    owner: {
-      name: 'Carlos Rodríguez',
-      email: 'carlos@example.com',
-      phone: '666888999'
-    },
-    pet: {
-      name: 'Rocky',
-      species: 'Perro',
-      breed: 'Pastor Alemán',
-      age: 5,
-      sex: 'male',
-      microchip: '941000024681246'
-    },
-    recordCount: 8,
-    petPass: false,
-    healthPlan: null,
-    insurance: {
-      provider: 'VetProtect',
-      number: 'VP-789012'
-    }
-  }
-];
 
 const MedicalHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPet, setSelectedPet] = useState<any>(null);
 
-  // Filter records based on search term (owner name, pet name, phone or microchip)
-  const filteredHistory = mockHistory.filter(record => 
+  // Obtener datos del historial médico desde Convex
+  const medicalHistoryData = useQuery(api.medicalHistory.getMedicalHistoryData);
+  const petDetailedHistory = useQuery(
+    api.medicalHistory.getPetDetailedHistory,
+    selectedPet ? { petId: selectedPet } : "skip"
+  );
+
+  // Filtrar registros basado en el término de búsqueda
+  const filteredHistory = medicalHistoryData?.filter(record => 
     record.owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.owner.phone.includes(searchTerm) ||
     record.pet.microchip.includes(searchTerm)
-  );
+  ) || [];
 
   const handleExportExcel = () => {
-    const excelData = mockHistory.map(record => ({
+    if (!medicalHistoryData) return;
+
+    const excelData = medicalHistoryData.map(record => ({
       'Fecha Alta': new Date(record.date).toLocaleDateString('es-ES'),
       'Propietario': record.owner.name,
       'Teléfono': record.owner.phone,
@@ -84,8 +43,8 @@ const MedicalHistory = () => {
       'Nº': record.recordCount,
       'PetPass': record.petPass ? 'Sí' : 'No',
       'Plan de Salud': record.healthPlan || '-',
-      'Seguro': record.insurance.provider,
-      'Nº Póliza': record.insurance.number
+      'Seguro': record.insurance?.provider || '-',
+      'Nº Póliza': record.insurance?.number || '-'
     }));
 
     const wb = XLSX.utils.book_new();
@@ -93,6 +52,21 @@ const MedicalHistory = () => {
     XLSX.utils.book_append_sheet(wb, ws, 'Historial');
     XLSX.writeFile(wb, 'historial-medico.xlsx');
   };
+
+  const handleViewHistory = (petId: string) => {
+    setSelectedPet(petId);
+  };
+
+  if (!medicalHistoryData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando historial médico...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -226,34 +200,21 @@ const MedicalHistory = () => {
                       )}
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{record.insurance.provider}</div>
-                      <div className="text-sm text-gray-500">{record.insurance.number}</div>
+                      {record.insurance ? (
+                        <>
+                          <div className="text-sm font-medium text-gray-900">{record.insurance.provider}</div>
+                          <div className="text-sm text-gray-500">{record.insurance.number}</div>
+                        </>
+                      ) : (
+                        <span className="text-sm text-gray-500">Sin seguro</span>
+                      )}
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Button
                         variant="outline"
                         size="sm"
                         icon={<Eye size={16} />}
-                        onClick={() => setSelectedPet({
-                          id: record.id,
-                          name: record.pet.name,
-                          species: record.pet.species,
-                          breed: record.pet.breed,
-                          sex: record.pet.sex,
-                          birthDate: new Date(Date.now() - record.pet.age * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                          owner: {
-                            name: record.owner.name,
-                            phone: record.owner.phone,
-                            email: record.owner.email
-                          },
-                          visits: Array(record.recordCount).fill(null).map((_, i) => ({
-                            date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                            doctor: 'Dr. Alejandro Ramírez',
-                            area: 'Veterinaria',
-                            service: 'Consulta General',
-                            amount: 75.00
-                          }))
-                        })}
+                        onClick={() => handleViewHistory(record.id)}
                       >
                         Ver Historial
                       </Button>
@@ -264,12 +225,18 @@ const MedicalHistory = () => {
             </table>
           </div>
         </div>
+
+        {filteredHistory.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No se encontraron registros médicos.</p>
+          </div>
+        )}
       </div>
 
       {/* Pet History Modal */}
-      {selectedPet && (
+      {selectedPet && petDetailedHistory && (
         <PetHistoryModal
-          pet={selectedPet}
+          pet={petDetailedHistory}
           onClose={() => setSelectedPet(null)}
         />
       )}
