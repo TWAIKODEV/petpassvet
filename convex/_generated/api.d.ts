@@ -29,7 +29,6 @@ import type * as pets from "../pets.js";
 import type * as prescriptions from "../prescriptions.js";
 import type * as products from "../products.js";
 import type * as threads from "../threads.js";
-import type * as treatments from "../treatments.js";
 import type * as userRoles from "../userRoles.js";
 import type * as users from "../users.js";
 
@@ -58,7 +57,6 @@ declare const fullApi: ApiFromModules<{
   prescriptions: typeof prescriptions;
   products: typeof products;
   threads: typeof threads;
-  treatments: typeof treatments;
   userRoles: typeof userRoles;
   users: typeof users;
 }>;
