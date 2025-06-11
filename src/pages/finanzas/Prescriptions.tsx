@@ -8,81 +8,8 @@ import { generatePrescriptionPDF } from '../../utils/pdfGenerator';
 import NewPrescriptionForm from '../../components/dashboard/NewPrescriptionForm';
 import * as XLSX from 'xlsx';
 import { QRCodeSVG } from 'qrcode.react';
-
-// Mock data for prescriptions
-const mockPrescriptions = [
-  {
-    id: '1',
-    number: 'RX-202505001',
-    date: '2025-05-21',
-    client: {
-      name: 'María García',
-      email: 'maria.garcia@example.com',
-      phone: '+34 666 777 888'
-    },
-    pet: {
-      name: 'Luna',
-      species: 'Perro',
-      breed: 'Labrador',
-      age: 3,
-      sex: 'female'
-    },
-    diagnosis: 'Dermatitis alérgica',
-    medications: [
-      {
-        id: '1',
-        name: 'Apoquel 16mg',
-        dosage: '1 comprimido',
-        frequency: 'Cada 24 horas',
-        duration: '30 días',
-        notes: 'Administrar con comida'
-      }
-    ],
-    doctor: 'Dr. Alejandro Ramírez',
-    status: 'active',
-    shared: true,
-    shareMethod: 'email'
-  },
-  {
-    id: '2',
-    number: 'RX-202505002',
-    date: '2025-05-20',
-    client: {
-      name: 'Carlos Rodríguez',
-      email: 'carlos.rodriguez@example.com',
-      phone: '+34 666 888 999'
-    },
-    pet: {
-      name: 'Rocky',
-      species: 'Perro',
-      breed: 'Pastor Alemán',
-      age: 5,
-      sex: 'male'
-    },
-    diagnosis: 'Infección bacteriana cutánea',
-    medications: [
-      {
-        id: '2',
-        name: 'Amoxicilina 250mg',
-        dosage: '1 comprimido',
-        frequency: 'Cada 12 horas',
-        duration: '10 días',
-        notes: ''
-      },
-      {
-        id: '3',
-        name: 'Meloxicam 1.5mg/ml',
-        dosage: '0.2mg/kg',
-        frequency: 'Cada 24 horas',
-        duration: '5 días',
-        notes: 'Administrar con comida'
-      }
-    ],
-    doctor: 'Dra. Laura Gómez',
-    status: 'active',
-    shared: false
-  }
-];
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const Prescriptions = () => {
   const navigate = useNavigate();
@@ -113,38 +40,53 @@ const Prescriptions = () => {
   const [showNewPrescriptionForm, setShowNewPrescriptionForm] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
 
+  // Get prescriptions from Convex
+  const prescriptions = useQuery(api.prescriptions.getPrescriptions) || [];
+  const patients = useQuery(api.patients.getPatients) || [];
+
   // Filter prescriptions based on search term and selected status
-  const filteredPrescriptions = mockPrescriptions.filter(prescription => 
-    (selectedStatus === 'all' || prescription.status === selectedStatus) &&
-    (searchTerm === '' || 
-     prescription.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     prescription.medications.some(med => med.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-     prescription.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     prescription.client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     prescription.client.phone.includes(searchTerm) ||
-     prescription.pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     prescription.pet.species.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     prescription.pet.breed.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredPrescriptions = prescriptions.filter(prescription => {
+    const matchesSearch = searchTerm === '' || 
+      prescription.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.patient?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.patient?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.patient?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.patient?.phone?.includes(searchTerm) ||
+      prescription.pet?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.pet?.species?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.pet?.breed?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prescription.medicines?.some(med => med?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // For now, we'll consider all prescriptions as 'active' since we don't have status in schema
+    const matchesStatus = selectedStatus === 'all' || selectedStatus === 'active';
+
+    return matchesSearch && matchesStatus;
+  });
 
   const handleNewPrescription = (prescriptionData: any) => {
-    // Here you would typically make an API call to save the new prescription
     console.log('New prescription data:', prescriptionData);
     setShowNewPrescriptionForm(false);
   };
 
   const handleDownloadPrescription = (prescription: any) => {
     const data = {
-      prescriptionNumber: prescription.number,
-      date: prescription.date,
-      patientName: prescription.client.name,
-      petName: prescription.pet.name,
-      petDetails: `${prescription.pet.species} ${prescription.pet.breed}, ${prescription.pet.sex === 'male' ? 'Macho' : 'Hembra'}, ${prescription.pet.age} años`,
-      diagnosis: prescription.diagnosis,
-      medications: prescription.medications,
-      notes: "",
-      doctor: prescription.doctor,
+      prescriptionNumber: `RX-${prescription._id.slice(-8)}`,
+      date: new Date(prescription.createdAt).toISOString().split('T')[0],
+      patientName: `${prescription.patient?.firstName} ${prescription.patient?.lastName}`,
+      petName: prescription.pet?.name || 'N/A',
+      petDetails: prescription.pet ? 
+        `${prescription.pet.species} ${prescription.pet.breed || ''}, ${prescription.pet.sex === 'male' ? 'Macho' : 'Hembra'}` : 'N/A',
+      diagnosis: prescription.notes || '',
+      medications: prescription.medicines?.map(med => ({
+        id: med?._id,
+        name: med?.name || '',
+        dosage: med?.recommendedDosage || '',
+        frequency: 'Según indicaciones',
+        duration: med?.duration || '',
+        notes: ''
+      })) || [],
+      notes: prescription.notes || '',
+      doctor: prescription.doctorId || 'Dr. Sin especificar',
       clinic: {
         name: "ClinicPro",
         address: "Calle de Beatriz de Bobadilla, 9, 28040 Madrid",
@@ -154,20 +96,28 @@ const Prescriptions = () => {
     };
 
     const doc = generatePrescriptionPDF(data);
-    doc.save(`receta-${prescription.number}.pdf`);
+    doc.save(`receta-RX-${prescription._id.slice(-8)}.pdf`);
   };
 
   const handlePrintPrescription = (prescription: any) => {
     const data = {
-      prescriptionNumber: prescription.number,
-      date: prescription.date,
-      patientName: prescription.client.name,
-      petName: prescription.pet.name,
-      petDetails: `${prescription.pet.species} ${prescription.pet.breed}, ${prescription.pet.sex === 'male' ? 'Macho' : 'Hembra'}, ${prescription.pet.age} años`,
-      diagnosis: prescription.diagnosis,
-      medications: prescription.medications,
-      notes: "",
-      doctor: prescription.doctor,
+      prescriptionNumber: `RX-${prescription._id.slice(-8)}`,
+      date: new Date(prescription.createdAt).toISOString().split('T')[0],
+      patientName: `${prescription.patient?.firstName} ${prescription.patient?.lastName}`,
+      petName: prescription.pet?.name || 'N/A',
+      petDetails: prescription.pet ? 
+        `${prescription.pet.species} ${prescription.pet.breed || ''}, ${prescription.pet.sex === 'male' ? 'Macho' : 'Hembra'}` : 'N/A',
+      diagnosis: prescription.notes || '',
+      medications: prescription.medicines?.map(med => ({
+        id: med?._id,
+        name: med?.name || '',
+        dosage: med?.recommendedDosage || '',
+        frequency: 'Según indicaciones',
+        duration: med?.duration || '',
+        notes: ''
+      })) || [],
+      notes: prescription.notes || '',
+      doctor: prescription.doctorId || 'Dr. Sin especificar',
       clinic: {
         name: "ClinicPro",
         address: "Calle de Beatriz de Bobadilla, 9, 28040 Madrid",
@@ -186,19 +136,19 @@ const Prescriptions = () => {
 
     // Pre-populate sharing forms with client data
     setEmailData({
-      to: prescription.client.email || '',
-      subject: `Receta Médica ${prescription.number} - ClinicPro`,
-      message: `Estimado/a ${prescription.client.name},\n\nAdjunto encontrará la receta médica para ${prescription.pet.name} con número ${prescription.number}.\n\nDiagnóstico: ${prescription.diagnosis}\n\nMedicamentos:\n${prescription.medications.map(med => `- ${med.name}: ${med.dosage} ${med.frequency}, ${med.duration}`).join('\n')}\n\nSi tiene alguna pregunta, no dude en contactarnos.\n\nSaludos cordiales,\n${prescription.doctor}\nClinicPro`
+      to: prescription.patient?.email || '',
+      subject: `Receta Médica RX-${prescription._id.slice(-8)} - ClinicPro`,
+      message: `Estimado/a ${prescription.patient?.firstName} ${prescription.patient?.lastName},\n\nAdjunto encontrará la receta médica para ${prescription.pet?.name} con número RX-${prescription._id.slice(-8)}.\n\nMedicamentos:\n${prescription.medicines?.map(med => `- ${med?.name}: ${med?.recommendedDosage}`).join('\n')}\n\nSi tiene alguna pregunta, no dude en contactarnos.\n\nSaludos cordiales,\n${prescription.doctorId}\nClinicPro`
     });
 
     setWhatsappData({
-      number: prescription.client.phone || '',
-      message: `Hola ${prescription.client.name}, le enviamos la receta médica para ${prescription.pet.name} con número ${prescription.number}.\n\nDiagnóstico: ${prescription.diagnosis}\n\nMedicamentos:\n${prescription.medications.map(med => `- ${med.name}: ${med.dosage} ${med.frequency}, ${med.duration}`).join('\n')}\n\nSaludos, ${prescription.doctor} - ClinicPro.`
+      number: prescription.patient?.phone || '',
+      message: `Hola ${prescription.patient?.firstName}, le enviamos la receta médica para ${prescription.pet?.name} con número RX-${prescription._id.slice(-8)}.\n\nMedicamentos:\n${prescription.medicines?.map(med => `- ${med?.name}: ${med?.recommendedDosage}`).join('\n')}\n\nSaludos, ${prescription.doctorId} - ClinicPro.`
     });
 
     setSmsData({
-      number: prescription.client.phone || '',
-      message: `ClinicPro: Receta ${prescription.number} para ${prescription.pet.name}. Diagnóstico: ${prescription.diagnosis}. Medicamentos: ${prescription.medications.map(m => m.name).join(', ')}.`
+      number: prescription.patient?.phone || '',
+      message: `ClinicPro: Receta RX-${prescription._id.slice(-8)} para ${prescription.pet?.name}. Medicamentos: ${prescription.medicines?.map(m => m?.name).join(', ')}.`
     });
   };
 
@@ -214,74 +164,38 @@ const Prescriptions = () => {
   };
 
   const handleSendEmail = () => {
-    // In a real app, this would send an email with the prescription attached
     console.log('Sending email:', emailData);
-
-    // Close the form
     setShowEmailForm(false);
-
-    // Update the prescription status to indicate it was shared
-    if (previewPrescription) {
-      const updatedPrescription = { ...previewPrescription, shared: true, shareMethod: 'email' };
-      // Here you would typically update the prescription in your database
-      console.log('Updated prescription:', updatedPrescription);
-    }
   };
 
   const handleSendWhatsapp = () => {
-    // In a real app, this would send a WhatsApp message with the prescription
     console.log('Sending WhatsApp:', whatsappData);
-
-    // For demo purposes, we'll open a WhatsApp web link
     const encodedMessage = encodeURIComponent(whatsappData.message);
     const whatsappUrl = `https://wa.me/${whatsappData.number.replace(/\D/g, '')}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
-
-    // Close the form
     setShowWhatsappForm(false);
-
-    // Update the prescription status to indicate it was shared
-    if (previewPrescription) {
-      const updatedPrescription = { ...previewPrescription, shared: true, shareMethod: 'whatsapp' };
-      // Here you would typically update the prescription in your database
-      console.log('Updated prescription:', updatedPrescription);
-    }
   };
 
   const handleSendSms = () => {
-    // In a real app, this would send an SMS with the prescription
     console.log('Sending SMS:', smsData);
-
-    // For demo purposes, we'll try to open the native SMS app
     const encodedMessage = encodeURIComponent(smsData.message);
     const smsUrl = `sms:${smsData.number}?body=${encodedMessage}`;
     window.location.href = smsUrl;
-
-    // Close the form
     setShowSmsForm(false);
-
-    // Update the prescription status to indicate it was shared
-    if (previewPrescription) {
-      const updatedPrescription = { ...previewPrescription, shared: true, shareMethod: 'sms' };
-      // Here you would typically update the prescription in your database
-      console.log('Updated prescription:', updatedPrescription);
-    }
   };
 
   const handleExportExcel = () => {
-    const excelData = mockPrescriptions.map(prescription => ({
-      'Nº Receta': prescription.number,
-      'Fecha': new Date(prescription.date).toLocaleDateString('es-ES'),
-      'Propietario': prescription.client.name,
-      'Email': prescription.client.email,
-      'Teléfono': prescription.client.phone,
-      'Mascota': `${prescription.pet.name} (${prescription.pet.species} ${prescription.pet.breed}, ${prescription.pet.age} años)`,
-      'Diagnóstico': prescription.diagnosis,
-      'Medicamentos': prescription.medications.map(med => med.name).join(', '),
-      'Doctor': prescription.doctor,
-      'Estado': prescription.status === 'active' ? 'Activa' : 'Inactiva',
-      'Compartida': prescription.shared ? 'Sí' : 'No',
-      'Método': prescription.shareMethod || '-'
+    const excelData = prescriptions.map(prescription => ({
+      'Nº Receta': `RX-${prescription._id.slice(-8)}`,
+      'Fecha': new Date(prescription.createdAt).toLocaleDateString('es-ES'),
+      'Propietario': `${prescription.patient?.firstName} ${prescription.patient?.lastName}`,
+      'Email': prescription.patient?.email,
+      'Teléfono': prescription.patient?.phone,
+      'Mascota': prescription.pet ? `${prescription.pet.name} (${prescription.pet.species} ${prescription.pet.breed || ''})` : 'N/A',
+      'Notas': prescription.notes || '',
+      'Medicamentos': prescription.medicines?.map(med => med?.name).join(', '),
+      'Doctor': prescription.doctorId,
+      'Estado': 'Activa'
     }));
 
     const wb = XLSX.utils.book_new();
@@ -292,28 +206,24 @@ const Prescriptions = () => {
 
   // Generate QR code data for Spanish pharmacy protocol
   const generateQRData = (prescription: any) => {
-    // Format according to Spanish pharmacy protocol
-    // This is a simplified version - in a real app, you would follow the exact protocol
     const qrData = {
-      prescriptionId: prescription.number,
-      patientName: prescription.client.name,
-      patientId: prescription.client.id || "N/A",
-      petName: prescription.pet.name,
-      petSpecies: prescription.pet.species,
-      diagnosis: prescription.diagnosis,
-      medications: prescription.medications.map(med => ({
-        name: med.name,
-        dosage: med.dosage,
-        frequency: med.frequency,
-        duration: med.duration
-      })),
-      doctor: prescription.doctor,
-      date: prescription.date,
+      prescriptionId: `RX-${prescription._id.slice(-8)}`,
+      patientName: `${prescription.patient?.firstName} ${prescription.patient?.lastName}`,
+      patientId: prescription.patient?._id || "N/A",
+      petName: prescription.pet?.name || 'N/A',
+      petSpecies: prescription.pet?.species || 'N/A',
+      diagnosis: prescription.notes || '',
+      medications: prescription.medicines?.map(med => ({
+        name: med?.name || '',
+        dosage: med?.recommendedDosage || '',
+        duration: med?.duration || ''
+      })) || [],
+      doctor: prescription.doctorId,
+      date: new Date(prescription.createdAt).toISOString().split('T')[0],
       clinic: "ClinicPro",
       clinicId: "B12345678"
     };
 
-    // Convert to JSON string
     return JSON.stringify(qrData);
   };
 
@@ -372,7 +282,7 @@ const Prescriptions = () => {
       <Card>
         <div className="flex flex-col sm:flex-row gap-4 p-4">
           <Input
-            placeholder="Buscar por receta, propietario, mascota o diagnóstico..."
+            placeholder="Buscar por receta, propietario, mascota o medicamentos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             icon={<Search size={18} />}
@@ -427,7 +337,7 @@ const Prescriptions = () => {
                   Mascota
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Diagnóstico
+                  Notas
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Medicamentos
@@ -438,9 +348,6 @@ const Prescriptions = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Compartida
-                </th>
                 <th scope="col" className="relative px-6 py-3">
                   <span className="sr-only">Acciones</span>
                 </th>
@@ -448,62 +355,51 @@ const Prescriptions = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredPrescriptions.map((prescription) => (
-                <tr key={prescription.id} className="hover:bg-gray-50">
+                <tr key={prescription._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <Pill size={16} className="text-blue-500 mr-2" />
-                      <span className="text-sm font-medium text-gray-900">{prescription.number}</span>
+                      <span className="text-sm font-medium text-gray-900">RX-{prescription._id.slice(-8)}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {new Date(prescription.date).toLocaleDateString('es-ES')}
+                      {new Date(prescription.createdAt).toLocaleDateString('es-ES')}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{prescription.client.name}</div>
-                    <div className="text-sm text-gray-500">{prescription.client.email}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {prescription.patient?.firstName} {prescription.patient?.lastName}
+                    </div>
+                    <div className="text-sm text-gray-500">{prescription.patient?.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{prescription.pet.name}</div>
+                    <div className="text-sm font-medium text-gray-900">{prescription.pet?.name || 'N/A'}</div>
                     <div className="text-sm text-gray-500">
-                      {prescription.pet.species} {prescription.pet.breed}, {prescription.pet.age} años
+                      {prescription.pet ? `${prescription.pet.species} ${prescription.pet.breed || ''}` : 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{prescription.diagnosis}</div>
+                    <div className="text-sm text-gray-900">{prescription.notes || 'Sin notas'}</div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
-                      {prescription.medications.map((med, index) => (
-                        <div key={med.id} className={index > 0 ? 'mt-1' : ''}>
-                          {med.name}
+                      {prescription.medicines?.map((med, index) => (
+                        <div key={med?._id || index} className={index > 0 ? 'mt-1' : ''}>
+                          {med?.name || 'Medicamento no encontrado'}
                         </div>
                       ))}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{prescription.doctor}</div>
+                    <div className="text-sm text-gray-900">{prescription.doctorId}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      statusStyles[prescription.status]
+                      statusStyles['active']
                     }`}>
-                      {statusLabels[prescription.status]}
+                      {statusLabels['active']}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {prescription.shared ? (
-                      <div className="flex items-center">
-                        {shareMethodIcons[prescription.shareMethod]}
-                        <span className="ml-1 text-sm text-gray-900">
-                          {prescription.shareMethod === 'email' ? 'Email' : 
-                           prescription.shareMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">No</span>
-                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center space-x-2">
@@ -543,7 +439,7 @@ const Prescriptions = () => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                Vista Previa de Receta - {previewPrescription.number}
+                Vista Previa de Receta - RX-{previewPrescription._id.slice(-8)}
               </h3>
               <button
                 onClick={() => setPreviewPrescription(null)}
@@ -557,53 +453,52 @@ const Prescriptions = () => {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Propietario</h4>
-                    <p className="mt-1 text-sm text-gray-900">{previewPrescription.client.name}</p>
-                    <p className="text-sm text-gray-500">{previewPrescription.client.email}</p>
-                    <p className="text-sm text-gray-500">{previewPrescription.client.phone}</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {previewPrescription.patient?.firstName} {previewPrescription.patient?.lastName}
+                    </p>
+                    <p className="text-sm text-gray-500">{previewPrescription.patient?.email}</p>
+                    <p className="text-sm text-gray-500">{previewPrescription.patient?.phone}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Mascota</h4>
-                    <p className="mt-1 text-sm text-gray-900">{previewPrescription.pet.name}</p>
+                    <p className="mt-1 text-sm text-gray-900">{previewPrescription.pet?.name || 'N/A'}</p>
                     <p className="text-sm text-gray-500">
-                      {previewPrescription.pet.species} {previewPrescription.pet.breed}, {previewPrescription.pet.age} años
+                      {previewPrescription.pet ? 
+                        `${previewPrescription.pet.species} ${previewPrescription.pet.breed || ''}` : 
+                        'Sin información de mascota'
+                      }
                     </p>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500">Diagnóstico</h4>
-                  <p className="mt-1 text-sm text-gray-900">{previewPrescription.diagnosis}</p>
+                  <h4 className="text-sm font-medium text-gray-500">Notas</h4>
+                  <p className="mt-1 text-sm text-gray-900">{previewPrescription.notes || 'Sin notas'}</p>
                 </div>
 
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Medicamentos</h4>
                   <div className="mt-2 space-y-4">
-                    {previewPrescription.medications.map((medication) => (
-                      <div key={medication.id} className="p-4 border border-gray-200 rounded-lg">
+                    {previewPrescription.medicines?.map((medication, index) => (
+                      <div key={medication?._id || index} className="p-4 border border-gray-200 rounded-lg">
                         <div className="flex items-center">
                           <Pill className="text-blue-600 mr-2" size={16} />
-                          <h5 className="text-sm font-medium text-gray-900">{medication.name}</h5>
+                          <h5 className="text-sm font-medium text-gray-900">{medication?.name || 'Medicamento no encontrado'}</h5>
                         </div>
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <p className="text-xs text-gray-500">Dosis</p>
-                            <p className="text-sm">{medication.dosage}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Frecuencia</p>
-                            <p className="text-sm">{medication.frequency}</p>
+                            <p className="text-xs text-gray-500">Dosis recomendada</p>
+                            <p className="text-sm">{medication?.recommendedDosage || 'No especificada'}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500">Duración</p>
-                            <p className="text-sm">{medication.duration}</p>
+                            <p className="text-sm">{medication?.duration || 'No especificada'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Principio activo</p>
+                            <p className="text-sm">{medication?.activeIngredient || 'No especificado'}</p>
                           </div>
                         </div>
-                        {medication.notes && (
-                          <div className="mt-2">
-                            <p className="text-xs text-gray-500">Notas</p>
-                            <p className="text-sm">{medication.notes}</p>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -614,9 +509,8 @@ const Prescriptions = () => {
                     <h4 className="text-sm font-medium text-gray-500">Doctor</h4>
                     <div className="mt-2 flex items-start justify-between">
                       <div>
-                        <p className="text-sm text-gray-900">{previewPrescription.doctor}</p>
+                        <p className="text-sm text-gray-900">{previewPrescription.doctorId}</p>
                         <p className="text-xs text-gray-500">Veterinario Colegiado</p>
-                        <p className="text-xs text-gray-500">Nº Colegiado: 12345</p>
                       </div>
                       <div className="w-32 h-16 border border-gray-300 rounded flex items-center justify-center text-gray-400">
                         [Firma]
@@ -659,25 +553,12 @@ const Prescriptions = () => {
                   <h4 className="text-sm font-medium text-gray-500">Estado</h4>
                   <p className="mt-1">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      statusStyles[previewPrescription.status]
+                      statusStyles['active']
                     }`}>
-                      {statusLabels[previewPrescription.status]}
+                      {statusLabels['active']}
                     </span>
                   </p>
                 </div>
-
-                {previewPrescription.shared && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Compartida vía</h4>
-                    <p className="mt-1 flex items-center">
-                      {shareMethodIcons[previewPrescription.shareMethod]}
-                      <span className="ml-1 text-sm text-gray-900">
-                        {previewPrescription.shareMethod === 'email' ? 'Email' : 
-                         previewPrescription.shareMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
-                      </span>
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -865,7 +746,7 @@ const Prescriptions = () => {
         </div>
       )}
 
-      {/* SMS Form Modal */}
+            {/* SMS Form Modal */}
       {showSmsForm && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[70]">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
@@ -920,50 +801,6 @@ const Prescriptions = () => {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* New Prescription Form Modal */}
-      {showNewPrescriptionForm && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
-            <NewPrescriptionForm
-              onSubmit={handleNewPrescription}
-              onCancel={() => setShowNewPrescriptionForm(false)}
-              patients={[
-                {
-                  id: '1',
-                  name: 'Luna',
-                  species: 'Perro',
-                  breed: 'Labrador',
-                  age: 3,
-                  weight: 25,
-                  owner: 'María García',
-                  ownerPhone: '+34 666 777 888'
-                },
-                {
-                  id: '2',
-                  name: 'Rocky',
-                  species: 'Perro',
-                  breed: 'Pastor Alemán',
-                  age: 5,
-                  weight: 30,
-                  owner: 'Carlos Rodríguez',
-                  ownerPhone: '+34 666 888 999'
-                },
-                {
-                  id: '3',
-                  name: 'Miau',
-                  species: 'Gato',
-                  breed: 'Siamés',
-                  age: 2,
-                  weight: 4,
-                  owner: 'Ana López',
-                  ownerPhone: '+34 666 999 111'
-                }
-              ]}
-            />
           </div>
         </div>
       )}

@@ -7,15 +7,8 @@ export const createPrescription = mutation({
   args: {
     patientId: v.id("patients"),
     petId: v.optional(v.id("pets")),
-    veterinarian: v.string(),
-    medications: v.array(v.object({
-      name: v.string(),
-      dosage: v.string(),
-      frequency: v.string(),
-      duration: v.string(),
-      instructions: v.optional(v.string()),
-    })),
-    diagnosis: v.optional(v.string()),
+    doctorId: v.string(),
+    medicines: v.array(v.id("medicines")),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -29,10 +22,40 @@ export const createPrescription = mutation({
   },
 });
 
-// Obtener todas las prescripciones
+// Obtener todas las prescripciones con información relacionada
 export const getPrescriptions = query({
   handler: async (ctx) => {
-    return await ctx.db.query("prescriptions").order("desc").collect();
+    const prescriptions = await ctx.db.query("prescriptions").order("desc").collect();
+    
+    // Get related data for each prescription
+    const prescriptionsWithData = await Promise.all(
+      prescriptions.map(async (prescription) => {
+        // Get patient data
+        const patient = await ctx.db.get(prescription.patientId);
+        
+        // Get pet data if petId exists
+        let pet = null;
+        if (prescription.petId) {
+          pet = await ctx.db.get(prescription.petId);
+        }
+        
+        // Get medicines data
+        const medicines = await Promise.all(
+          prescription.medicines.map(async (medicineId) => {
+            return await ctx.db.get(medicineId);
+          })
+        );
+        
+        return {
+          ...prescription,
+          patient,
+          pet,
+          medicines: medicines.filter(Boolean), // Remove any null medicines
+        };
+      })
+    );
+    
+    return prescriptionsWithData;
   },
 });
 
@@ -40,10 +63,40 @@ export const getPrescriptions = query({
 export const getPrescriptionsByPatient = query({
   args: { patientId: v.id("patients") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const prescriptions = await ctx.db
       .query("prescriptions")
       .withIndex("by_patient", (q) => q.eq("patientId", args.patientId))
       .collect();
+      
+    // Get related data for each prescription
+    const prescriptionsWithData = await Promise.all(
+      prescriptions.map(async (prescription) => {
+        // Get patient data
+        const patient = await ctx.db.get(prescription.patientId);
+        
+        // Get pet data if petId exists
+        let pet = null;
+        if (prescription.petId) {
+          pet = await ctx.db.get(prescription.petId);
+        }
+        
+        // Get medicines data
+        const medicines = await Promise.all(
+          prescription.medicines.map(async (medicineId) => {
+            return await ctx.db.get(medicineId);
+          })
+        );
+        
+        return {
+          ...prescription,
+          patient,
+          pet,
+          medicines: medicines.filter(Boolean),
+        };
+      })
+    );
+    
+    return prescriptionsWithData;
   },
 });
 
@@ -51,7 +104,31 @@ export const getPrescriptionsByPatient = query({
 export const getPrescription = query({
   args: { id: v.id("prescriptions") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const prescription = await ctx.db.get(args.id);
+    if (!prescription) return null;
+    
+    // Get patient data
+    const patient = await ctx.db.get(prescription.patientId);
+    
+    // Get pet data if petId exists
+    let pet = null;
+    if (prescription.petId) {
+      pet = await ctx.db.get(prescription.petId);
+    }
+    
+    // Get medicines data
+    const medicines = await Promise.all(
+      prescription.medicines.map(async (medicineId) => {
+        return await ctx.db.get(medicineId);
+      })
+    );
+    
+    return {
+      ...prescription,
+      patient,
+      pet,
+      medicines: medicines.filter(Boolean),
+    };
   },
 });
 
@@ -61,15 +138,8 @@ export const updatePrescription = mutation({
     id: v.id("prescriptions"),
     patientId: v.optional(v.id("patients")),
     petId: v.optional(v.id("pets")),
-    veterinarian: v.optional(v.string()),
-    medications: v.optional(v.array(v.object({
-      name: v.string(),
-      dosage: v.string(),
-      frequency: v.string(),
-      duration: v.string(),
-      instructions: v.optional(v.string()),
-    }))),
-    diagnosis: v.optional(v.string()),
+    doctorId: v.optional(v.string()),
+    medicines: v.optional(v.array(v.id("medicines"))),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

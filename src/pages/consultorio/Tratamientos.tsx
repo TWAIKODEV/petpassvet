@@ -764,7 +764,7 @@ const Tratamientos: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 flex items-center">
-                        <Clock size={14} className="mr-1" />
+                        <Clock size={14 className="mr-1" />
                         {treatment.duration} min
                       </div>
                       {treatment.followUpPeriod && (
@@ -1027,7 +1027,7 @@ const Tratamientos: React.FC = () => {
                   </div>
                 </div>
 
-                
+
 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Medicamentos Asociados</h3>
                   <div className="space-y-3">
@@ -1150,7 +1150,6 @@ const Tratamientos: React.FC = () => {
                       <textarea
                         rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Una contraindicación por línea..."
                         value={formData.contraindications.join('\n')}
                         onChange={(e) => setFormData(prev => ({ 
                           ...prev, 
@@ -1165,7 +1164,6 @@ const Tratamientos: React.FC = () => {
                       <textarea
                         rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Un efecto secundario por línea..."
                         value={formData.sideEffects.join('\n')}
                         onChange={(e) => setFormData(prev => ({ 
                           ...prev, 
@@ -1400,7 +1398,7 @@ const Tratamientos: React.FC = () => {
                   </div>
                 </div>
 
-                
+
 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Medicamentos Asociados</h3>
                   <div className="space-y-3">
@@ -1507,7 +1505,8 @@ const Tratamientos: React.FC = () => {
                           onChange={(e) => handleProcedureChange(procedure.id, e.target.checked)}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <span className="ml-2 text-sm text-gray-700">{procedure.name}</span>                     </label>
+                        <span className="ml-2 text-sm text-gray-700">{procedure.name}</span>
+                                          </label>
                     ))}
                   </div>
                 </div>
