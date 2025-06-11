@@ -120,7 +120,7 @@ function App() {
                 <Route path="consultorio/consulta/:id" element={<Consultation />} />
                 <Route path="consultorio/historiales" element={<MedicalHistory />} />
                 <Route path="consultorio/tratamientos" element={<Tratamientos />} />
-                <Route path="consultorio/medicamentos" element={<Medicamentos />} />
+                <Route path="consultorio/medicamentos" element={<Medications />} />
                 <Route path="consultorio/recetas" element={<Prescriptions />} />
 
                 {/* Peluquería routes */}
