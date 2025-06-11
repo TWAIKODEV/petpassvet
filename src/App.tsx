@@ -26,7 +26,7 @@ import GroomingTreatments from './pages/peluqueria/GroomingTreatments';
 import ConsultationAppointments from './pages/consultorio/ConsultationAppointments';
 import Consultation from './pages/consultorio/Consultation';
 import MedicalHistory from './pages/consultorio/MedicalHistory';
-import MedicamentosConsultorio from './pages/consultorio/Medications';
+import Medicamentos from './pages/consultorio/Medications';
 import Tratamientos from './pages/consultorio/Tratamientos';
 import Inbox from './pages/Inbox';
 import PageLayout from './components/layout/PageLayout';
@@ -120,7 +120,7 @@ function App() {
                 <Route path="consultorio/consulta/:id" element={<Consultation />} />
                 <Route path="consultorio/historiales" element={<MedicalHistory />} />
                 <Route path="consultorio/tratamientos" element={<Tratamientos />} />
-                <Route path="consultorio/medicamentos" element={<MedicamentosConsultorio />} />
+                <Route path="consultorio/medicamentos" element={<Medications />} />
                 <Route path="consultorio/recetas" element={<Prescriptions />} />
 
                 {/* Peluquería routes */}

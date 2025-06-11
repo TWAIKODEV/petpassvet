@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UserCheck, UserX, Calendar, Clock, FileText, Printer, Download, Camera, Pill, Activity, Clipboard, Stethoscope, Heart, Thermometer, Weight, Droplet, Zap, Percent, Gauge, Eye, Smile, Frown, Meh, CheckCircle, AlertCircle, CalendarClock, User, PawPrint } from 'lucide-react';
+import { X, UserCheck, UserX, Calendar, Clock, DollarSign, FileText, Printer, Download, Camera, Pill, Activity, Clipboard, Stethoscope, Heart, Thermometer, Weight, Droplet, Zap, Percent, Gauge, Eye, Smile, Frown, Meh, CheckCircle, AlertCircle, CalendarClock, User, PawPrint } from 'lucide-react';
 import Button from '../common/Button';
 
 interface Visit {
@@ -173,6 +173,7 @@ const PetHistoryModal: React.FC<PetHistoryModalProps> = ({ pet, onClose }) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
+                          <DollarSign size={16} className="text-gray-400 mr-1" />
                           <span className="text-sm text-gray-900">
                             {visit.amount.toLocaleString('es-ES', {
                               style: 'currency',
