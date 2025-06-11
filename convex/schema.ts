@@ -842,4 +842,31 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_manufacturer", ["manufacturer"])
     .index("by_status", ["status"]),
+
+  // Treatments table
+  treatments: defineTable({
+    name: v.string(),
+    category: v.string(),
+    description: v.string(),
+    duration: v.number(),
+    followUpPeriod: v.optional(v.number()),
+    price: v.number(),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    species: v.array(v.string()),
+    sex: v.union(v.literal("male"), v.literal("female"), v.literal("both")),
+    clinicArea: v.optional(v.string()),
+    conditions: v.array(v.string()),
+    associatedMedicines: v.array(v.id("medicines")),
+    procedures: v.array(v.string()),
+    contraindications: v.array(v.string()),
+    sideEffects: v.array(v.string()),
+    notes: v.optional(v.string()),
+    minAge: v.optional(v.number()),
+    maxAge: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_status", ["status"])
+    .index("by_clinic_area", ["clinicArea"]),
 });

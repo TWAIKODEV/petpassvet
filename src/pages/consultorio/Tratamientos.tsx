@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, Filter, Plus, Edit, Trash, X, Check, Grid, List, ChevronDown, ChevronUp, AlertTriangle, Clock, DollarSign, Pill, FileText, Clipboard, Activity, Calendar, Download, Printer } from 'lucide-react';
 import Card from '../../components/common/Card';
@@ -5,162 +6,33 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 
 interface Treatment {
-  id: string;
+  _id: Id<"treatments">;
   name: string;
-  description: string;
   category: string;
+  description: string;
   duration: number;
   followUpPeriod?: number;
   price: number;
   status: 'active' | 'inactive';
-  contraindications?: string[];
-  sideEffects?: string[];
-  medications?: string[];
-  procedures?: string[];
-  notes?: string;
-  species?: string[];
-  breed?: string[];
-  sex?: 'male' | 'female' | 'both';
-  conditions?: string[];
+  species: string[];
+  sex: 'male' | 'female' | 'both';
   clinicArea?: string;
+  conditions: string[];
+  associatedMedicines: Id<"medicines">[];
+  procedures: string[];
+  contraindications: string[];
+  sideEffects: string[];
+  notes?: string;
   minAge?: number;
   maxAge?: number;
+  createdAt: number;
+  updatedAt: number;
 }
-
-const mockTreatments: Treatment[] = [
-  {
-    id: '1',
-    name: 'Limpieza Dental Completa',
-    description: 'Limpieza dental profesional para eliminar sarro y placa bacteriana',
-    category: 'Dental',
-    duration: 45,
-    followUpPeriod: 180, // 6 months in days
-    price: 85.00,
-    status: 'active',
-    contraindications: ['Problemas cardíacos graves', 'Infección oral activa'],
-    sideEffects: ['Sensibilidad dental temporal', 'Sangrado leve de encías'],
-    procedures: ['Ultrasonido dental', 'Pulido dental', 'Aplicación de flúor'],
-    notes: 'Recomendado anualmente para la mayoría de los pacientes',
-    species: ['Perro', 'Gato'],
-    breed: ['Todas'],
-    sex: 'both',
-    conditions: ['Sarro dental', 'Halitosis', 'Gingivitis'],
-    clinicArea: 'Odontología'
-  },
-  {
-    id: '2',
-    name: 'Tratamiento Dermatológico Básico',
-    description: 'Tratamiento para problemas dermatológicos leves como dermatitis o alergias',
-    category: 'Dermatología',
-    duration: 30,
-    followUpPeriod: 14,
-    price: 65.00,
-    status: 'active',
-    medications: ['Antihistamínicos', 'Corticosteroides tópicos'],
-    sideEffects: ['Somnolencia (por antihistamínicos)', 'Irritación local'],
-    notes: 'Evaluar respuesta en dos semanas',
-    species: ['Perro', 'Gato', 'Conejo'],
-    breed: ['Todas'],
-    sex: 'both',
-    conditions: ['Dermatitis', 'Alergias cutáneas', 'Prurito'],
-    clinicArea: 'Dermatología'
-  },
-  {
-    id: '3',
-    name: 'Vacunación Antirrábica',
-    description: 'Vacuna obligatoria contra la rabia',
-    category: 'Vacunación',
-    duration: 15,
-    followUpPeriod: 365,
-    price: 45.00,
-    status: 'active',
-    contraindications: ['Fiebre', 'Inmunosupresión severa', 'Reacción previa grave a la vacuna'],
-    sideEffects: ['Inflamación en el sitio de inyección', 'Letargo temporal'],
-    notes: 'Obligatoria por ley. Renovación anual.',
-    species: ['Perro', 'Gato', 'Hurón'],
-    breed: ['Todas'],
-    sex: 'both',
-    conditions: ['Prevención de rabia'],
-    clinicArea: 'Medicina Preventiva'
-  },
-  {
-    id: '4',
-    name: 'Cirugía de Esterilización Canina',
-    description: 'Procedimiento quirúrgico para esterilizar perros',
-    category: 'Cirugía',
-    duration: 90,
-    price: 250.00,
-    status: 'active',
-    contraindications: ['Edad menor a 6 meses', 'Problemas de coagulación', 'Enfermedades sistémicas graves'],
-    sideEffects: ['Dolor postoperatorio', 'Inflamación', 'Riesgo de infección'],
-    procedures: ['Anestesia general', 'Incisión abdominal', 'Ligadura', 'Sutura'],
-    medications: ['Antibióticos', 'Analgésicos', 'Antiinflamatorios'],
-    notes: 'Requiere ayuno de 12 horas. Recuperación de 7-10 días con collar isabelino.',
-    species: ['Perro'],
-    breed: ['Todas'],
-    sex: 'female',
-    conditions: ['Control reproductivo', 'Prevención de tumores mamarios'],
-    clinicArea: 'Cirugía',
-    minAge: 6,
-    maxAge: 84
-  },
-  {
-    id: '5',
-    name: 'Fisioterapia Canina',
-    description: 'Sesión de fisioterapia para rehabilitación de lesiones musculoesqueléticas',
-    category: 'Rehabilitación',
-    duration: 60,
-    followUpPeriod: 7,
-    price: 70.00,
-    status: 'active',
-    contraindications: ['Fracturas no estabilizadas', 'Procesos infecciosos activos'],
-    procedures: ['Masaje terapéutico', 'Ejercicios pasivos', 'Ultrasonido terapéutico'],
-    notes: 'Se recomienda un mínimo de 5 sesiones para resultados óptimos',
-    species: ['Perro'],
-    breed: ['Todas'],
-    sex: 'both',
-    conditions: ['Displasia de cadera', 'Artrosis', 'Lesiones musculares', 'Rehabilitación postquirúrgica'],
-    clinicArea: 'Rehabilitación'
-  },
-  {
-    id: '6',
-    name: 'Tratamiento para Otitis Externa',
-    description: 'Tratamiento para inflamación e infección del canal auditivo externo',
-    category: 'Dermatología',
-    duration: 25,
-    followUpPeriod: 10,
-    price: 55.00,
-    status: 'active',
-    medications: ['Antibióticos tópicos', 'Antifúngicos', 'Antiinflamatorios'],
-    sideEffects: ['Irritación local', 'Enrojecimiento temporal'],
-    notes: 'Requiere limpieza diaria en casa',
-    species: ['Perro', 'Gato'],
-    breed: ['Cocker Spaniel', 'Labrador', 'Bulldog Francés', 'Persa', 'Sphynx'],
-    sex: 'both',
-    conditions: ['Otitis externa', 'Infección ótica', 'Ácaros del oído'],
-    clinicArea: 'Dermatología'
-  },
-  {
-    id: '7',
-    name: 'Tratamiento Dental para Conejos',
-    description: 'Corrección dental para conejos con sobrecrecimiento dental',
-    category: 'Dental',
-    duration: 40,
-    followUpPeriod: 60,
-    price: 75.00,
-    status: 'active',
-    contraindications: ['Enfermedades cardíacas graves', 'Problemas respiratorios severos'],
-    procedures: ['Sedación', 'Limado dental', 'Extracción si es necesario'],
-    notes: 'Requiere revisiones periódicas. Importante ajustar dieta posterior.',
-    species: ['Conejo'],
-    breed: ['Todas'],
-    sex: 'both',
-    conditions: ['Maloclusión dental', 'Sobrecrecimiento dental', 'Puntas dentales'],
-    clinicArea: 'Odontología'
-  }
-];
 
 const categories = [
   { id: 'all', name: 'Todas las categorías' },
@@ -183,28 +55,8 @@ const speciesOptions = [
   { id: 'Roedor', name: 'Roedor' }
 ];
 
-// Common dog breeds
-const dogBreeds = [
-  'Labrador', 'Pastor Alemán', 'Bulldog Francés', 'Yorkshire Terrier', 
-  'Chihuahua', 'Beagle', 'Boxer', 'Caniche', 'Golden Retriever', 'Cocker Spaniel'
-];
-
-// Common cat breeds
-const catBreeds = [
-  'Común Europeo', 'Persa', 'Siamés', 'Maine Coon', 'Bengalí',
-  'Ragdoll', 'Sphynx', 'Angora', 'British Shorthair', 'Abisinio'
-];
-
-// All breeds combined
-const breedOptions = [
-  { id: 'all', name: 'Todas las razas' },
-  ...dogBreeds.map(breed => ({ id: breed, name: breed })),
-  ...catBreeds.map(breed => ({ id: breed, name: breed }))
-];
-
 // Common conditions
 const conditionOptions = [
-  { id: 'all', name: 'Todas las dolencias' },
   { id: 'Dermatitis', name: 'Dermatitis' },
   { id: 'Otitis', name: 'Otitis' },
   { id: 'Displasia de cadera', name: 'Displasia de cadera' },
@@ -215,6 +67,20 @@ const conditionOptions = [
   { id: 'Maloclusión dental', name: 'Maloclusión dental' },
   { id: 'Control reproductivo', name: 'Control reproductivo' },
   { id: 'Prevención de rabia', name: 'Prevención de rabia' }
+];
+
+// Common procedures
+const procedureOptions = [
+  { id: 'Ultrasonido dental', name: 'Ultrasonido dental' },
+  { id: 'Pulido dental', name: 'Pulido dental' },
+  { id: 'Aplicación de flúor', name: 'Aplicación de flúor' },
+  { id: 'Radiografía', name: 'Radiografía' },
+  { id: 'Ecografía', name: 'Ecografía' },
+  { id: 'Análisis de sangre', name: 'Análisis de sangre' },
+  { id: 'Biopsia', name: 'Biopsia' },
+  { id: 'Cirugía menor', name: 'Cirugía menor' },
+  { id: 'Anestesia general', name: 'Anestesia general' },
+  { id: 'Masaje terapéutico', name: 'Masaje terapéutico' }
 ];
 
 // Clinic areas
@@ -232,11 +98,15 @@ const clinicAreaOptions = [
 ];
 
 const Tratamientos: React.FC = () => {
-  const [treatments, setTreatments] = useState<Treatment[]>(mockTreatments);
+  const treatments = useQuery(api.treatments.getTreatments) || [];
+  const medicines = useQuery(api.medicines.getMedicines) || [];
+  const createTreatment = useMutation(api.treatments.createTreatment);
+  const updateTreatment = useMutation(api.treatments.updateTreatment);
+  const deleteTreatment = useMutation(api.treatments.deleteTreatment);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSpecies, setSelectedSpecies] = useState('all');
-  const [selectedBreed, setSelectedBreed] = useState('all');
   const [selectedSex, setSelectedSex] = useState('all');
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [selectedClinicArea, setSelectedClinicArea] = useState('all');
@@ -248,24 +118,65 @@ const Tratamientos: React.FC = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
 
-  // Filter treatments based on search term, category, species, breed, sex, condition, clinic area, and status
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    category: '',
+    description: '',
+    duration: 0,
+    followUpPeriod: 0,
+    price: 0,
+    status: 'active' as 'active' | 'inactive',
+    species: [] as string[],
+    sex: 'both' as 'male' | 'female' | 'both',
+    clinicArea: '',
+    conditions: [] as string[],
+    associatedMedicines: [] as Id<"medicines">[],
+    procedures: [] as string[],
+    contraindications: [] as string[],
+    sideEffects: [] as string[],
+    notes: '',
+    minAge: 0,
+    maxAge: 0,
+  });
+
+  // Filter treatments based on search term and filters
   const filteredTreatments = treatments.filter(treatment => {
     const matchesSearch = treatment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          treatment.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || treatment.category === selectedCategory;
     const matchesSpecies = selectedSpecies === 'all' || treatment.species?.includes(selectedSpecies);
-    const matchesBreed = selectedBreed === 'all' || treatment.breed?.includes(selectedBreed) || treatment.breed?.includes('Todas');
     const matchesSex = selectedSex === 'all' || treatment.sex === selectedSex || treatment.sex === 'both';
     const matchesCondition = selectedCondition === 'all' || treatment.conditions?.includes(selectedCondition);
     const matchesClinicArea = selectedClinicArea === 'all' || treatment.clinicArea === selectedClinicArea;
     const matchesStatus = showInactive ? true : treatment.status === 'active';
     
-    return matchesSearch && matchesCategory && matchesSpecies && matchesBreed && 
+    return matchesSearch && matchesCategory && matchesSpecies && 
            matchesSex && matchesCondition && matchesClinicArea && matchesStatus;
   });
 
   const handleEditTreatment = (treatment: Treatment) => {
     setSelectedTreatment(treatment);
+    setFormData({
+      name: treatment.name,
+      category: treatment.category,
+      description: treatment.description,
+      duration: treatment.duration,
+      followUpPeriod: treatment.followUpPeriod || 0,
+      price: treatment.price,
+      status: treatment.status,
+      species: treatment.species,
+      sex: treatment.sex,
+      clinicArea: treatment.clinicArea || '',
+      conditions: treatment.conditions,
+      associatedMedicines: treatment.associatedMedicines,
+      procedures: treatment.procedures,
+      contraindications: treatment.contraindications,
+      sideEffects: treatment.sideEffects,
+      notes: treatment.notes || '',
+      minAge: treatment.minAge || 0,
+      maxAge: treatment.maxAge || 0,
+    });
     setShowEditTreatmentModal(true);
   };
 
@@ -274,24 +185,111 @@ const Tratamientos: React.FC = () => {
     setShowDeleteConfirmation(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (selectedTreatment) {
-      setTreatments(prev => prev.filter(t => t.id !== selectedTreatment.id));
+      await deleteTreatment({ id: selectedTreatment._id });
       setShowDeleteConfirmation(false);
       setSelectedTreatment(null);
     }
   };
 
-  const handleNewTreatment = (treatmentData: any) => {
-    // Here you would typically make an API call to save the new treatment
-    console.log('New treatment data:', treatmentData);
-    setShowNewTreatmentModal(false);
+  const handleNewTreatment = async () => {
+    try {
+      const data = {
+        ...formData,
+        followUpPeriod: formData.followUpPeriod || undefined,
+        clinicArea: formData.clinicArea || undefined,
+        notes: formData.notes || undefined,
+        minAge: formData.minAge || undefined,
+        maxAge: formData.maxAge || undefined,
+      };
+      await createTreatment(data);
+      setShowNewTreatmentModal(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error creating treatment:', error);
+    }
   };
 
-  const handleUpdateTreatment = (treatmentData: any) => {
-    // Here you would typically make an API call to update the treatment
-    console.log('Updated treatment data:', treatmentData);
-    setShowEditTreatmentModal(false);
+  const handleUpdateTreatment = async () => {
+    if (selectedTreatment) {
+      try {
+        const data = {
+          id: selectedTreatment._id,
+          ...formData,
+          followUpPeriod: formData.followUpPeriod || undefined,
+          clinicArea: formData.clinicArea || undefined,
+          notes: formData.notes || undefined,
+          minAge: formData.minAge || undefined,
+          maxAge: formData.maxAge || undefined,
+        };
+        await updateTreatment(data);
+        setShowEditTreatmentModal(false);
+        resetForm();
+      } catch (error) {
+        console.error('Error updating treatment:', error);
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      category: '',
+      description: '',
+      duration: 0,
+      followUpPeriod: 0,
+      price: 0,
+      status: 'active',
+      species: [],
+      sex: 'both',
+      clinicArea: '',
+      conditions: [],
+      associatedMedicines: [],
+      procedures: [],
+      contraindications: [],
+      sideEffects: [],
+      notes: '',
+      minAge: 0,
+      maxAge: 0,
+    });
+    setSelectedTreatment(null);
+  };
+
+  const handleSpeciesChange = (species: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      species: checked 
+        ? [...prev.species, species]
+        : prev.species.filter(s => s !== species)
+    }));
+  };
+
+  const handleConditionChange = (condition: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      conditions: checked 
+        ? [...prev.conditions, condition]
+        : prev.conditions.filter(c => c !== condition)
+    }));
+  };
+
+  const handleProcedureChange = (procedure: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      procedures: checked 
+        ? [...prev.procedures, procedure]
+        : prev.procedures.filter(p => p !== procedure)
+    }));
+  };
+
+  const handleMedicineChange = (medicineId: Id<"medicines">, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      associatedMedicines: checked 
+        ? [...prev.associatedMedicines, medicineId]
+        : prev.associatedMedicines.filter(m => m !== medicineId)
+    }));
   };
 
   const handleExportExcel = () => {
@@ -304,14 +302,12 @@ const Tratamientos: React.FC = () => {
       'Precio (€)': treatment.price,
       'Estado': treatment.status === 'active' ? 'Activo' : 'Inactivo',
       'Especies': treatment.species?.join(', ') || 'Todas',
-      'Razas': treatment.breed?.join(', ') || 'Todas',
       'Sexo': treatment.sex === 'male' ? 'Macho' : 
               treatment.sex === 'female' ? 'Hembra' : 'Ambos',
       'Dolencias': treatment.conditions?.join(', ') || '-',
       'Área Clínica': treatment.clinicArea || '-',
       'Contraindicaciones': treatment.contraindications?.join(', ') || '-',
       'Efectos Secundarios': treatment.sideEffects?.join(', ') || '-',
-      'Medicamentos': treatment.medications?.join(', ') || '-',
       'Procedimientos': treatment.procedures?.join(', ') || '-',
       'Notas': treatment.notes || '-'
     }));
@@ -340,7 +336,6 @@ const Tratamientos: React.FC = () => {
     let filtersText = 'Filtros aplicados: ';
     if (selectedCategory !== 'all') filtersText += `Categoría: ${selectedCategory}, `;
     if (selectedSpecies !== 'all') filtersText += `Especie: ${selectedSpecies}, `;
-    if (selectedBreed !== 'all') filtersText += `Raza: ${selectedBreed}, `;
     if (selectedSex !== 'all') filtersText += `Sexo: ${selectedSex === 'male' ? 'Macho' : 'Hembra'}, `;
     if (selectedCondition !== 'all') filtersText += `Dolencia: ${selectedCondition}, `;
     if (selectedClinicArea !== 'all') filtersText += `Área: ${selectedClinicArea}, `;
@@ -421,6 +416,11 @@ const Tratamientos: React.FC = () => {
   const handlePrint = () => {
     window.print();
     setShowExportOptions(false);
+  };
+
+  const getMedicineName = (medicineId: Id<"medicines">) => {
+    const medicine = medicines.find(m => m._id === medicineId);
+    return medicine ? medicine.name : 'Medicamento no encontrado';
   };
 
   return (
@@ -536,16 +536,6 @@ const Tratamientos: React.FC = () => {
             
             <select
               className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              value={selectedBreed}
-              onChange={(e) => setSelectedBreed(e.target.value)}
-            >
-              {breedOptions.map(option => (
-                <option key={option.id} value={option.id}>{option.name}</option>
-              ))}
-            </select>
-            
-            <select
-              className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               value={selectedSex}
               onChange={(e) => setSelectedSex(e.target.value)}
             >
@@ -560,6 +550,7 @@ const Tratamientos: React.FC = () => {
               value={selectedCondition}
               onChange={(e) => setSelectedCondition(e.target.value)}
             >
+              <option value="all">Todas las dolencias</option>
               {conditionOptions.map(option => (
                 <option key={option.id} value={option.id}>{option.name}</option>
               ))}
@@ -595,7 +586,7 @@ const Tratamientos: React.FC = () => {
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTreatments.map((treatment) => (
-            <Card key={treatment.id}>
+            <Card key={treatment._id}>
               <div className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
@@ -755,7 +746,7 @@ const Tratamientos: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredTreatments.map((treatment) => (
-                  <tr key={treatment.id} className="hover:bg-gray-50">
+                  <tr key={treatment._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{treatment.name}</div>
                       <div className="text-sm text-gray-500">{treatment.description}</div>
@@ -788,12 +779,10 @@ const Tratamientos: React.FC = () => {
                       <div className="text-sm text-gray-900">
                         {treatment.species?.join(', ') || 'Todas'}
                       </div>
-                      {treatment.sex && (
-                        <div className="text-sm text-gray-500">
-                          {treatment.sex === 'male' ? 'Solo machos' : 
-                           treatment.sex === 'female' ? 'Solo hembras' : 'Ambos sexos'}
-                        </div>
-                      )}
+                      <div className="text-sm text-gray-500">
+                        {treatment.sex === 'male' ? 'Solo machos' : 
+                         treatment.sex === 'female' ? 'Solo hembras' : 'Ambos sexos'}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">
@@ -852,7 +841,10 @@ const Tratamientos: React.FC = () => {
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Nuevo Tratamiento</h2>
               <button
-                onClick={() => setShowNewTreatmentModal(false)}
+                onClick={() => {
+                  setShowNewTreatmentModal(false);
+                  resetForm();
+                }}
                 className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100"
               >
                 <X size={24} />
@@ -865,6 +857,8 @@ const Tratamientos: React.FC = () => {
                   <Input
                     label="Nombre del Tratamiento"
                     placeholder="Ej: Limpieza Dental Completa"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     required
                   />
                   
@@ -874,6 +868,8 @@ const Tratamientos: React.FC = () => {
                     </label>
                     <select
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      value={formData.category}
+                      onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                       required
                     >
                       <option value="">Seleccionar categoría</option>
@@ -891,6 +887,8 @@ const Tratamientos: React.FC = () => {
                       rows={3}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       placeholder="Descripción detallada del tratamiento..."
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       required
                     />
                   </div>
@@ -902,6 +900,8 @@ const Tratamientos: React.FC = () => {
                     <Input
                       type="number"
                       placeholder="Ej: 30"
+                      value={formData.duration.toString()}
+                      onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
                       min="1"
                       required
                       icon={<Clock size={18} />}
@@ -915,6 +915,8 @@ const Tratamientos: React.FC = () => {
                     <Input
                       type="number"
                       placeholder="Ej: 14"
+                      value={formData.followUpPeriod?.toString() || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, followUpPeriod: parseInt(e.target.value) || undefined }))}
                       min="0"
                       icon={<Calendar size={18} />}
                     />
@@ -927,6 +929,8 @@ const Tratamientos: React.FC = () => {
                     <Input
                       type="number"
                       placeholder="Ej: 85.00"
+                      value={formData.price.toString()}
+                      onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
                       min="0"
                       step="0.01"
                       required
@@ -940,6 +944,8 @@ const Tratamientos: React.FC = () => {
                     </label>
                     <select
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      value={formData.status}
+                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
                       required
                     >
                       <option value="active">Activo</option>
@@ -952,19 +958,22 @@ const Tratamientos: React.FC = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Aplicabilidad</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Especies
                       </label>
-                      <select
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        multiple
-                        size={4}
-                      >
+                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
                         {speciesOptions.filter(s => s.id !== 'all').map(species => (
-                          <option key={species.id} value={species.id}>{species.name}</option>
+                          <label key={species.id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.species.includes(species.id)}
+                              onChange={(e) => handleSpeciesChange(species.id, e.target.checked)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">{species.name}</span>
+                          </label>
                         ))}
-                      </select>
-                      <p className="mt-1 text-xs text-gray-500">Mantén presionado Ctrl para seleccionar múltiples opciones</p>
+                      </div>
                     </div>
                     
                     <div>
@@ -973,6 +982,8 @@ const Tratamientos: React.FC = () => {
                       </label>
                       <select
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        value={formData.sex}
+                        onChange={(e) => setFormData(prev => ({ ...prev, sex: e.target.value as 'male' | 'female' | 'both' }))}
                       >
                         <option value="both">Ambos</option>
                         <option value="male">Solo machos</option>
@@ -986,6 +997,8 @@ const Tratamientos: React.FC = () => {
                       </label>
                       <select
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        value={formData.clinicArea}
+                        onChange={(e) => setFormData(prev => ({ ...prev, clinicArea: e.target.value }))}
                       >
                         <option value="">Seleccionar área</option>
                         {clinicAreaOptions.filter(a => a.id !== 'all').map(area => (
@@ -995,82 +1008,59 @@ const Tratamientos: React.FC = () => {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Dolencias Tratadas
                       </label>
-                      <select
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        multiple
-                        size={4}
-                      >
-                        {conditionOptions.filter(c => c.id !== 'all').map(condition => (
-                          <option key={condition.id} value={condition.id}>{condition.name}</option>
+                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                        {conditionOptions.map(condition => (
+                          <label key={condition.id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.conditions.includes(condition.id)}
+                              onChange={(e) => handleConditionChange(condition.id, e.target.checked)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">{condition.name}</span>
+                          </label>
                         ))}
-                      </select>
-                      <p className="mt-1 text-xs text-gray-500">Mantén presionado Ctrl para seleccionar múltiples opciones</p>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Medicamentos Asociados</h3>
-                  <div className="mb-4">
-                    <Input
-                      placeholder="Buscar medicamentos..."
-                      icon={<Search size={18} />}
-                    />
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Pill size={18} className="text-blue-500 mr-2" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Amoxicilina 250mg</p>
-                          <p className="text-xs text-gray-500">Antibiótico</p>
-                        </div>
-                      </div>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        Añadir
-                      </button>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Pill size={18} className="text-blue-500 mr-2" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Meloxicam 1.5mg/ml</p>
-                          <p className="text-xs text-gray-500">Antiinflamatorio</p>
-                        </div>
-                      </div>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        Añadir
-                      </button>
-                    </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                    {medicines.map(medicine => (
+                      <label key={medicine._id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.associatedMedicines.includes(medicine._id)}
+                          onChange={(e) => handleMedicineChange(medicine._id, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          {medicine.name} - {medicine.activeIngredient}
+                        </span>
+                      </label>
+                    ))}
                   </div>
                 </div>
                 
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Procedimientos</h3>
-                  <div className="mb-4">
-                    <Input
-                      placeholder="Buscar procedimientos..."
-                      icon={<Search size={18} />}
-                    />
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Activity size={18} className="text-green-500 mr-2" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Radiografía Dental</p>
-                          <p className="text-xs text-gray-500">Diagnóstico por imagen</p>
-                        </div>
-                      </div>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        Añadir
-                      </button>
-                    </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                    {procedureOptions.map(procedure => (
+                      <label key={procedure.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.procedures.includes(procedure.id)}
+                          onChange={(e) => handleProcedureChange(procedure.id, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{procedure.name}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
                 
@@ -1085,6 +1075,11 @@ const Tratamientos: React.FC = () => {
                         rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         placeholder="Una contraindicación por línea..."
+                        value={formData.contraindications.join('\n')}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          contraindications: e.target.value.split('\n').filter(line => line.trim() !== '')
+                        }))}
                       />
                     </div>
                     <div>
@@ -1095,6 +1090,11 @@ const Tratamientos: React.FC = () => {
                         rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         placeholder="Un efecto secundario por línea..."
+                        value={formData.sideEffects.join('\n')}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          sideEffects: e.target.value.split('\n').filter(line => line.trim() !== '')
+                        }))}
                       />
                     </div>
                   </div>
@@ -1108,6 +1108,8 @@ const Tratamientos: React.FC = () => {
                     rows={3}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     placeholder="Información adicional relevante..."
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                   />
                 </div>
               </form>
@@ -1116,13 +1118,16 @@ const Tratamientos: React.FC = () => {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
               <Button
                 variant="outline"
-                onClick={() => setShowNewTreatmentModal(false)}
+                onClick={() => {
+                  setShowNewTreatmentModal(false);
+                  resetForm();
+                }}
               >
                 Cancelar
               </Button>
               <Button
                 variant="primary"
-                onClick={() => handleNewTreatment({})}
+                onClick={handleNewTreatment}
               >
                 Guardar Tratamiento
               </Button>
@@ -1138,7 +1143,10 @@ const Tratamientos: React.FC = () => {
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Editar Tratamiento</h2>
               <button
-                onClick={() => setShowEditTreatmentModal(false)}
+                onClick={() => {
+                  setShowEditTreatmentModal(false);
+                  resetForm();
+                }}
                 className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100"
               >
                 <X size={24} />
@@ -1150,7 +1158,8 @@ const Tratamientos: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Input
                     label="Nombre del Tratamiento"
-                    defaultValue={selectedTreatment.name}
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     required
                   />
                   
@@ -1160,7 +1169,8 @@ const Tratamientos: React.FC = () => {
                     </label>
                     <select
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      defaultValue={selectedTreatment.category}
+                      value={formData.category}
+                      onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                       required
                     >
                       {categories.filter(c => c.id !== 'all').map(category => (
@@ -1176,7 +1186,8 @@ const Tratamientos: React.FC = () => {
                     <textarea
                       rows={3}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      defaultValue={selectedTreatment.description}
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       required
                     />
                   </div>
@@ -1187,7 +1198,8 @@ const Tratamientos: React.FC = () => {
                     </label>
                     <Input
                       type="number"
-                      defaultValue={selectedTreatment.duration.toString()}
+                      value={formData.duration.toString()}
+                      onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
                       min="1"
                       required
                       icon={<Clock size={18} />}
@@ -1200,7 +1212,8 @@ const Tratamientos: React.FC = () => {
                     </label>
                     <Input
                       type="number"
-                      defaultValue={selectedTreatment.followUpPeriod?.toString() || ''}
+                      value={formData.followUpPeriod?.toString() || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, followUpPeriod: parseInt(e.target.value) || undefined }))}
                       min="0"
                       icon={<Calendar size={18} />}
                     />
@@ -1212,7 +1225,8 @@ const Tratamientos: React.FC = () => {
                     </label>
                     <Input
                       type="number"
-                      defaultValue={selectedTreatment.price.toString()}
+                      value={formData.price.toString()}
+                      onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
                       min="0"
                       step="0.01"
                       required
@@ -1226,7 +1240,8 @@ const Tratamientos: React.FC = () => {
                     </label>
                     <select
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      defaultValue={selectedTreatment.status}
+                      value={formData.status}
+                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
                       required
                     >
                       <option value="active">Activo</option>
@@ -1239,20 +1254,22 @@ const Tratamientos: React.FC = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Aplicabilidad</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Especies
                       </label>
-                      <select
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        multiple
-                        size={4}
-                        defaultValue={selectedTreatment.species || []}
-                      >
+                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
                         {speciesOptions.filter(s => s.id !== 'all').map(species => (
-                          <option key={species.id} value={species.id}>{species.name}</option>
+                          <label key={species.id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.species.includes(species.id)}
+                              onChange={(e) => handleSpeciesChange(species.id, e.target.checked)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">{species.name}</span>
+                          </label>
                         ))}
-                      </select>
-                      <p className="mt-1 text-xs text-gray-500">Mantén presionado Ctrl para seleccionar múltiples opciones</p>
+                      </div>
                     </div>
                     
                     <div>
@@ -1261,7 +1278,8 @@ const Tratamientos: React.FC = () => {
                       </label>
                       <select
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        defaultValue={selectedTreatment.sex || 'both'}
+                        value={formData.sex}
+                        onChange={(e) => setFormData(prev => ({ ...prev, sex: e.target.value as 'male' | 'female' | 'both' }))}
                       >
                         <option value="both">Ambos</option>
                         <option value="male">Solo machos</option>
@@ -1275,7 +1293,8 @@ const Tratamientos: React.FC = () => {
                       </label>
                       <select
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        defaultValue={selectedTreatment.clinicArea || ''}
+                        value={formData.clinicArea}
+                        onChange={(e) => setFormData(prev => ({ ...prev, clinicArea: e.target.value }))}
                       >
                         <option value="">Seleccionar área</option>
                         {clinicAreaOptions.filter(a => a.id !== 'all').map(area => (
@@ -1285,78 +1304,60 @@ const Tratamientos: React.FC = () => {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Dolencias Tratadas
                       </label>
-                      <select
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        multiple
-                        size={4}
-                        defaultValue={selectedTreatment.conditions || []}
-                      >
-                        {conditionOptions.filter(c => c.id !== 'all').map(condition => (
-                          <option key={condition.id} value={condition.id}>{condition.name}</option>
+                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                        {conditionOptions.map(condition => (
+                          <label key={condition.id} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.conditions.includes(condition.id)}
+                              onChange={(e) => handleConditionChange(condition.id, e.target.checked)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">{condition.name}</span>
+                          </label>
                         ))}
-                      </select>
-                      <p className="mt-1 text-xs text-gray-500">Mantén presionado Ctrl para seleccionar múltiples opciones</p>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Medicamentos Asociados</h3>
-                  <div className="mb-4">
-                    <Input
-                      placeholder="Buscar medicamentos..."
-                      icon={<Search size={18} />}
-                    />
-                  </div>
-                  {selectedTreatment.medications?.map((medication, index) => (
-                    <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-2 flex justify-between items-center">
-                      <div className="flex items-center">
-                        <Pill size={18} className="text-blue-500 mr-2" />
-                        <span className="text-sm font-medium">{medication}</span>
-                      </div>
-                      <button className="text-red-500 hover:text-red-700">
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Pill size={18} className="text-blue-500 mr-2" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Amoxicilina 250mg</p>
-                          <p className="text-xs text-gray-500">Antibiótico</p>
-                        </div>
-                      </div>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        Añadir
-                      </button>
-                    </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                    {medicines.map(medicine => (
+                      <label key={medicine._id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.associatedMedicines.includes(medicine._id)}
+                          onChange={(e) => handleMedicineChange(medicine._id, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          {medicine.name} - {medicine.activeIngredient}
+                        </span>
+                      </label>
+                    ))}
                   </div>
                 </div>
                 
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Procedimientos</h3>
-                  <div className="mb-4">
-                    <Input
-                      placeholder="Buscar procedimientos..."
-                      icon={<Search size={18} />}
-                    />
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                    {procedureOptions.map(procedure => (
+                      <label key={procedure.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.procedures.includes(procedure.id)}
+                          onChange={(e) => handleProcedureChange(procedure.id, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{procedure.name}</span>
+                      </label>
+                    ))}
                   </div>
-                  {selectedTreatment.procedures?.map((procedure, index) => (
-                    <div key={index} className="bg-green-50 p-3 rounded-lg border border-green-200 mb-2 flex justify-between items-center">
-                      <div className="flex items-center">
-                        <Activity size={18} className="text-green-500 mr-2" />
-                        <span className="text-sm font-medium">{procedure}</span>
-                      </div>
-                      <button className="text-red-500 hover:text-red-700">
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
                 </div>
                 
                 <div className="border-t border-gray-200 pt-6">
@@ -1369,7 +1370,11 @@ const Tratamientos: React.FC = () => {
                       <textarea
                         rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        defaultValue={selectedTreatment.contraindications?.join('\n')}
+                        value={formData.contraindications.join('\n')}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          contraindications: e.target.value.split('\n').filter(line => line.trim() !== '')
+                        }))}
                       />
                     </div>
                     <div>
@@ -1379,7 +1384,11 @@ const Tratamientos: React.FC = () => {
                       <textarea
                         rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        defaultValue={selectedTreatment.sideEffects?.join('\n')}
+                        value={formData.sideEffects.join('\n')}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          sideEffects: e.target.value.split('\n').filter(line => line.trim() !== '')
+                        }))}
                       />
                     </div>
                   </div>
@@ -1392,7 +1401,8 @@ const Tratamientos: React.FC = () => {
                   <textarea
                     rows={3}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    defaultValue={selectedTreatment.notes}
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                   />
                 </div>
               </form>
@@ -1401,13 +1411,16 @@ const Tratamientos: React.FC = () => {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
               <Button
                 variant="outline"
-                onClick={() => setShowEditTreatmentModal(false)}
+                onClick={() => {
+                  setShowEditTreatmentModal(false);
+                  resetForm();
+                }}
               >
                 Cancelar
               </Button>
               <Button
                 variant="primary"
-                onClick={() => handleUpdateTreatment({})}
+                onClick={handleUpdateTreatment}
               >
                 Guardar Cambios
               </Button>
