@@ -8,12 +8,20 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import NewPrescriptionForm from '../../components/dashboard/NewPrescriptionForm';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const NewPrescriptionPage: React.FC = () => {
   const navigate = useNavigate();
   const [showPreview, setShowPreview] = useState(false);
   const [prescriptionData, setPrescriptionData] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Convex queries and mutations
+  const patients = useQuery(api.patients.getPatients) || [];
+  const doctors = useQuery(api.doctors.getDoctors) || [];
+  const medicines = useQuery(api.medicines.getMedicines) || [];
+  const createPrescription = useMutation(api.prescriptions.createPrescription);
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
@@ -35,10 +43,33 @@ const NewPrescriptionPage: React.FC = () => {
     `
   });
 
-  const handlePrescriptionSubmit = (prescription: any) => {
+  const handlePrescriptionSubmit = async (prescription: any) => {
     console.log('Prescription submitted:', prescription);
-    setPrescriptionData(prescription);
-    setShowPreview(true);
+    
+    try {
+      // Save prescription to database
+      const prescriptionId = await createPrescription({
+        patientId: prescription.patientId,
+        petId: prescription.petId,
+        doctorId: prescription.doctorId,
+        medicines: prescription.medicines,
+        notes: prescription.notes
+      });
+
+      // Set prescription data for preview
+      const prescriptionWithData = {
+        ...prescription,
+        _id: prescriptionId,
+        number: `RX-${prescriptionId.slice(-8)}`,
+        date: new Date().toISOString().split('T')[0]
+      };
+      
+      setPrescriptionData(prescriptionWithData);
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Error creating prescription:', error);
+      alert('Error al crear la receta. Por favor, inténtalo de nuevo.');
+    }
   };
 
   const handleDownloadPDF = () => {
@@ -65,38 +96,37 @@ const NewPrescriptionPage: React.FC = () => {
     });
   };
 
-  const mockPatients = [
-    {
-      id: '1',
-      name: 'Luna',
-      species: 'Perro',
-      breed: 'Labrador',
-      age: 3,
-      weight: 25,
-      owner: 'María García',
-      ownerPhone: '+34 666 777 888'
-    },
-    {
-      id: '2',
-      name: 'Rocky',
-      species: 'Perro',
-      breed: 'Pastor Alemán',
-      age: 5,
-      weight: 30,
-      owner: 'Carlos Rodríguez',
-      ownerPhone: '+34 666 888 999'
-    },
-    {
-      id: '3',
-      name: 'Miau',
-      species: 'Gato',
-      breed: 'Siamés',
-      age: 2,
-      weight: 4,
-      owner: 'Ana López',
-      ownerPhone: '+34 666 999 111'
-    }
-  ];
+  // Transform patients data for the form
+  const transformedPatients = patients.map(patient => ({
+    id: patient._id,
+    name: patient.pets?.[0]?.name || 'Sin mascota',
+    species: patient.pets?.[0]?.species || 'N/A',
+    breed: patient.pets?.[0]?.breed || 'N/A',
+    age: patient.pets?.[0] ? Math.floor((Date.now() - new Date(patient.pets[0].birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0,
+    weight: patient.pets?.[0]?.weight || 0,
+    owner: `${patient.firstName} ${patient.lastName}`,
+    ownerPhone: patient.phone,
+    patientId: patient._id,
+    petId: patient.pets?.[0]?._id || null
+  }));
+
+  // Transform doctors data for the form
+  const transformedDoctors = doctors.map(doctor => ({
+    id: doctor._id,
+    name: doctor.name,
+    specialization: doctor.specialization
+  }));
+
+  // Transform medicines data for the form
+  const transformedMedicines = medicines.map(medicine => ({
+    id: medicine._id,
+    name: medicine.name,
+    activeIngredient: medicine.activeIngredient,
+    dosage: medicine.recommendedDosage,
+    duration: medicine.duration,
+    manufacturer: medicine.manufacturer,
+    type: medicine.type
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -128,7 +158,9 @@ const NewPrescriptionPage: React.FC = () => {
           <NewPrescriptionForm
             onSubmit={handlePrescriptionSubmit}
             onCancel={() => navigate('/dashboard')}
-            patients={mockPatients}
+            patients={transformedPatients}
+            doctors={transformedDoctors}
+            medicines={transformedMedicines}
           />
         ) : (
           <div className="space-y-6">

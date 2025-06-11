@@ -33,12 +33,16 @@ interface NewPrescriptionFormProps {
   onSubmit: (prescription: any) => void;
   onCancel: () => void;
   patients: Patient[];
+  doctors: any[];
+  medicines: any[];
 }
 
-const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
-  onSubmit,
-  onCancel,
-  patients
+const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ 
+  onSubmit, 
+  onCancel, 
+  patients, 
+  doctors = [], 
+  medicines = [] 
 }) => {
   const createPrescription = useMutation(api.prescriptions.createPrescription);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -141,52 +145,31 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    try {
-      if (!selectedPatient) {
-        console.error('No patient selected for prescription');
-        alert('Por favor seleccione un paciente');
-        return;
-      }
-
-      if (medications.length === 0) {
-        console.error('No medications added to prescription');
-        alert('Por favor añada al menos un medicamento');
-        return;
-      }
-
-      const finalPrescriptionNumber = prescriptionNumber || `RX-${Date.now()}`;
-
-      const prescription = {
-        id: Date.now().toString(),
-        number: finalPrescriptionNumber,
-        date: prescriptionDate,
-        patient: selectedPatient,
-        veterinarian,
-        medications,
-        notes,
-        status: 'active'
-      };
-
-      console.log('Submitting prescription:', prescription);
-
-      await createPrescription({
-        patientId: selectedPatient.id as any,
-        veterinarian: veterinarian,
-        medications: medications.map(med => ({
-          name: med.name,
-          dosage: med.dosage,
-          frequency: med.frequency,
-          duration: med.duration,
-          instructions: med.instructions || undefined,
-        })),
-        diagnosis: notes || undefined,
-        notes: notes || undefined,
-      });
-      onSubmit(prescription);
-    } catch (error) {
-      console.error('Error submitting prescription:', error);
-      alert('Error al crear la receta');
+    if (!selectedPatient || !veterinarian || medications.length === 0) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
     }
+
+    // Find the selected doctor
+    const selectedDoctor = doctors.find(doc => doc.name === veterinarian);
+
+    const prescriptionData = {
+      number: prescriptionNumber,
+      date: prescriptionDate,
+      patient: selectedPatient,
+      patientId: selectedPatient.id, // Use patient.id
+      petId: selectedPatient.id,    // Assuming patient.id is also petId
+      doctorId: selectedDoctor?.id || veterinarian,
+      veterinarian,
+      medications,
+      medicines: medications.map(med => {
+        const medicine = medicines.find(m => m.name === med.name);
+        return medicine?.id;
+      }).filter(Boolean),
+      notes
+    };
+
+    onSubmit(prescriptionData);
   };
 
   const handlePreview = () => {
@@ -278,11 +261,19 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Veterinario
               </label>
-              <Input
-                value={veterinarian}
-                onChange={(e) => setVeterinarian(e.target.value)}
-                required
-              />
+              <select
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={veterinarian}
+                  onChange={(e) => setVeterinarian(e.target.value)}
+                  required
+                >
+                  <option value="">Seleccionar veterinario</option>
+                  {doctors.map(doctor => (
+                    <option key={doctor.id} value={doctor.name}>
+                      {doctor.name} - {doctor.specialization}
+                    </option>
+                  ))}
+                </select>
             </div>
 
             {/* Añadir medicamentos */}
@@ -290,11 +281,29 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
               <h4 className="text-md font-medium text-gray-900 mb-3">Medicamentos</h4>
               <div className="border border-gray-200 rounded-lg p-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <Input
-                    placeholder="Nombre del medicamento"
-                    value={newMedication.name}
-                    onChange={(e) => setNewMedication({...newMedication, name: e.target.value})}
-                  />
+                  <select
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={newMedication.name}
+                  onChange={(e) => {
+                    const selectedMedicine = medicines.find(med => med.name === e.target.value);
+                    if (selectedMedicine) {
+                      setNewMedication({
+                        ...newMedication,
+                        name: selectedMedicine.name,
+                        dosage: selectedMedicine.dosage,
+                        duration: selectedMedicine.duration
+                      });
+                    }
+                  }}
+                  required
+                >
+                  <option value="">Seleccionar medicamento</option>
+                  {medicines.map(medicine => (
+                    <option key={medicine.id} value={medicine.name}>
+                      {medicine.name} - {medicine.activeIngredient}
+                    </option>
+                  ))}
+                </select>
                   <Input
                     placeholder="Dosis (ej: 250mg)"
                     value={newMedication.dosage}
