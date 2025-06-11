@@ -1,11 +1,15 @@
+
 import React, { useState } from 'react';
 import { Plus, Search, Filter, Download, Pill, RefreshCw, Edit, Trash, Tag, Eye, X, DollarSign, Database } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { Id } from '../../convex/_generated/dataModel';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 
-interface Medication {
-  id: string;
+interface Medicine {
+  _id: Id<"medicines">;
   name: string;
   activeIngredient: string;
   manufacturer: string;
@@ -34,191 +38,107 @@ interface Medication {
   excipients?: string[];
   withdrawalPeriod?: string;
   aiScore?: number;
+  createdAt: number;
+  updatedAt: number;
 }
-
-// Mock data for medications
-const mockMedications: Medication[] = [
-  {
-    id: '1',
-    name: 'Amoxicilina 250mg',
-    activeIngredient: 'Amoxicilina',
-    manufacturer: 'Laboratorios MSD',
-    type: 'Antibiótico',
-    conditions: ['Infección bacteriana', 'Infección respiratoria'],
-    species: ['Perro', 'Gato'],
-    breeds: ['Todas'],
-    sex: 'both',
-    dosageForm: 'Comprimidos',
-    recommendedDosage: '1 comprimido cada 12 horas',
-    duration: '7-14 días',
-    contraindications: ['Alergia a penicilinas'],
-    sideEffects: ['Diarrea', 'Vómitos'],
-    interactions: ['No administrar con otros antibióticos'],
-    status: 'active',
-    stock: 45,
-    minStock: 20,
-    price: 25.50,
-    reference: 'MED-AMOX-250',
-    atcVetCode: 'QJ01CA04',
-    registrationNumber: '1234-ESP',
-    prescriptionRequired: true,
-    psychotropic: false,
-    antibiotic: true,
-    administrationRoutes: ['Oral'],
-    aiScore: 95
-  },
-  {
-    id: '2',
-    name: 'Meloxicam 1.5mg/ml',
-    activeIngredient: 'Meloxicam',
-    manufacturer: 'Boehringer Ingelheim',
-    type: 'Antiinflamatorio',
-    conditions: ['Dolor', 'Inflamación', 'Artritis'],
-    species: ['Perro'],
-    breeds: ['Todas'],
-    sex: 'both',
-    dosageForm: 'Suspensión oral',
-    recommendedDosage: '0.2mg/kg el primer día, luego 0.1mg/kg',
-    duration: '5-7 días',
-    contraindications: ['Problemas renales', 'Úlceras gástricas'],
-    sideEffects: ['Problemas digestivos'],
-    interactions: ['No combinar con otros AINEs'],
-    status: 'active',
-    stock: 32,
-    minStock: 15,
-    price: 18.75,
-    reference: 'MED-MELOX-15',
-    atcVetCode: 'QM01AC06',
-    registrationNumber: '2345-ESP',
-    prescriptionRequired: true,
-    psychotropic: false,
-    antibiotic: false,
-    administrationRoutes: ['Oral'],
-    aiScore: 88
-  },
-  {
-    id: '3',
-    name: 'Apoquel 16mg',
-    activeIngredient: 'Oclacitinib',
-    manufacturer: 'Zoetis',
-    type: 'Antialérgico',
-    conditions: ['Dermatitis atópica', 'Prurito'],
-    species: ['Perro'],
-    breeds: ['Todas'],
-    sex: 'both',
-    dosageForm: 'Comprimidos',
-    recommendedDosage: '0.4-0.6mg/kg cada 12 horas',
-    duration: 'Según respuesta',
-    contraindications: ['Infecciones graves'],
-    sideEffects: ['Letargia', 'Anorexia'],
-    interactions: ['Inmunosupresores'],
-    status: 'active',
-    stock: 18,
-    minStock: 10,
-    price: 45.20,
-    reference: 'MED-APOQ-16',
-    atcVetCode: 'QD11AH90',
-    registrationNumber: '3456-ESP',
-    prescriptionRequired: true,
-    psychotropic: false,
-    antibiotic: false,
-    administrationRoutes: ['Oral'],
-    aiScore: 92
-  },
-  {
-    id: '4',
-    name: 'Simparica 80mg',
-    activeIngredient: 'Sarolaner',
-    manufacturer: 'Zoetis',
-    type: 'Antiparasitario',
-    conditions: ['Pulgas', 'Garrapatas', 'Ácaros'],
-    species: ['Perro'],
-    breeds: ['Todas'],
-    sex: 'both',
-    dosageForm: 'Comprimidos masticables',
-    recommendedDosage: '1 comprimido mensual',
-    duration: 'Mensual',
-    contraindications: ['Cachorros menores de 8 semanas'],
-    sideEffects: ['Vómitos', 'Diarrea (poco frecuentes)'],
-    interactions: ['No conocidas'],
-    status: 'active',
-    stock: 25,
-    minStock: 12,
-    price: 32.40,
-    reference: 'MED-SIMP-80',
-    atcVetCode: 'QP53BE01',
-    registrationNumber: '4567-ESP',
-    prescriptionRequired: true,
-    psychotropic: false,
-    antibiotic: false,
-    administrationRoutes: ['Oral'],
-    aiScore: 96
-  },
-  {
-    id: '5',
-    name: 'Metacam 1.5mg/ml',
-    activeIngredient: 'Meloxicam',
-    manufacturer: 'Boehringer Ingelheim',
-    type: 'Antiinflamatorio',
-    conditions: ['Dolor', 'Inflamación', 'Artritis'],
-    species: ['Perro'],
-    breeds: ['Todas'],
-    sex: 'both',
-    dosageForm: 'Suspensión oral',
-    recommendedDosage: '0.1mg/kg una vez al día',
-    duration: '5-7 días',
-    contraindications: ['Problemas renales', 'Úlceras gástricas'],
-    sideEffects: ['Problemas digestivos'],
-    interactions: ['No combinar con otros AINEs'],
-    status: 'active',
-    stock: 28,
-    minStock: 15,
-    price: 19.50,
-    reference: 'MED-META-15',
-    atcVetCode: 'QM01AC06',
-    registrationNumber: '5678-ESP',
-    prescriptionRequired: true,
-    psychotropic: false,
-    antibiotic: false,
-    administrationRoutes: ['Oral'],
-    aiScore: 90
-  }
-];
 
 const Medicamentos: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedSpecies, setSelectedSpecies] = useState('all');
   const [showInactive, setShowInactive] = useState(false);
-  const [selectedMedication, setSelectedMedication] = useState<Medication | null>(null);
+  const [selectedMedication, setSelectedMedication] = useState<Medicine | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [cimavetSearchTerm, setCimavetSearchTerm] = useState('');
+  const [showNewMedicationForm, setShowNewMedicationForm] = useState(false);
+  const [showEditMedicationForm, setShowEditMedicationForm] = useState(false);
 
-  // Get unique medication types and species
-  const types = Array.from(new Set(mockMedications.map(med => med.type)));
-  const species = Array.from(new Set(mockMedications.flatMap(med => med.species)));
-
-  // Filter medications based on search, type, species, and status
-  const filteredMedications = mockMedications.filter(medication => {
-    const matchesSearch = 
-      medication.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      medication.activeIngredient.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      medication.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      medication.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      medication.conditions.some(c => c.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesType = selectedType === 'all' || medication.type === selectedType;
-    const matchesSpecies = selectedSpecies === 'all' || medication.species.includes(selectedSpecies);
-    const matchesStatus = showInactive ? true : medication.status === 'active';
-    
-    return matchesSearch && matchesType && matchesSpecies && matchesStatus;
+  // Convex queries and mutations
+  const medicines = useQuery(api.medicines.searchMedicines, {
+    searchTerm: searchTerm || undefined,
+    type: selectedType !== 'all' ? selectedType : undefined,
+    species: selectedSpecies !== 'all' ? selectedSpecies : undefined,
+    showInactive: showInactive,
   });
 
+  const createMedicine = useMutation(api.medicines.createMedicine);
+  const updateMedicine = useMutation(api.medicines.updateMedicine);
+  const deleteMedicine = useMutation(api.medicines.deleteMedicine);
+
+  const filteredMedications = medicines || [];
+
+  // Get unique medication types and species
+  const types = Array.from(new Set(filteredMedications.map(med => med.type)));
+  const species = Array.from(new Set(filteredMedications.flatMap(med => med.species)));
+
   const handleCimavetSearch = () => {
-    // In a real app, this would search the CIMAVET API
     console.log('Searching CIMAVET for:', cimavetSearchTerm);
-    // For demo purposes, we'll just show an alert
     alert(`Buscando en CIMAVET: ${cimavetSearchTerm}`);
+  };
+
+  const handleNewMedication = async (formData: any) => {
+    try {
+      const medicationData = {
+        name: formData.name || '',
+        activeIngredient: formData.activeIngredient || '',
+        manufacturer: formData.manufacturer || '',
+        type: formData.type || 'Otro',
+        conditions: formData.conditions || [],
+        species: formData.species || [],
+        breeds: formData.breeds || ['Todas'],
+        sex: formData.sex || 'both' as const,
+        dosageForm: formData.dosageForm || '',
+        recommendedDosage: formData.recommendedDosage || '',
+        duration: formData.duration || '',
+        contraindications: formData.contraindications || [],
+        sideEffects: formData.sideEffects || [],
+        interactions: formData.interactions || [],
+        status: 'active' as const,
+        stock: formData.stock || 0,
+        minStock: formData.minStock || 0,
+        price: formData.price || 0,
+        reference: formData.reference,
+        atcVetCode: formData.atcVetCode,
+        registrationNumber: formData.registrationNumber,
+        prescriptionRequired: formData.prescriptionRequired || false,
+        psychotropic: formData.psychotropic || false,
+        antibiotic: formData.antibiotic || false,
+        administrationRoutes: formData.administrationRoutes || ['Oral'],
+        excipients: formData.excipients,
+        withdrawalPeriod: formData.withdrawalPeriod,
+        aiScore: formData.aiScore,
+      };
+
+      await createMedicine(medicationData);
+      setShowNewMedicationForm(false);
+    } catch (error) {
+      console.error('Error creating medicine:', error);
+    }
+  };
+
+  const handleUpdateMedication = async (formData: any) => {
+    if (!selectedMedication) return;
+
+    try {
+      await updateMedicine({
+        id: selectedMedication._id,
+        ...formData,
+      });
+      setShowEditMedicationForm(false);
+      setSelectedMedication(null);
+    } catch (error) {
+      console.error('Error updating medicine:', error);
+    }
+  };
+
+  const handleDeleteMedication = async (medicineId: Id<"medicines">) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este medicamento?')) {
+      try {
+        await deleteMedicine({ id: medicineId });
+      } catch (error) {
+        console.error('Error deleting medicine:', error);
+      }
+    }
   };
 
   return (
@@ -256,6 +176,7 @@ const Medicamentos: React.FC = () => {
             variant="primary"
             icon={<Plus size={18} />}
             className="flex-1 sm:flex-none"
+            onClick={() => setShowNewMedicationForm(true)}
           >
             Nuevo Medicamento
           </Button>
@@ -288,8 +209,8 @@ const Medicamentos: React.FC = () => {
             onChange={(e) => setSelectedSpecies(e.target.value)}
           >
             <option value="all">Todas las especies</option>
-            {species.map(species => (
-              <option key={species} value={species}>{species}</option>
+            {species.map(spec => (
+              <option key={spec} value={spec}>{spec}</option>
             ))}
           </select>
           <div className="flex items-center">
@@ -317,7 +238,7 @@ const Medicamentos: React.FC = () => {
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMedications.map((medication) => (
-            <Card key={medication.id}>
+            <Card key={medication._id}>
               <div className="p-6">
                 <div className="flex items-start justify-between">
                   <div>
@@ -329,6 +250,10 @@ const Medicamentos: React.FC = () => {
                       variant="outline"
                       size="sm"
                       icon={<Edit size={16} />}
+                      onClick={() => {
+                        setSelectedMedication(medication);
+                        setShowEditMedicationForm(true);
+                      }}
                     >
                       Editar
                     </Button>
@@ -434,7 +359,7 @@ const Medicamentos: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredMedications.map((medication) => (
-                  <tr key={medication.id} className="hover:bg-gray-50">
+                  <tr key={medication._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{medication.name}</div>
                       <div className="text-xs text-gray-500">{medication.activeIngredient} • {medication.manufacturer}</div>
@@ -491,10 +416,21 @@ const Medicamentos: React.FC = () => {
                           <Eye size={18} />
                         </button>
                         <button
+                          onClick={() => {
+                            setSelectedMedication(medication);
+                            setShowEditMedicationForm(true);
+                          }}
                           className="text-gray-400 hover:text-gray-600"
                           title="Editar"
                         >
                           <Edit size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMedication(medication._id)}
+                          className="text-red-400 hover:text-red-600"
+                          title="Eliminar"
+                        >
+                          <Trash size={18} />
                         </button>
                       </div>
                     </td>
@@ -517,7 +453,7 @@ const Medicamentos: React.FC = () => {
       )}
 
       {/* Medication Details Modal */}
-      {selectedMedication && (
+      {selectedMedication && !showEditMedicationForm && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
@@ -719,6 +655,7 @@ const Medicamentos: React.FC = () => {
               <Button
                 variant="outline"
                 icon={<Edit size={18} />}
+                onClick={() => setShowEditMedicationForm(true)}
               >
                 Editar
               </Button>
@@ -728,6 +665,573 @@ const Medicamentos: React.FC = () => {
               >
                 Cerrar
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Medication Form Modal */}
+      {showNewMedicationForm && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Nuevo Medicamento</h2>
+              <button
+                onClick={() => setShowNewMedicationForm(false)}
+                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6">
+              <form 
+                className="space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const data = {
+                    name: formData.get('name') as string,
+                    activeIngredient: formData.get('activeIngredient') as string,
+                    manufacturer: formData.get('manufacturer') as string,
+                    type: formData.get('type') as string,
+                    dosageForm: formData.get('dosageForm') as string,
+                    recommendedDosage: formData.get('recommendedDosage') as string,
+                    duration: formData.get('duration') as string,
+                    registrationNumber: formData.get('registrationNumber') as string,
+                    reference: formData.get('reference') as string,
+                    price: parseFloat(formData.get('price') as string) || 0,
+                    stock: parseInt(formData.get('stock') as string) || 0,
+                    minStock: parseInt(formData.get('minStock') as string) || 0,
+                    conditions: (formData.get('conditions') as string).split('\n').filter(Boolean),
+                    contraindications: (formData.get('contraindications') as string).split('\n').filter(Boolean),
+                    sideEffects: (formData.get('sideEffects') as string).split('\n').filter(Boolean),
+                    interactions: (formData.get('interactions') as string).split('\n').filter(Boolean),
+                    species: Array.from(formData.getAll('species')) as string[],
+                    administrationRoutes: Array.from(formData.getAll('administrationRoutes')) as string[],
+                    prescriptionRequired: formData.get('prescriptionRequired') === 'on',
+                    psychotropic: formData.get('psychotropic') === 'on',
+                    antibiotic: formData.get('antibiotic') === 'on',
+                  };
+                  handleNewMedication(data);
+                }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre del Medicamento *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Ej: Amoxicilina 250mg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Principio Activo *
+                    </label>
+                    <input
+                      type="text"
+                      name="activeIngredient"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Ej: Amoxicilina"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fabricante *
+                    </label>
+                    <input
+                      type="text"
+                      name="manufacturer"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Ej: Laboratorios MSD"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo *
+                    </label>
+                    <select
+                      name="type"
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="Antibiótico">Antibiótico</option>
+                      <option value="Antiinflamatorio">Antiinflamatorio</option>
+                      <option value="Antialérgico">Antialérgico</option>
+                      <option value="Antiparasitario">Antiparasitario</option>
+                      <option value="Analgésico">Analgésico</option>
+                      <option value="Hormonal">Hormonal</option>
+                      <option value="Cardiovascular">Cardiovascular</option>
+                      <option value="Dermatológico">Dermatológico</option>
+                      <option value="Oftalmológico">Oftalmológico</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Forma Farmacéutica
+                    </label>
+                    <input
+                      type="text"
+                      name="dosageForm"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Ej: Comprimidos"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Posología Recomendada
+                    </label>
+                    <input
+                      type="text"
+                      name="recommendedDosage"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Ej: 1 comprimido cada 12 horas"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Duración Recomendada
+                    </label>
+                    <input
+                      type="text"
+                      name="duration"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Ej: 7-14 días"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número de Registro
+                    </label>
+                    <input
+                      type="text"
+                      name="registrationNumber"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Ej: 1234-ESP"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Referencia
+                    </label>
+                    <input
+                      type="text"
+                      name="reference"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Ej: MED-AMOX-250"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Precio (€)
+                    </label>
+                    <input
+                      type="number"
+                      name="price"
+                      step="0.01"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Stock Actual
+                    </label>
+                    <input
+                      type="number"
+                      name="stock"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Stock Mínimo
+                    </label>
+                    <input
+                      type="number"
+                      name="minStock"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Especies
+                    </label>
+                    <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {['Perro', 'Gato', 'Conejo', 'Hurón', 'Ave', 'Reptil', 'Roedor', 'Équido'].map((species) => (
+                        <label key={species} className="inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            name="species"
+                            value={species}
+                            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">{species}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Vías de Administración
+                    </label>
+                    <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {['Oral', 'Inyectable', 'Tópica', 'Oftálmica', 'Ótica', 'Nasal', 'Rectal', 'Vaginal'].map((route) => (
+                        <label key={route} className="inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            name="administrationRoutes"
+                            value={route}
+                            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">{route}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Indicaciones (una por línea)
+                    </label>
+                    <textarea
+                      name="conditions"
+                      rows={3}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Infección bacteriana&#10;Infección respiratoria"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Contraindicaciones (una por línea)
+                    </label>
+                    <textarea
+                      name="contraindications"
+                      rows={3}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Alergia a penicilinas&#10;Problemas renales"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Efectos Secundarios (uno por línea)
+                    </label>
+                    <textarea
+                      name="sideEffects"
+                      rows={3}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="Diarrea&#10;Vómitos"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Interacciones (una por línea)
+                    </label>
+                    <textarea
+                      name="interactions"
+                      rows={3}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      placeholder="No administrar con otros antibióticos"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-gray-900">Características Especiales</h3>
+                    <div className="flex space-x-6">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          name="prescriptionRequired"
+                          id="prescriptionRequired"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="prescriptionRequired" className="ml-2 text-sm text-gray-700">
+                          Requiere Receta
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          name="psychotropic"
+                          id="psychotropic"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="psychotropic" className="ml-2 text-sm text-gray-700">
+                          Psicotrópico
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          name="antibiotic"
+                          id="antibiotic"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="antibiotic" className="ml-2 text-sm text-gray-700">
+                          Antibiótico
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowNewMedicationForm(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                  >
+                    Guardar Medicamento
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Medication Modal */}
+      {showEditMedicationForm && selectedMedication && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Editar Medicamento</h2>
+              <button
+                onClick={() => {
+                  setShowEditMedicationForm(false);
+                  setSelectedMedication(null);
+                }}
+                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6">
+              <form 
+                className="space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const data = {
+                    name: formData.get('name') as string,
+                    activeIngredient: formData.get('activeIngredient') as string,
+                    manufacturer: formData.get('manufacturer') as string,
+                    type: formData.get('type') as string,
+                    dosageForm: formData.get('dosageForm') as string,
+                    recommendedDosage: formData.get('recommendedDosage') as string,
+                    duration: formData.get('duration') as string,
+                    registrationNumber: formData.get('registrationNumber') as string,
+                    reference: formData.get('reference') as string,
+                    price: parseFloat(formData.get('price') as string) || selectedMedication.price,
+                    stock: parseInt(formData.get('stock') as string) || selectedMedication.stock,
+                    minStock: parseInt(formData.get('minStock') as string) || selectedMedication.minStock,
+                    conditions: (formData.get('conditions') as string).split('\n').filter(Boolean),
+                    contraindications: (formData.get('contraindications') as string).split('\n').filter(Boolean),
+                    sideEffects: (formData.get('sideEffects') as string).split('\n').filter(Boolean),
+                    interactions: (formData.get('interactions') as string).split('\n').filter(Boolean),
+                    species: Array.from(formData.getAll('species')) as string[],
+                    administrationRoutes: Array.from(formData.getAll('administrationRoutes')) as string[],
+                    status: formData.get('status') === 'on' ? 'active' as const : 'inactive' as const,
+                    prescriptionRequired: formData.get('prescriptionRequired') === 'on',
+                    psychotropic: formData.get('psychotropic') === 'on',
+                    antibiotic: formData.get('antibiotic') === 'on',
+                  };
+                  handleUpdateMedication(data);
+                }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre del Medicamento *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      defaultValue={selectedMedication.name}
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Principio Activo *
+                    </label>
+                    <input
+                      type="text"
+                      name="activeIngredient"
+                      defaultValue={selectedMedication.activeIngredient}
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fabricante *
+                    </label>
+                    <input
+                      type="text"
+                      name="manufacturer"
+                      defaultValue={selectedMedication.manufacturer}
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo *
+                    </label>
+                    <select
+                      name="type"
+                      defaultValue={selectedMedication.type}
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    >
+                      <option value="Antibiótico">Antibiótico</option>
+                      <option value="Antiinflamatorio">Antiinflamatorio</option>
+                      <option value="Antialérgico">Antialérgico</option>
+                      <option value="Antiparasitario">Antiparasitario</option>
+                      <option value="Analgésico">Analgésico</option>
+                      <option value="Hormonal">Hormonal</option>
+                      <option value="Cardiovascular">Cardiovascular</option>
+                      <option value="Dermatológico">Dermatológico</option>
+                      <option value="Oftalmológico">Oftalmológico</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Precio (€)
+                    </label>
+                    <input
+                      type="number"
+                      name="price"
+                      step="0.01"
+                      defaultValue={selectedMedication.price}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Stock Actual
+                    </label>
+                    <input
+                      type="number"
+                      name="stock"
+                      defaultValue={selectedMedication.stock}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Stock Mínimo
+                    </label>
+                    <input
+                      type="number"
+                      name="minStock"
+                      defaultValue={selectedMedication.minStock}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Especies
+                    </label>
+                    <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {['Perro', 'Gato', 'Conejo', 'Hurón', 'Ave', 'Reptil', 'Roedor', 'Équido'].map((species) => (
+                        <label key={species} className="inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            name="species"
+                            value={species}
+                            defaultChecked={selectedMedication.species.includes(species)}
+                            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">{species}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-gray-900">Estado</h3>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="status"
+                        id="editMedicationStatus"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        defaultChecked={selectedMedication.status === 'active'}
+                      />
+                      <label htmlFor="editMedicationStatus" className="ml-2 text-sm text-gray-700">
+                        Activo
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowEditMedicationForm(false);
+                      setSelectedMedication(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                  >
+                    Guardar Cambios
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
