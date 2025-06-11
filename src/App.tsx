@@ -26,7 +26,7 @@ import GroomingTreatments from './pages/peluqueria/GroomingTreatments';
 import ConsultationAppointments from './pages/consultorio/ConsultationAppointments';
 import Consultation from './pages/consultorio/Consultation';
 import MedicalHistory from './pages/consultorio/MedicalHistory';
-import Medicamentos from './pages/consultorio/Medications';
+import Medicamentos from './pages/consultorio/Medicamentos';
 import Tratamientos from './pages/consultorio/Tratamientos';
 import Inbox from './pages/Inbox';
 import PageLayout from './components/layout/PageLayout';

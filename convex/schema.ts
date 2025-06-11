@@ -807,4 +807,39 @@ export default defineSchema({
   })
     .index("by_date", ["date"])
     .index("by_groomer", ["groomerId"]),
+
+  // Medicines table
+  medicines: defineTable({
+    name: v.string(),
+    activeIngredient: v.string(),
+    manufacturer: v.string(),
+    type: v.string(),
+    dosageForm: v.string(),
+    species: v.array(v.string()),
+    recommendedDosage: v.string(),
+    duration: v.string(),
+    registrationNumber: v.optional(v.string()),
+    reference: v.optional(v.string()),
+    stock: v.number(),
+    minStock: v.number(),
+    price: v.number(),
+    conditions: v.array(v.string()),
+    contraindications: v.array(v.string()),
+    sideEffects: v.array(v.string()),
+    interactions: v.array(v.string()),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    atcVetCode: v.optional(v.string()),
+    prescriptionRequired: v.optional(v.boolean()),
+    psychotropic: v.optional(v.boolean()),
+    antibiotic: v.optional(v.boolean()),
+    administrationRoutes: v.optional(v.array(v.string())),
+    excipients: v.optional(v.array(v.string())),
+    withdrawalPeriod: v.optional(v.string()),
+    aiScore: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_type", ["type"])
+    .index("by_manufacturer", ["manufacturer"])
+    .index("by_status", ["status"]),
 });
