@@ -334,17 +334,8 @@ export default defineSchema({
   prescriptions: defineTable({
     patientId: v.id("patients"),
     petId: v.optional(v.id("pets")),
-    veterinarian: v.string(),
-    medications: v.array(
-      v.object({
-        name: v.string(),
-        dosage: v.string(),
-        frequency: v.string(),
-        duration: v.string(),
-        instructions: v.optional(v.string()),
-      }),
-    ),
-    diagnosis: v.optional(v.string()),
+    doctorId: v.string(),
+    medicines: v.array(v.id("medicines")),
     notes: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),

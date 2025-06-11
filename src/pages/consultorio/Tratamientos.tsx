@@ -1507,7 +1507,7 @@ const Tratamientos: React.FC = () => {
                           onChange={(e) => handleProcedureChange(procedure.id, e.target.checked)}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <span className="ml-2 text-sm text-gray-700">{procedure.name}                      </label>
+                        <span className="ml-2 text-sm text-gray-700">{procedure.name}</span>                     </label>
                     ))}
                   </div>
                 </div>
