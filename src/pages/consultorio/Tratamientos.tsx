@@ -764,7 +764,7 @@ const Tratamientos: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 flex items-center">
-                        <Clock size={14 className="mr-1" />
+                        <Clock size={14} className="mr-1" />
                         {treatment.duration} min
                       </div>
                       {treatment.followUpPeriod && (
