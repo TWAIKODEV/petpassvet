@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Search, Filter, Download, Pill, RefreshCw, Edit, Trash, Tag, Eye, X, DollarSign, Database, AlertTriangle } from 'lucide-react';
 import Card from '../../components/common/Card';
@@ -97,11 +96,11 @@ const Medicamentos: React.FC = () => {
       medication.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       medication.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
       medication.conditions.some(c => c.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     const matchesType = selectedType === 'all' || medication.type === selectedType;
     const matchesSpecies = selectedSpecies === 'all' || medication.species.includes(selectedSpecies);
     const matchesStatus = showInactive ? true : medication.status === 'active';
-    
+
     return matchesSearch && matchesType && matchesSpecies && matchesStatus;
   });
 
@@ -146,7 +145,7 @@ const Medicamentos: React.FC = () => {
 
   const handleUpdateMedication = async () => {
     if (!selectedMedication) return;
-    
+
     try {
       await updateMedicine({
         id: selectedMedication._id,
@@ -184,7 +183,7 @@ const Medicamentos: React.FC = () => {
 
   const handleDeleteMedication = async () => {
     if (!selectedMedication) return;
-    
+
     try {
       await deleteMedicine({ id: selectedMedication._id });
       setShowDeleteConfirmation(false);
@@ -592,7 +591,7 @@ const Medicamentos: React.FC = () => {
               </tbody>
             </table>
           </div>
-          
+
           {filteredMedications.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 mb-2">
@@ -628,18 +627,21 @@ const Medicamentos: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
                   label="Nombre del Medicamento"
+                  placeholder="Ej: Amoxicilina 250mg"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   required
                 />
                 <Input
                   label="Principio Activo"
+                  placeholder="Ej: Amoxicilina"
                   value={formData.activeIngredient}
                   onChange={(e) => setFormData({...formData, activeIngredient: e.target.value})}
                   required
                 />
                 <Input
                   label="Fabricante"
+                  placeholder="Ej: Laboratorios MSD"
                   value={formData.manufacturer}
                   onChange={(e) => setFormData({...formData, manufacturer: e.target.value})}
                   required
@@ -689,23 +691,27 @@ const Medicamentos: React.FC = () => {
                 </div>
                 <Input
                   label="Posología Recomendada"
+                  placeholder="Ej: 10-20 mg/kg cada 12h"
                   value={formData.recommendedDosage}
                   onChange={(e) => setFormData({...formData, recommendedDosage: e.target.value})}
                   required
                 />
                 <Input
                   label="Duración Recomendada"
+                  placeholder="Ej: 7-10 días"
                   value={formData.duration}
                   onChange={(e) => setFormData({...formData, duration: e.target.value})}
                   required
                 />
                 <Input
                   label="Número de Registro"
+                  placeholder="Ej: 2568 ESP"
                   value={formData.registrationNumber}
                   onChange={(e) => setFormData({...formData, registrationNumber: e.target.value})}
                 />
                 <Input
                   label="Referencia"
+                  placeholder="Ej: AMX250-100"
                   value={formData.reference}
                   onChange={(e) => setFormData({...formData, reference: e.target.value})}
                 />
@@ -783,7 +789,7 @@ const Medicamentos: React.FC = () => {
                     rows={3}
                     value={formData.sideEffects.join('\n')}
                     onChange={(e) => setFormData({...formData, sideEffects: e.target.value.split('\n').filter(c => c.trim())})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-smfocus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     placeholder="Un efecto secundario por línea..."
                   />
                 </div>
@@ -858,18 +864,21 @@ const Medicamentos: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
                   label="Nombre del Medicamento"
+                  placeholder="Ej: Amoxicilina 250mg"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   required
                 />
                 <Input
                   label="Principio Activo"
+                  placeholder="Ej: Amoxicilina"
                   value={formData.activeIngredient}
                   onChange={(e) => setFormData({...formData, activeIngredient: e.target.value})}
                   required
                 />
                 <Input
                   label="Fabricante"
+                  placeholder="Ej: Laboratorios MSD"
                   value={formData.manufacturer}
                   onChange={(e) => setFormData({...formData, manufacturer: e.target.value})}
                   required
@@ -919,23 +928,27 @@ const Medicamentos: React.FC = () => {
                 </div>
                 <Input
                   label="Posología Recomendada"
+                  placeholder="Ej: 10-20 mg/kg cada 12h"
                   value={formData.recommendedDosage}
                   onChange={(e) => setFormData({...formData, recommendedDosage: e.target.value})}
                   required
                 />
                 <Input
                   label="Duración Recomendada"
+                  placeholder="Ej: 7-10 días"
                   value={formData.duration}
                   onChange={(e) => setFormData({...formData, duration: e.target.value})}
                   required
                 />
                 <Input
                   label="Número de Registro"
+                  placeholder="Ej: 2568 ESP"
                   value={formData.registrationNumber}
                   onChange={(e) => setFormData({...formData, registrationNumber: e.target.value})}
                 />
                 <Input
                   label="Referencia"
+                  placeholder="Ej: AMX250-100"
                   value={formData.reference}
                   onChange={(e) => setFormData({...formData, reference: e.target.value})}
                 />
