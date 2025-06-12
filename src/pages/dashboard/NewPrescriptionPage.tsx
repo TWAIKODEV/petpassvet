@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Printer, Download, QrCode } from 'lucide-react';
@@ -45,7 +44,7 @@ const NewPrescriptionPage: React.FC = () => {
 
   const handlePrescriptionSubmit = async (prescription: any) => {
     console.log('Prescription submitted:', prescription);
-    
+
     try {
       // Save prescription to database
       const prescriptionId = await createPrescription({
@@ -63,7 +62,7 @@ const NewPrescriptionPage: React.FC = () => {
         number: `RX-${prescriptionId.slice(-8)}`,
         date: new Date().toISOString().split('T')[0]
       };
-      
+
       setPrescriptionData(prescriptionWithData);
       setShowPreview(true);
     } catch (error) {
@@ -81,7 +80,7 @@ const NewPrescriptionPage: React.FC = () => {
 
   const generateQRData = () => {
     if (!prescriptionData) return '';
-    
+
     return JSON.stringify({
       prescriptionNumber: prescriptionData.number,
       date: prescriptionData.date,
@@ -99,6 +98,8 @@ const NewPrescriptionPage: React.FC = () => {
   // Transform patients data for the form
   const transformedPatients = patients.map(patient => ({
     id: patient._id,
+    patientId: patient._id,
+    petId: patient.pets?.[0]?._id,
     name: patient.pets?.[0]?.name || 'Sin mascota',
     species: patient.pets?.[0]?.species || 'N/A',
     breed: patient.pets?.[0]?.breed || 'N/A',

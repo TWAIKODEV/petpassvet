@@ -141,8 +141,8 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
       number: prescriptionNumber,
       date: prescriptionDate,
       patient: selectedPatient,
-      patientId: selectedPatient.id, // Use patient.id
-      petId: selectedPatient.id,    // Assuming patient.id is also petId
+      patientId: selectedPatient.patientId || selectedPatient.id, // Use correct patient ID
+      petId: selectedPatient.petId, // Use the actual pet ID
       doctorId: selectedDoctor?.id || veterinarian,
       veterinarian,
       medications,
