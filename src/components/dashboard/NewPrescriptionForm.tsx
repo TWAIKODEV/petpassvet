@@ -120,23 +120,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
     });
   };
 
-  const addMedication = () => {
-    if (newMedication.name && newMedication.dosage) {
-      const medication = {
-        ...newMedication,
-        id: Date.now().toString()
-      };
-      setMedications([...medications, medication]);
-      setNewMedication({
-        id: '',
-        name: '',
-        dosage: '',
-        frequency: '',
-        duration: '',
-        instructions: ''
-      });
-    }
-  };
+  
 
   const removeMedication = (id: string) => {
     setMedications(medications.filter(med => med.id !== id));
@@ -279,63 +263,33 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
             {/* Añadir medicamentos */}
             <div>
               <h4 className="text-md font-medium text-gray-900 mb-3">Medicamentos</h4>
-              <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <select
+              <div className="border border-gray-200 rounded-lg p-4">
+                <select
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={newMedication.name}
+                  value=""
                   onChange={(e) => {
                     const selectedMedicine = medicines.find(med => med.name === e.target.value);
                     if (selectedMedicine) {
-                      setNewMedication({
-                        ...newMedication,
+                      const medication = {
+                        id: Date.now().toString(),
                         name: selectedMedicine.name,
-                        dosage: selectedMedicine.dosage,
-                        duration: selectedMedicine.duration
-                      });
+                        dosage: selectedMedicine.recommendedDosage || 'No especificada',
+                        frequency: '',
+                        duration: selectedMedicine.duration || 'No especificada',
+                        instructions: ''
+                      };
+                      setMedications([...medications, medication]);
+                      e.target.value = ''; // Reset select
                     }
                   }}
-                  required
                 >
-                  <option value="">Seleccionar medicamento</option>
+                  <option value="">Seleccionar medicamento para añadir</option>
                   {medicines.map(medicine => (
                     <option key={medicine.id} value={medicine.name}>
                       {medicine.name} - {medicine.activeIngredient}
                     </option>
                   ))}
                 </select>
-                  <Input
-                    placeholder="Dosis (ej: 250mg)"
-                    value={newMedication.dosage}
-                    onChange={(e) => setNewMedication({...newMedication, dosage: e.target.value})}
-                  />
-                  <Input
-                    placeholder="Frecuencia (ej: cada 8h)"
-                    value={newMedication.frequency}
-                    onChange={(e) => setNewMedication({...newMedication, frequency: e.target.value})}
-                  />
-                  <Input
-                    placeholder="Duración (ej: 7 días)"
-                    value={newMedication.duration}
-                    onChange={(e) => setNewMedication({...newMedication, duration: e.target.value})}
-                  />
-                  <div className="md:col-span-2">
-                    <Input
-                      placeholder="Instrucciones especiales"
-                      value={newMedication.instructions}
-                      onChange={(e) => setNewMedication({...newMedication, instructions: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  icon={<Plus size={18} />}
-                  onClick={addMedication}
-                  disabled={!newMedication.name || !newMedication.dosage}
-                >
-                  Añadir Medicamento
-                </Button>
               </div>
             </div>
 
@@ -349,11 +303,8 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                       <div className="flex-1">
                         <div className="font-medium">{medication.name}</div>
                         <div className="text-sm text-gray-600">
-                          {medication.dosage} - {medication.frequency} - {medication.duration}
+                          Dosis: {medication.dosage} - Duración: {medication.duration}
                         </div>
-                        {medication.instructions && (
-                          <div className="text-sm text-gray-500">{medication.instructions}</div>
-                        )}
                       </div>
                       <button
                         type="button"
