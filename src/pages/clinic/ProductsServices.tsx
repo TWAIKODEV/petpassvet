@@ -798,12 +798,73 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
             required
           />
 
-          <Input
-            label="Categoría/Tipo"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Categoría/Tipo
+            </label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="">Seleccionar categoría</option>
+              {formData.itemType === 'product' && (
+                <>
+                  <option value="Alimentación">Alimentación</option>
+                  <option value="Higiene">Higiene</option>
+                  <option value="Accesorios">Accesorios</option>
+                  <option value="Juguetes">Juguetes</option>
+                  <option value="Salud">Salud</option>
+                  <option value="Cuidado dental">Cuidado dental</option>
+                  <option value="Camas y descanso">Camas y descanso</option>
+                  <option value="Transporte">Transporte</option>
+                  <option value="Adiestramiento">Adiestramiento</option>
+                  <option value="Otro">Otro</option>
+                </>
+              )}
+              {formData.itemType === 'service' && (
+                <>
+                  <option value="Consulta">Consulta</option>
+                  <option value="Cirugía">Cirugía</option>
+                  <option value="Vacunación">Vacunación</option>
+                  <option value="Peluquería">Peluquería</option>
+                  <option value="Rehabilitación">Rehabilitación</option>
+                  <option value="Análisis">Análisis</option>
+                  <option value="Radiología">Radiología</option>
+                  <option value="Hospitalización">Hospitalización</option>
+                  <option value="Urgencias">Urgencias</option>
+                  <option value="Otro">Otro</option>
+                </>
+              )}
+              {formData.itemType === 'medicine' && (
+                <>
+                  <option value="Antibiótico">Antibiótico</option>
+                  <option value="Antiinflamatorio">Antiinflamatorio</option>
+                  <option value="Antialérgico">Antialérgico</option>
+                  <option value="Antiparasitario">Antiparasitario</option>
+                  <option value="Analgésico">Analgésico</option>
+                  <option value="Hormonal">Hormonal</option>
+                  <option value="Cardiovascular">Cardiovascular</option>
+                  <option value="Dermatológico">Dermatológico</option>
+                  <option value="Oftalmológico">Oftalmológico</option>
+                  <option value="Otológico">Otológico</option>
+                  <option value="Neurológico">Neurológico</option>
+                  <option value="Digestivo">Digestivo</option>
+                  <option value="Respiratorio">Respiratorio</option>
+                  <option value="Urológico">Urológico</option>
+                  <option value="Reproductivo">Reproductivo</option>
+                  <option value="Vacuna">Vacuna</option>
+                  <option value="Vitaminas">Vitaminas</option>
+                  <option value="Suplemento">Suplemento</option>
+                  <option value="Desparasitante">Desparasitante</option>
+                  <option value="Sedante">Sedante</option>
+                  <option value="Anestésico">Anestésico</option>
+                  <option value="Otro">Otro</option>
+                </>
+              )}
+            </select>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
