@@ -766,7 +766,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
           <h2 className="text-xl font-semibold text-gray-900">
             {item ? 'Editar' : 'Nuevo'} {formData.itemType === 'product' ? 'Producto' : formData.itemType === 'service' ? 'Servicio' : 'Medicamento'}
           </h2>
-          <Button variant="secondary" onClick={onClose} className="p-2 !bg-transparent">
+          <Button variant="secondary" onClick={onClose} className="p-2 !bg-transparent hover:!bg-gray-100 text-black">
             <X className="w-4 h-4" />
           </Button>
         </div>
@@ -910,7 +910,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose} className="!bg-transparent hover:!bg-gray-100 text-black border border-gray-300">
               Cancelar
             </Button>
             <Button type="submit">
