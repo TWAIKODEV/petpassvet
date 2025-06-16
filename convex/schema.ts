@@ -856,4 +856,45 @@ export default defineSchema({
     .index("by_area", ["area"])
     .index("by_status", ["status"])
     .index("by_email", ["email"]),
+
+  // Products table
+  products: defineTable({
+    name: v.string(),
+    category: v.string(),
+    description: v.optional(v.string()),
+    basePrice: v.number(),
+    vat: v.number(),
+    cost: v.number(),
+    margin: v.number(),
+    reference: v.optional(v.string()),
+    barcode: v.optional(v.string()),
+    currentStock: v.number(),
+    minStock: v.number(),
+    isActive: v.boolean(),
+    providerId: v.optional(v.id("providers")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_provider", ["providerId"])
+    .index("by_active", ["isActive"]),
+
+  // Services table
+  services: defineTable({
+    name: v.string(),
+    category: v.string(),
+    description: v.optional(v.string()),
+    basePrice: v.number(),
+    vat: v.number(),
+    cost: v.number(),
+    margin: v.number(),
+    duration: v.number(), // en minutos
+    isActive: v.boolean(),
+    providerId: v.optional(v.id("providers")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_provider", ["providerId"])
+    .index("by_active", ["isActive"]),
 });

@@ -1,404 +1,427 @@
+
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Download, Package, RefreshCw, Edit, Trash, Tag, Eye, X, DollarSign, Printer } from 'lucide-react';
+import { Plus, Search, Filter, Download, Package, Clock, Pill, Edit, Trash, Eye, DollarSign, Activity, Building2, Tag, BarChart3, X, User, AlertTriangle } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { Id } from '../../../convex/_generated/dataModel';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 
-interface Product {
-  id: string;
-  name: string;
-  type: 'product' | 'service';
-  category: string;
-  description: string;
-  price: number;
-  tax: number;
-  reference?: string;
-  duration?: number;
-  status: 'active' | 'inactive';
-}
-
-// Mock data for products
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Consulta General',
-    type: 'service',
-    category: 'Consultas',
-    description: 'Consulta veterinaria general',
-    price: 45.00,
-    tax: 21,
-    duration: 30,
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'Vacunación',
-    type: 'service',
-    category: 'Vacunas',
-    description: 'Servicio de vacunación',
-    price: 35.00,
-    tax: 21,
-    duration: 15,
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Pienso Premium 12kg',
-    type: 'product',
-    category: 'Alimentación',
-    description: 'Pienso de alta calidad para perros adultos',
-    price: 65.50,
-    tax: 10,
-    reference: 'PP-12KG',
-    status: 'active'
-  },
-  {
-    id: '4',
-    name: 'Peluquería Completa',
-    type: 'service',
-    category: 'Peluquería',
-    description: 'Servicio completo de peluquería',
-    price: 55.00,
-    tax: 21,
-    duration: 90,
-    status: 'active'
-  }
-];
-
-const ProductsServices: React.FC = () => {
+const ProductsServices = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<'all' | 'product' | 'service'>('all');
+  const [selectedType, setSelectedType] = useState<'all' | 'products' | 'services' | 'medicines'>('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [showInactive, setShowInactive] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
+  const [showNewItemModal, setShowNewItemModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
 
-  // Get unique categories
-  const categories = Array.from(new Set(mockProducts.map(p => p.category)));
+  // Convex queries and mutations
+  const products = useQuery(api.products.getProducts) || [];
+  const services = useQuery(api.services.getServices) || [];
+  const medicines = useQuery(api.medicines.getMedicines) || [];
+  const providers = useQuery(api.providers.getProviders) || [];
 
-  // Filter products based on search term and filters
-  const filteredProducts = mockProducts.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'all' || product.type === selectedType;
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesStatus = showInactive ? true : product.status === 'active';
+  const createProduct = useMutation(api.products.createProduct);
+  const updateProduct = useMutation(api.products.updateProduct);
+  const deleteProduct = useMutation(api.products.deleteProduct);
+
+  const createService = useMutation(api.services.createService);
+  const updateService = useMutation(api.services.updateService);
+  const deleteService = useMutation(api.services.deleteService);
+
+  const createMedicine = useMutation(api.medicines.createMedicine);
+  const updateMedicine = useMutation(api.medicines.updateMedicine);
+  const deleteMedicine = useMutation(api.medicines.deleteMedicine);
+
+  // Combine all items with type information
+  const allItems = [
+    ...products.map(item => ({ ...item, itemType: 'product' as const })),
+    ...services.map(item => ({ ...item, itemType: 'service' as const })),
+    ...medicines.map(item => ({ ...item, itemType: 'medicine' as const })),
+  ];
+
+  // Filter items
+  const filteredItems = allItems.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = selectedType === 'all' || 
+      (selectedType === 'products' && item.itemType === 'product') ||
+      (selectedType === 'services' && item.itemType === 'service') ||
+      (selectedType === 'medicines' && item.itemType === 'medicine');
+    
+    let matchesCategory = true;
+    if (selectedCategory !== 'all') {
+      if (item.itemType === 'product' || item.itemType === 'service') {
+        matchesCategory = item.category === selectedCategory;
+      } else if (item.itemType === 'medicine') {
+        matchesCategory = item.type === selectedCategory;
+      }
+    }
+
+    const matchesStatus = showInactive ? true : 
+      (item.itemType === 'medicine' ? item.status === 'active' : item.isActive);
+    
     return matchesSearch && matchesType && matchesCategory && matchesStatus;
   });
 
-  const handleNewProduct = (productData: any) => {
-    // Here you would typically make an API call to save the new product
-    console.log('New product data:', productData);
-    setShowNewProductModal(false);
+  const handleNewItem = () => {
+    setEditingItem(null);
+    setShowNewItemModal(true);
+  };
+
+  const handleEditItem = (item: any) => {
+    setEditingItem(item);
+    setShowNewItemModal(true);
+  };
+
+  const handleDeleteItem = async (item: any) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar ${item.name}?`)) return;
+
+    try {
+      if (item.itemType === 'product') {
+        await deleteProduct({ id: item._id });
+      } else if (item.itemType === 'service') {
+        await deleteService({ id: item._id });
+      } else if (item.itemType === 'medicine') {
+        await deleteMedicine({ id: item._id });
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
+  };
+
+  const handleFormSubmit = async (formData: any) => {
+    try {
+      if (editingItem) {
+        // Update existing item
+        if (editingItem.itemType === 'product') {
+          await updateProduct({ id: editingItem._id, ...formData });
+        } else if (editingItem.itemType === 'service') {
+          await updateService({ id: editingItem._id, ...formData });
+        } else if (editingItem.itemType === 'medicine') {
+          await updateMedicine({ id: editingItem._id, ...formData });
+        }
+      } else {
+        // Create new item
+        if (formData.itemType === 'product') {
+          await createProduct(formData);
+        } else if (formData.itemType === 'service') {
+          await createService(formData);
+        } else if (formData.itemType === 'medicine') {
+          await createMedicine(formData);
+        }
+      }
+      setShowNewItemModal(false);
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Error saving item:', error);
+    }
+  };
+
+  const getPrice = (item: any) => {
+    if (item.itemType === 'medicine') return item.price;
+    return item.basePrice;
+  };
+
+  const getIcon = (itemType: string) => {
+    switch (itemType) {
+      case 'product': return <Package className="w-4 h-4" />;
+      case 'service': return <Clock className="w-4 h-4" />;
+      case 'medicine': return <Pill className="w-4 h-4" />;
+      default: return <Package className="w-4 h-4" />;
+    }
+  };
+
+  const getTypeLabel = (itemType: string) => {
+    switch (itemType) {
+      case 'product': return 'Producto';
+      case 'service': return 'Servicio';
+      case 'medicine': return 'Medicamento';
+      default: return 'Desconocido';
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Productos & Servicios</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Gestión del catálogo de productos y servicios
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Productos y Servicios</h1>
+          <p className="text-gray-600">Gestiona tu inventario de productos, servicios y medicamentos</p>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <div className="flex rounded-md shadow-sm">
-            <button
-              className={`px-3 py-2 text-sm font-medium rounded-l-md border ${
-                viewMode === 'grid'
-                  ? 'bg-blue-50 text-blue-600 border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              }`}
-              onClick={() => setViewMode('grid')}
-              title="Vista de tarjetas"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
-            </button>
-            <button
-              className={`px-3 py-2 text-sm font-medium rounded-r-md border-t border-b border-r ${
-                viewMode === 'list'
-                  ? 'bg-blue-50 text-blue-600 border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              }`}
-              onClick={() => setViewMode('list')}
-              title="Vista de lista"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-          <Button
-            variant="outline"
-            icon={<Download size={18} />}
-            className="flex-1 sm:flex-none"
-          >
-            Exportar
-          </Button>
-          <Button
-            variant="primary"
-            icon={<Plus size={18} />}
-            className="flex-1 sm:flex-none"
-            onClick={() => setShowNewProductModal(true)}
-          >
-            Nuevo Producto/Servicio
-          </Button>
-        </div>
+        <Button onClick={handleNewItem} className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Nuevo Item
+        </Button>
       </div>
 
       {/* Filters */}
-      <Card>
-        <div className="flex flex-col sm:flex-row gap-4 p-4">
-          <Input
-            placeholder="Buscar productos y servicios..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            icon={<Search size={18} />}
-            className="flex-1"
-          />
-          <select
-            className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value as 'all' | 'product' | 'service')}
-          >
-            <option value="all">Todos los tipos</option>
-            <option value="product">Productos</option>
-            <option value="service">Servicios</option>
-          </select>
-          <select
-            className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-          >
-            <option value="all">Todas las categorías</option>
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="showInactive"
-              checked={showInactive}
-              onChange={(e) => setShowInactive(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="showInactive" className="ml-2 text-sm text-gray-700">
-              Mostrar inactivos
-            </label>
+      <Card className="mb-6">
+        <div className="p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex-1 min-w-64">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Buscar por nombre..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value as any)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Todos los tipos</option>
+              <option value="products">Productos</option>
+              <option value="services">Servicios</option>
+              <option value="medicines">Medicamentos</option>
+            </select>
+
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Todas las categorías</option>
+              <option value="alimentacion">Alimentación</option>
+              <option value="higiene">Higiene</option>
+              <option value="accesorios">Accesorios</option>
+              <option value="juguetes">Juguetes</option>
+              <option value="salud">Salud</option>
+              <option value="consulta">Consulta</option>
+              <option value="cirugia">Cirugía</option>
+              <option value="vacunacion">Vacunación</option>
+              <option value="peluqueria">Peluquería</option>
+            </select>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="showInactive"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="rounded text-blue-600"
+              />
+              <label htmlFor="showInactive" className="text-sm text-gray-600">
+                Mostrar inactivos
+              </label>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'grid' ? 'primary' : 'secondary'}
+                onClick={() => setViewMode('grid')}
+                className="p-2"
+              >
+                <Package className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'primary' : 'secondary'}
+                onClick={() => setViewMode('list')}
+                className="p-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            icon={<RefreshCw size={18} />}
-          >
-            Actualizar
-          </Button>
         </div>
       </Card>
 
-      {/* Grid View */}
-      {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((item) => (
-            <Card key={item.id}>
-              <div className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
-                    <p className="mt-1 text-sm text-gray-500">{item.description}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      icon={<Edit size={16} />}
-                    >
-                      Editar
-                    </Button>
-                    <button className="text-gray-400 hover:text-gray-600">
-                      <Trash size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    item.type === 'product' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                  }`}>
-                    {item.type === 'product' ? 'Producto' : 'Servicio'}
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    {item.category}
-                  </span>
-                  {item.status === 'inactive' && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      Inactivo
+      {/* Items Grid/List */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredItems.map((item) => (
+            <Card key={`${item.itemType}-${item._id}`} className="hover:shadow-lg transition-shadow">
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {getIcon(item.itemType)}
+                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      {getTypeLabel(item.itemType)}
                     </span>
-                  )}
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Precio</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {item.price.toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
-                      })}
-                    </p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">IVA</p>
-                    <p className="text-sm font-medium text-gray-900">{item.tax}%</p>
-                  </div>
-                  {item.type === 'product' && item.reference && (
-                    <div>
-                      <p className="text-xs text-gray-500">Referencia</p>
-                      <p className="text-sm font-medium text-gray-900">{item.reference}</p>
-                    </div>
-                  )}
-                  {item.type === 'service' && item.duration && (
-                    <div>
-                      <p className="text-xs text-gray-500">Duración</p>
-                      <p className="text-sm font-medium text-gray-900">{item.duration} min</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex justify-between items-center">
+                  <div className="flex gap-1">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
-                      icon={<Tag size={16} />}
+                      onClick={() => handleEditItem(item)}
+                      className="p-1"
                     >
-                      Precios Especiales
+                      <Edit className="w-3 h-3" />
                     </Button>
-                    <p className="text-sm text-gray-500">
-                      {item.type === 'product' ? 'Stock disponible' : 'Disponible'}
-                    </p>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleDeleteItem(item)}
+                      className="p-1 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                <h3 className="font-semibold text-gray-900 mb-2">{item.name}</h3>
+                
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    <span>{item.itemType === 'medicine' ? item.type : item.category}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    <span className="font-medium text-lg text-green-600">
+                      €{getPrice(item).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {item.itemType === 'product' && (
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4" />
+                      <span>Stock: {item.currentStock}</span>
+                      {item.currentStock <= item.minStock && (
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                      )}
+                    </div>
+                  )}
+
+                  {item.itemType === 'service' && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      <span>{item.duration} min</span>
+                    </div>
+                  )}
+
+                  {item.itemType === 'medicine' && (
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4" />
+                      <span>Stock: {item.stock}</span>
+                      {item.stock <= item.minStock && (
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                      )}
+                    </div>
+                  )}
+
+                  {item.provider && (
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      <span className="truncate">{item.provider.name}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      (item.itemType === 'medicine' ? item.status === 'active' : item.isActive)
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {(item.itemType === 'medicine' ? item.status === 'active' : item.isActive) ? 'Activo' : 'Inactivo'}
+                    </span>
                   </div>
                 </div>
               </div>
             </Card>
           ))}
         </div>
-      )}
-
-      {/* List View */}
-      {viewMode === 'list' && (
-        <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+      ) : (
+        // List view
+        <Card>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Producto/Servicio
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nombre
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tipo
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Categoría
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Precio
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    IVA
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock/Duración
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ref./Duración
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Proveedor
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">{product.description}</div>
+                {filteredItems.map((item) => (
+                  <tr key={`${item.itemType}-${item._id}`} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {getIcon(item.itemType)}
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        {getTypeLabel(item.itemType)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.itemType === 'medicine' ? item.type : item.category}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                      €{getPrice(item).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.itemType === 'service' 
+                        ? `${item.duration} min`
+                        : item.itemType === 'medicine'
+                        ? `${item.stock} unidades`
+                        : `${item.currentStock} unidades`
+                      }
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.provider?.name || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        product.type === 'product' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {product.type === 'product' ? 'Producto' : 'Servicio'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{product.category}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {product.price.toLocaleString('es-ES', {
-                          style: 'currency',
-                          currency: 'EUR'
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{product.tax}%</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {product.type === 'product' ? product.reference : `${product.duration} min`}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
+                        (item.itemType === 'medicine' ? item.status === 'active' : item.isActive)
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {product.status === 'active' ? 'Activo' : 'Inactivo'}
+                        {(item.itemType === 'medicine' ? item.status === 'active' : item.isActive) ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2 justify-end">
-                        <button
-                          onClick={() => setSelectedProduct(product)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Ver detalles"
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleEditItem(item)}
                         >
-                          <Eye size={18} />
-                        </button>
-                        <button
-                          className="text-gray-400 hover:text-gray-600"
-                          title="Editar"
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleDeleteItem(item)}
+                          className="text-red-600 hover:bg-red-50"
                         >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          className="text-gray-400 hover:text-gray-600"
-                          title="Imprimir"
-                        >
-                          <Printer size={18} />
-                        </button>
-                        <button
-                          className="text-gray-400 hover:text-gray-600"
-                          title="Descargar"
-                        >
-                          <Download size={18} />
-                        </button>
+                          <Trash className="w-4 h-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -406,438 +429,436 @@ const ProductsServices: React.FC = () => {
               </tbody>
             </table>
           </div>
-          
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-2">
-                <Search size={48} className="mx-auto" />
+        </Card>
+      )}
+
+      {/* New/Edit Item Modal */}
+      {showNewItemModal && (
+        <ItemFormModal
+          item={editingItem}
+          providers={providers}
+          onSave={handleFormSubmit}
+          onClose={() => {
+            setShowNewItemModal(false);
+            setEditingItem(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Item Form Modal Component
+const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
+  const [formData, setFormData] = useState({
+    itemType: item?.itemType || 'product',
+    name: item?.name || '',
+    category: item?.category || item?.type || '',
+    description: item?.description || '',
+    basePrice: item?.basePrice || item?.price || 0,
+    vat: item?.vat || 21,
+    cost: item?.cost || 0,
+    margin: item?.margin || 0,
+    reference: item?.reference || '',
+    barcode: item?.barcode || '',
+    currentStock: item?.currentStock || item?.stock || 0,
+    minStock: item?.minStock || 0,
+    duration: item?.duration || 30,
+    isActive: item?.isActive !== undefined ? item.isActive : item?.status === 'active' || true,
+    providerId: item?.providerId || '',
+    // Medicine specific fields
+    activeIngredient: item?.activeIngredient || '',
+    manufacturer: item?.manufacturer || '',
+    dosageForm: item?.dosageForm || '',
+    species: item?.species || [],
+    recommendedDosage: item?.recommendedDosage || '',
+    conditions: item?.conditions || [],
+    contraindications: item?.contraindications || [],
+    sideEffects: item?.sideEffects || [],
+    interactions: item?.interactions || [],
+    registrationNumber: item?.registrationNumber || '',
+    atcVetCode: item?.atcVetCode || '',
+    prescriptionRequired: item?.prescriptionRequired || false,
+    psychotropic: item?.psychotropic || false,
+    antibiotic: item?.antibiotic || false,
+    administrationRoutes: item?.administrationRoutes || [],
+    excipients: item?.excipients || [],
+    withdrawalPeriod: item?.withdrawalPeriod || '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const submitData: any = {
+      name: formData.name,
+      category: formData.category,
+      description: formData.description,
+      providerId: formData.providerId || undefined,
+    };
+
+    if (formData.itemType === 'product') {
+      Object.assign(submitData, {
+        basePrice: formData.basePrice,
+        vat: formData.vat,
+        cost: formData.cost,
+        margin: formData.margin,
+        reference: formData.reference,
+        barcode: formData.barcode,
+        currentStock: formData.currentStock,
+        minStock: formData.minStock,
+        isActive: formData.isActive,
+      });
+    } else if (formData.itemType === 'service') {
+      Object.assign(submitData, {
+        basePrice: formData.basePrice,
+        vat: formData.vat,
+        cost: formData.cost,
+        margin: formData.margin,
+        duration: formData.duration,
+        isActive: formData.isActive,
+      });
+    } else if (formData.itemType === 'medicine') {
+      Object.assign(submitData, {
+        activeIngredient: formData.activeIngredient,
+        manufacturer: formData.manufacturer,
+        type: formData.category,
+        dosageForm: formData.dosageForm,
+        species: formData.species,
+        recommendedDosage: formData.recommendedDosage,
+        duration: formData.recommendedDosage,
+        registrationNumber: formData.registrationNumber,
+        reference: formData.reference,
+        stock: formData.currentStock,
+        minStock: formData.minStock,
+        price: formData.basePrice,
+        conditions: formData.conditions,
+        contraindications: formData.contraindications,
+        sideEffects: formData.sideEffects,
+        interactions: formData.interactions,
+        status: formData.isActive ? 'active' : 'inactive',
+        atcVetCode: formData.atcVetCode,
+        prescriptionRequired: formData.prescriptionRequired,
+        psychotropic: formData.psychotropic,
+        antibiotic: formData.antibiotic,
+        administrationRoutes: formData.administrationRoutes,
+        excipients: formData.excipients,
+        withdrawalPeriod: formData.withdrawalPeriod,
+      });
+      delete submitData.category;
+    }
+
+    onSave(submitData);
+  };
+
+  const renderFormFields = () => {
+    switch (formData.itemType) {
+      case 'product':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Precio Base"
+                type="number"
+                step="0.01"
+                value={formData.basePrice}
+                onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
+                required
+              />
+              <Input
+                label="IVA (%)"
+                type="number"
+                value={formData.vat}
+                onChange={(e) => setFormData({ ...formData, vat: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Coste"
+                type="number"
+                step="0.01"
+                value={formData.cost}
+                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
+              />
+              <Input
+                label="Margen (%)"
+                type="number"
+                value={formData.margin}
+                onChange={(e) => setFormData({ ...formData, margin: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Referencia"
+                value={formData.reference}
+                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+              />
+              <Input
+                label="Código de Barras"
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Stock Actual"
+                type="number"
+                value={formData.currentStock}
+                onChange={(e) => setFormData({ ...formData, currentStock: parseInt(e.target.value) || 0 })}
+                required
+              />
+              <Input
+                label="Stock Mínimo"
+                type="number"
+                value={formData.minStock}
+                onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
+                required
+              />
+            </div>
+          </>
+        );
+
+      case 'service':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Precio Base"
+                type="number"
+                step="0.01"
+                value={formData.basePrice}
+                onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
+                required
+              />
+              <Input
+                label="IVA (%)"
+                type="number"
+                value={formData.vat}
+                onChange={(e) => setFormData({ ...formData, vat: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Coste"
+                type="number"
+                step="0.01"
+                value={formData.cost}
+                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
+              />
+              <Input
+                label="Margen (%)"
+                type="number"
+                value={formData.margin}
+                onChange={(e) => setFormData({ ...formData, margin: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <Input
+              label="Duración (minutos)"
+              type="number"
+              value={formData.duration}
+              onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
+              required
+            />
+          </>
+        );
+
+      case 'medicine':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Principio Activo"
+                value={formData.activeIngredient}
+                onChange={(e) => setFormData({ ...formData, activeIngredient: e.target.value })}
+                required
+              />
+              <Input
+                label="Fabricante"
+                value={formData.manufacturer}
+                onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Forma Farmacéutica"
+                value={formData.dosageForm}
+                onChange={(e) => setFormData({ ...formData, dosageForm: e.target.value })}
+                required
+              />
+              <Input
+                label="Precio"
+                type="number"
+                step="0.01"
+                value={formData.basePrice}
+                onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Stock Actual"
+                type="number"
+                value={formData.currentStock}
+                onChange={(e) => setFormData({ ...formData, currentStock: parseInt(e.target.value) || 0 })}
+                required
+              />
+              <Input
+                label="Stock Mínimo"
+                type="number"
+                value={formData.minStock}
+                onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <Input
+              label="Dosis Recomendada"
+              value={formData.recommendedDosage}
+              onChange={(e) => setFormData({ ...formData, recommendedDosage: e.target.value })}
+              required
+            />
+            <Input
+              label="Número de Registro"
+              value={formData.registrationNumber}
+              onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+            />
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="prescriptionRequired"
+                  checked={formData.prescriptionRequired}
+                  onChange={(e) => setFormData({ ...formData, prescriptionRequired: e.target.checked })}
+                />
+                <label htmlFor="prescriptionRequired" className="text-sm">Requiere receta</label>
               </div>
-              <h3 className="text-lg font-medium text-gray-900">No se encontraron productos o servicios</h3>
-              <p className="text-gray-500 mt-1">Prueba con otros términos de búsqueda o cambia los filtros</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="psychotropic"
+                  checked={formData.psychotropic}
+                  onChange={(e) => setFormData({ ...formData, psychotropic: e.target.checked })}
+                />
+                <label htmlFor="psychotropic" className="text-sm">Psicotrópico</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="antibiotic"
+                  checked={formData.antibiotic}
+                  onChange={(e) => setFormData({ ...formData, antibiotic: e.target.checked })}
+                />
+                <label htmlFor="antibiotic" className="text-sm">Antibiótico</label>
+              </div>
+            </div>
+          </>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {item ? 'Editar' : 'Nuevo'} {formData.itemType === 'product' ? 'Producto' : formData.itemType === 'service' ? 'Servicio' : 'Medicamento'}
+          </h2>
+          <Button variant="secondary" onClick={onClose} className="p-2">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {!item && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo
+              </label>
+              <select
+                value={formData.itemType}
+                onChange={(e) => setFormData({ ...formData, itemType: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="product">Producto</option>
+                <option value="service">Servicio</option>
+                <option value="medicine">Medicamento</option>
+              </select>
             </div>
           )}
-        </div>
-      )}
 
-      {/* Product Details Modal */}
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
-                Detalles del {selectedProduct.type === 'product' ? 'Producto' : 'Servicio'}
-              </h3>
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X size={24} />
-              </button>
-            </div>
+          <Input
+            label="Nombre"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+          />
 
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Product Information */}
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-4">Información General</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Nombre</p>
-                      <p className="mt-1 text-base font-medium text-gray-900">{selectedProduct.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Descripción</p>
-                      <p className="mt-1 text-sm text-gray-900">{selectedProduct.description}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Tipo</p>
-                        <p className="mt-1">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            selectedProduct.type === 'product' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                          }`}>
-                            {selectedProduct.type === 'product' ? 'Producto' : 'Servicio'}
-                          </span>
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Categoría</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedProduct.category}</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Precio</p>
-                        <p className="mt-1 text-sm font-medium text-gray-900">
-                          {selectedProduct.price.toLocaleString('es-ES', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          })}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">IVA</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedProduct.tax}%</p>
-                      </div>
-                    </div>
-                    {selectedProduct.type === 'product' && selectedProduct.reference && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Referencia</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedProduct.reference}</p>
-                      </div>
-                    )}
-                    {selectedProduct.type === 'service' && selectedProduct.duration && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Duración</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedProduct.duration} minutos</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Estado</p>
-                      <p className="mt-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          selectedProduct.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {selectedProduct.status === 'active' ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
+          <Input
+            label="Categoría/Tipo"
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            required
+          />
 
-                {/* Pricing Information */}
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-4">Información de Precios</h4>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Precio Base</p>
-                        <p className="mt-1 text-sm font-medium text-gray-900">
-                          {selectedProduct.price.toLocaleString('es-ES', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          })}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">IVA ({selectedProduct.tax}%)</p>
-                        <p className="mt-1 text-sm text-gray-900">
-                          {(selectedProduct.price * selectedProduct.tax / 100).toLocaleString('es-ES', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Precio con IVA</p>
-                      <p className="mt-1 text-lg font-bold text-gray-900">
-                        {(selectedProduct.price * (1 + selectedProduct.tax / 100)).toLocaleString('es-ES', {
-                          style: 'currency',
-                          currency: 'EUR'
-                        })}
-                      </p>
-                    </div>
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="text-sm font-medium text-gray-500">Precios Especiales</p>
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-500">No hay precios especiales configurados</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                icon={<Printer size={18} />}
-              >
-                Imprimir
-              </Button>
-              <Button
-                variant="outline"
-                icon={<Download size={18} />}
-              >
-                Descargar
-              </Button>
-              <Button
-                variant="outline"
-                icon={<Edit size={18} />}
-              >
-                Editar
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setSelectedProduct(null)}
-              >
-                Cerrar
-              </Button>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Descripción
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={3}
+            />
           </div>
-        </div>
-      )}
 
-      {/* New Product/Service Modal */}
-      {showNewProductModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
-                Nuevo Producto/Servicio
-              </h3>
-              <button
-                onClick={() => setShowNewProductModal(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X size={24} />
-              </button>
-            </div>
+          {renderFormFields()}
 
-            <div className="overflow-y-auto flex-1 p-6">
-              <form className="space-y-6">
-                {/* Basic Information */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Información Básica</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <Input
-                        label="Nombre"
-                        name="name"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo
-                      </label>
-                      <select
-                        name="type"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Seleccionar tipo</option>
-                        <option value="product">Producto</option>
-                        <option value="service">Servicio</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Categoría
-                      </label>
-                      <select
-                        name="category"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Seleccionar categoría</option>
-                        <option value="Consultas">Consultas</option>
-                        <option value="Vacunas">Vacunas</option>
-                        <option value="Cirugías">Cirugías</option>
-                        <option value="Peluquería">Peluquería</option>
-                        <option value="Alimentación">Alimentación</option>
-                        <option value="Medicamentos">Medicamentos</option>
-                        <option value="Accesorios">Accesorios</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Descripción
-                      </label>
-                      <textarea
-                        name="description"
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Descripción detallada del producto o servicio..."
-                        required
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pricing Information */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center mb-4">
-                    <DollarSign className="text-green-600 mr-3" size={24} />
-                    <h3 className="text-lg font-medium text-gray-900">Información de Precios</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="Precio Base"
-                      type="number"
-                      name="price"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        IVA
-                      </label>
-                      <select
-                        name="tax"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Seleccionar IVA</option>
-                        <option value="0">0%</option>
-                        <option value="4">4%</option>
-                        <option value="10">10%</option>
-                        <option value="21">21%</option>
-                      </select>
-                    </div>
-                    <Input
-                      label="Coste"
-                      type="number"
-                      name="cost"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                    />
-                    <Input
-                      label="Margen (%)"
-                      type="number"
-                      name="margin"
-                      placeholder="0"
-                      min="0"
-                      max="100"
-                    />
-                  </div>
-                </div>
-
-                {/* Product-specific fields */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Detalles Específicos</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="product-field">
-                      <Input
-                        label="Referencia"
-                        name="reference"
-                        placeholder="Ej: PROD-001"
-                      />
-                    </div>
-                    <div className="product-field">
-                      <Input
-                        label="Código de Barras"
-                        name="barcode"
-                        placeholder="Ej: 8414606123456"
-                      />
-                    </div>
-                    <div className="product-field">
-                      <Input
-                        label="Stock Actual"
-                        type="number"
-                        name="stock"
-                        placeholder="0"
-                        min="0"
-                      />
-                    </div>
-                    <div className="product-field">
-                      <Input
-                        label="Stock Mínimo"
-                        type="number"
-                        name="minStock"
-                        placeholder="0"
-                        min="0"
-                      />
-                    </div>
-                    <div className="service-field">
-                      <Input
-                        label="Duración (minutos)"
-                        type="number"
-                        name="duration"
-                        placeholder="30"
-                        min="0"
-                      />
-                    </div>
-                    <div className="service-field">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Profesional Asignado
-                      </label>
-                      <select
-                        name="professional"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar profesional</option>
-                        <option value="any">Cualquiera</option>
-                        <option value="veterinarian">Solo Veterinarios</option>
-                        <option value="assistant">Solo Auxiliares</option>
-                        <option value="groomer">Solo Peluqueros</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Information */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Información Adicional</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Estado
-                      </label>
-                      <select
-                        name="status"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="active">Activo</option>
-                        <option value="inactive">Inactivo</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Proveedor
-                      </label>
-                      <select
-                        name="supplier"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar proveedor</option>
-                        <option value="1">VetSupplies S.L.</option>
-                        <option value="2">PetFood Distribución</option>
-                        <option value="3">MedVet Distribución</option>
-                        <option value="4">Laboratorios Syva</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Etiquetas
-                      </label>
-                      <Input
-                        placeholder="Ej: perro, gato, vacuna, antibiótico (separadas por comas)"
-                        name="tags"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowNewProductModal(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  // Here you would typically submit the form
-                  handleNewProduct({});
-                }}
-              >
-                Guardar
-              </Button>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Proveedor
+            </label>
+            <select
+              value={formData.providerId}
+              onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Sin proveedor</option>
+              {providers.map((provider: any) => (
+                <option key={provider._id} value={provider._id}>
+                  {provider.name}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-      )}
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={formData.isActive}
+              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+            />
+            <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+              Activo
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit">
+              {item ? 'Actualizar' : 'Crear'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
