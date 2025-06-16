@@ -860,4 +860,40 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_status", ["status"])
     .index("by_clinic_area", ["clinicArea"]),
+
+  // Providers table
+  providers: defineTable({
+    name: v.string(),
+    area: v.union(v.literal("productos"), v.literal("servicios"), v.literal("medicamentos")),
+    cif: v.string(),
+    contactName: v.string(),
+    position: v.optional(v.string()),
+    email: v.string(),
+    phone: v.string(),
+    mobile: v.optional(v.string()),
+    address: v.string(),
+    postalCode: v.string(),
+    city: v.string(),
+    province: v.string(),
+    country: v.string(),
+    website: v.optional(v.string()),
+    paymentMethod: v.string(),
+    bankAccount: v.optional(v.string()),
+    vatNumber: v.optional(v.string()),
+    currency: v.string(),
+    paymentTerms: v.string(),
+    minimumOrder: v.optional(v.number()),
+    shippingMethod: v.string(),
+    deliveryTime: v.string(),
+    shippingCost: v.number(),
+    freeShippingThreshold: v.optional(v.number()),
+    returnPolicy: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_area", ["area"])
+    .index("by_status", ["status"])
+    .index("by_email", ["email"]),
 });

@@ -1,116 +1,13 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Download, Phone, Mail, Globe, MapPin, Edit, Trash, Eye, ShoppingBag, Scissors, Building2, X, User, Briefcase, CreditCard, Truck, DollarSign, FileText } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { Id } from '../../../convex/_generated/dataModel';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-
-const mockProviders = [
-  {
-    id: '1',
-    name: 'VetSupplies S.L.',
-    type: 'Medicamentos',
-    area: 'Clínica',
-    family: 'Farmacéuticos',
-    contact: 'Ana García',
-    email: 'ana.garcia@vetsupplies.com',
-    phone: '+34 912 345 678',
-    address: 'Calle Comercial 123, Madrid',
-    website: 'www.vetsupplies.com',
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'PetFood Distribución',
-    type: 'Alimentación',
-    area: 'Tienda',
-    family: 'Alimentación',
-    contact: 'Carlos Ruiz',
-    email: 'carlos@petfood.es',
-    phone: '+34 913 456 789',
-    address: 'Avenida Industrial 45, Barcelona',
-    website: 'www.petfood.es',
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'MedVet Distribución',
-    type: 'Material Clínico',
-    area: 'Clínica',
-    family: 'Material Médico',
-    contact: 'Laura Martínez',
-    email: 'laura@medvet.com',
-    phone: '+34 914 567 890',
-    address: 'Calle Médica 78, Valencia',
-    website: 'www.medvet.com',
-    status: 'active'
-  },
-  {
-    id: '4',
-    name: 'Laboratorios Syva',
-    type: 'Medicamentos',
-    area: 'Clínica',
-    family: 'Farmacéuticos',
-    contact: 'Miguel Fernández',
-    email: 'miguel@syva.es',
-    phone: '+34 915 678 901',
-    address: 'Polígono Industrial 12, León',
-    website: 'www.syva.es',
-    status: 'active'
-  },
-  {
-    id: '5',
-    name: 'PetAccessories Inc.',
-    type: 'Accesorios',
-    area: 'Tienda',
-    family: 'Accesorios',
-    contact: 'Sofía López',
-    email: 'sofia@petaccessories.com',
-    phone: '+34 916 789 012',
-    address: 'Calle Comercio 56, Madrid',
-    website: 'www.petaccessories.com',
-    status: 'inactive'
-  },
-  {
-    id: '6',
-    name: 'OfficeSupplies S.A.',
-    type: 'Material de Oficina',
-    area: 'Clínica',
-    family: 'Papelería',
-    contact: 'Javier Rodríguez',
-    email: 'javier@officesupplies.es',
-    phone: '+34 917 890 123',
-    address: 'Avenida Oficina 34, Barcelona',
-    website: 'www.officesupplies.es',
-    status: 'active'
-  },
-  {
-    id: '7',
-    name: 'GroomingSupplies Co.',
-    type: 'Material de Peluquería',
-    area: 'Peluquería',
-    family: 'Herramientas',
-    contact: 'Elena Gómez',
-    email: 'elena@groomingsupplies.com',
-    phone: '+34 918 901 234',
-    address: 'Calle Estilista 23, Madrid',
-    website: 'www.groomingsupplies.com',
-    status: 'active'
-  },
-  {
-    id: '8',
-    name: 'PetToys Wholesale',
-    type: 'Juguetes',
-    area: 'Tienda',
-    family: 'Juguetes',
-    contact: 'Pablo Sánchez',
-    email: 'pablo@pettoys.es',
-    phone: '+34 919 012 345',
-    address: 'Polígono Comercial 8, Valencia',
-    website: 'www.pettoys.es',
-    status: 'active'
-  }
-];
 
 const Providers = () => {
   const navigate = useNavigate();
@@ -119,15 +16,19 @@ const Providers = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showInactive, setShowInactive] = useState(false);
   const [showNewProviderModal, setShowNewProviderModal] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<any>(null);
 
-  // Get unique provider areas
-  const providerAreas = Array.from(new Set(mockProviders.map(p => p.area)));
+  // Convex queries and mutations
+  const providers = useQuery(api.providers.getProviders) || [];
+  const createProvider = useMutation(api.providers.createProvider);
+  const updateProvider = useMutation(api.providers.updateProvider);
+  const deleteProvider = useMutation(api.providers.deleteProvider);
 
   // Filter providers based on search term, area, and status
-  const filteredProviders = mockProviders.filter(provider => {
+  const filteredProviders = providers.filter(provider => {
     const matchesSearch = 
       provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      provider.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      provider.contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       provider.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       provider.phone.includes(searchTerm);
     
@@ -144,21 +45,87 @@ const Providers = () => {
   // Get area icon
   const getAreaIcon = (area: string) => {
     switch (area) {
-      case 'Clínica':
-        return <Building2 size={16} className="text-blue-600" />;
-      case 'Tienda':
+      case 'productos':
         return <ShoppingBag size={16} className="text-green-600" />;
-      case 'Peluquería':
+      case 'servicios':
+        return <Building2 size={16} className="text-blue-600" />;
+      case 'medicamentos':
         return <Scissors size={16} className="text-purple-600" />;
       default:
         return <Building2 size={16} className="text-gray-600" />;
     }
   };
 
-  const handleNewProvider = (providerData: any) => {
-    // Here you would typically make an API call to save the new provider
-    console.log('New provider data:', providerData);
-    setShowNewProviderModal(false);
+  const getAreaDisplayName = (area: string) => {
+    switch (area) {
+      case 'productos':
+        return 'Productos';
+      case 'servicios':
+        return 'Servicios';
+      case 'medicamentos':
+        return 'Medicamentos';
+      default:
+        return area;
+    }
+  };
+
+  const handleDeleteProvider = async (providerId: Id<"providers">) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este proveedor?')) {
+      try {
+        await deleteProvider({ id: providerId });
+      } catch (error) {
+        console.error('Error deleting provider:', error);
+      }
+    }
+  };
+
+  const handleEditProvider = (provider: any) => {
+    setEditingProvider(provider);
+    setShowNewProviderModal(true);
+  };
+
+  const handleSubmitProvider = async (formData: FormData) => {
+    try {
+      const providerData = {
+        name: formData.get('name') as string,
+        area: formData.get('area') as 'productos' | 'servicios' | 'medicamentos',
+        cif: formData.get('cif') as string,
+        contactName: formData.get('contactName') as string,
+        position: formData.get('position') as string || undefined,
+        email: formData.get('email') as string,
+        phone: formData.get('phone') as string,
+        mobile: formData.get('mobile') as string || undefined,
+        address: formData.get('address') as string,
+        postalCode: formData.get('postalCode') as string,
+        city: formData.get('city') as string,
+        province: formData.get('province') as string,
+        country: formData.get('country') as string,
+        website: formData.get('website') as string || undefined,
+        paymentMethod: formData.get('paymentMethod') as string,
+        bankAccount: formData.get('bankAccount') as string || undefined,
+        vatNumber: formData.get('vatNumber') as string || undefined,
+        currency: formData.get('currency') as string,
+        paymentTerms: formData.get('paymentTerms') as string,
+        minimumOrder: parseFloat(formData.get('minimumOrder') as string) || undefined,
+        shippingMethod: formData.get('shippingMethod') as string,
+        deliveryTime: formData.get('deliveryTime') as string,
+        shippingCost: parseFloat(formData.get('shippingCost') as string) || 0,
+        freeShippingThreshold: parseFloat(formData.get('freeShippingThreshold') as string) || undefined,
+        returnPolicy: formData.get('returnPolicy') as string || undefined,
+        notes: formData.get('notes') as string || undefined,
+      };
+
+      if (editingProvider) {
+        await updateProvider({ id: editingProvider._id, ...providerData });
+      } else {
+        await createProvider(providerData);
+      }
+
+      setShowNewProviderModal(false);
+      setEditingProvider(null);
+    } catch (error) {
+      console.error('Error saving provider:', error);
+    }
   };
 
   return (
@@ -242,9 +209,9 @@ const Providers = () => {
             onChange={(e) => setSelectedArea(e.target.value)}
           >
             <option value="all">Todas las áreas</option>
-            {providerAreas.map(area => (
-              <option key={area} value={area}>{area}</option>
-            ))}
+            <option value="productos">Productos</option>
+            <option value="servicios">Servicios</option>
+            <option value="medicamentos">Medicamentos</option>
           </select>
           <div className="flex items-center">
             <input
@@ -271,7 +238,7 @@ const Providers = () => {
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProviders.map(provider => (
-            <Card key={provider.id}>
+            <Card key={provider._id}>
               <div className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
@@ -279,15 +246,7 @@ const Providers = () => {
                     <div className="flex items-center mt-1">
                       <div className="flex items-center text-xs px-2 py-1 rounded-full bg-gray-100">
                         {getAreaIcon(provider.area)}
-                        <span className="ml-1">{provider.area}</span>
-                        <span className="mx-1">•</span>
-                        <span className="text-gray-700">{provider.type}</span>
-                        {provider.area === 'Tienda' && (
-                          <>
-                            <span className="mx-1">•</span>
-                            <span className="text-gray-700">{provider.family}</span>
-                          </>
-                        )}
+                        <span className="ml-1">{getAreaDisplayName(provider.area)}</span>
                       </div>
                     </div>
                   </div>
@@ -317,38 +276,42 @@ const Providers = () => {
                     <MapPin className="h-4 w-4 text-gray-400 mr-2" />
                     <span className="text-gray-600">{provider.address}</span>
                   </div>
-                  <div className="flex items-center text-sm">
-                    <Globe className="h-4 w-4 text-gray-400 mr-2" />
-                    <a 
-                      href={`https://${provider.website}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-gray-600 hover:text-gray-900"
-                    >
-                      {provider.website}
-                    </a>
-                  </div>
+                  {provider.website && (
+                    <div className="flex items-center text-sm">
+                      <Globe className="h-4 w-4 text-gray-400 mr-2" />
+                      <a 
+                        href={`https://${provider.website}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gray-600 hover:text-gray-900"
+                      >
+                        {provider.website}
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-6 flex justify-between items-center">
                   <div className="text-sm text-gray-500">
-                    Contacto: {provider.contact}
+                    Contacto: {provider.contactName}
                   </div>
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => handleViewDetails(provider.id)}
+                      onClick={() => handleViewDetails(provider._id)}
                       className="text-blue-600 hover:text-blue-800"
                       title="Ver detalles"
                     >
                       <Eye size={18} />
                     </button>
                     <button
+                      onClick={() => handleEditProvider(provider)}
                       className="text-gray-400 hover:text-gray-600"
                       title="Editar"
                     >
                       <Edit size={18} />
                     </button>
                     <button
+                      onClick={() => handleDeleteProvider(provider._id)}
                       className="text-gray-400 hover:text-gray-600"
                       title="Eliminar"
                     >
@@ -373,7 +336,7 @@ const Providers = () => {
                     Proveedor
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Área/Familia
+                    Área
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Contacto
@@ -391,38 +354,34 @@ const Providers = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProviders.map((provider) => (
-                  <tr key={provider.id} className="hover:bg-gray-50">
+                  <tr key={provider._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{provider.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {getAreaIcon(provider.area)}
-                        <span className="ml-1 text-sm text-gray-900">{provider.area}</span>
-                        <span className="mx-1">•</span>
-                        <span className="text-sm text-gray-700">{provider.type}</span>
-                        {provider.area === 'Tienda' && (
-                          <>
-                            <span className="mx-1">•</span>
-                            <span className="text-sm text-gray-700">{provider.family}</span>
-                          </>
-                        )}
+                        <span className="ml-1 text-sm text-gray-900">{getAreaDisplayName(provider.area)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{provider.contact}</div>
+                      <div className="text-sm text-gray-900">{provider.contactName}</div>
                       <div className="text-sm text-gray-500">{provider.email}</div>
                       <div className="text-sm text-gray-500">{provider.phone}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <a 
-                        href={`https://${provider.website}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        {provider.website}
-                      </a>
+                      {provider.website ? (
+                        <a 
+                          href={`https://${provider.website}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          {provider.website}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -436,19 +395,21 @@ const Providers = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center space-x-2 justify-end">
                         <button
-                          onClick={() => handleViewDetails(provider.id)}
+                          onClick={() => handleViewDetails(provider._id)}
                           className="text-blue-600 hover:text-blue-800"
                           title="Ver detalles"
                         >
                           <Eye size={18} />
                         </button>
                         <button
+                          onClick={() => handleEditProvider(provider)}
                           className="text-gray-400 hover:text-gray-600"
                           title="Editar"
                         >
                           <Edit size={18} />
                         </button>
                         <button
+                          onClick={() => handleDeleteProvider(provider._id)}
                           className="text-gray-400 hover:text-gray-600"
                           title="Eliminar"
                         >
@@ -500,10 +461,13 @@ const Providers = () => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                Nuevo Proveedor
+                {editingProvider ? 'Editar Proveedor' : 'Nuevo Proveedor'}
               </h3>
               <button
-                onClick={() => setShowNewProviderModal(false)}
+                onClick={() => {
+                  setShowNewProviderModal(false);
+                  setEditingProvider(null);
+                }}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X size={24} />
@@ -511,7 +475,14 @@ const Providers = () => {
             </div>
 
             <div className="overflow-y-auto flex-1 p-6">
-              <form className="space-y-6">
+              <form 
+                className="space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  handleSubmitProvider(formData);
+                }}
+              >
                 {/* General Information */}
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Información General</h3>
@@ -519,6 +490,7 @@ const Providers = () => {
                     <Input
                       label="Nombre del Proveedor"
                       name="name"
+                      defaultValue={editingProvider?.name || ''}
                       required
                     />
                     <div>
@@ -527,55 +499,20 @@ const Providers = () => {
                       </label>
                       <select
                         name="area"
+                        defaultValue={editingProvider?.area || ''}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         required
                       >
                         <option value="">Seleccionar área</option>
-                        <option value="Clínica">Clínica</option>
-                        <option value="Tienda">Tienda</option>
-                        <option value="Peluquería">Peluquería</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo
-                      </label>
-                      <select
-                        name="type"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Seleccionar tipo</option>
-                        <option value="Medicamentos">Medicamentos</option>
-                        <option value="Material Clínico">Material Clínico</option>
-                        <option value="Alimentación">Alimentación</option>
-                        <option value="Accesorios">Accesorios</option>
-                        <option value="Material de Peluquería">Material de Peluquería</option>
-                        <option value="Material de Oficina">Material de Oficina</option>
-                        <option value="Juguetes">Juguetes</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Familia
-                      </label>
-                      <select
-                        name="family"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar familia</option>
-                        <option value="Farmacéuticos">Farmacéuticos</option>
-                        <option value="Material Médico">Material Médico</option>
-                        <option value="Alimentación">Alimentación</option>
-                        <option value="Accesorios">Accesorios</option>
-                        <option value="Herramientas">Herramientas</option>
-                        <option value="Papelería">Papelería</option>
-                        <option value="Juguetes">Juguetes</option>
+                        <option value="productos">Productos</option>
+                        <option value="servicios">Servicios</option>
+                        <option value="medicamentos">Medicamentos</option>
                       </select>
                     </div>
                     <Input
                       label="CIF/NIF"
                       name="cif"
+                      defaultValue={editingProvider?.cif || ''}
                       required
                     />
                   </div>
@@ -591,29 +528,34 @@ const Providers = () => {
                     <Input
                       label="Nombre de Contacto"
                       name="contactName"
+                      defaultValue={editingProvider?.contactName || ''}
                       required
                     />
                     <Input
                       label="Cargo"
                       name="position"
+                      defaultValue={editingProvider?.position || ''}
                       placeholder="Ej: Responsable de Ventas"
                     />
                     <Input
                       label="Email"
                       type="email"
                       name="email"
+                      defaultValue={editingProvider?.email || ''}
                       required
                     />
                     <Input
                       label="Teléfono"
                       type="tel"
                       name="phone"
+                      defaultValue={editingProvider?.phone || ''}
                       required
                     />
                     <Input
                       label="Móvil"
                       type="tel"
                       name="mobile"
+                      defaultValue={editingProvider?.mobile || ''}
                     />
                   </div>
                 </div>
@@ -629,33 +571,38 @@ const Providers = () => {
                       <Input
                         label="Dirección"
                         name="address"
+                        defaultValue={editingProvider?.address || ''}
                         required
                       />
                     </div>
                     <Input
                       label="Código Postal"
                       name="postalCode"
+                      defaultValue={editingProvider?.postalCode || ''}
                       required
                     />
                     <Input
                       label="Ciudad"
                       name="city"
+                      defaultValue={editingProvider?.city || ''}
                       required
                     />
                     <Input
                       label="Provincia"
                       name="province"
+                      defaultValue={editingProvider?.province || ''}
                       required
                     />
                     <Input
                       label="País"
                       name="country"
-                      defaultValue="España"
+                      defaultValue={editingProvider?.country || 'España'}
                       required
                     />
                     <Input
                       label="Sitio Web"
                       name="website"
+                      defaultValue={editingProvider?.website || ''}
                       placeholder="www.ejemplo.com"
                     />
                   </div>
@@ -674,6 +621,7 @@ const Providers = () => {
                       </label>
                       <select
                         name="paymentMethod"
+                        defaultValue={editingProvider?.paymentMethod || ''}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         required
                       >
@@ -687,11 +635,13 @@ const Providers = () => {
                     <Input
                       label="Cuenta Bancaria"
                       name="bankAccount"
+                      defaultValue={editingProvider?.bankAccount || ''}
                       placeholder="ES12 3456 7890 1234 5678 9012"
                     />
                     <Input
                       label="NIF/CIF IVA"
                       name="vatNumber"
+                      defaultValue={editingProvider?.vatNumber || ''}
                       placeholder="ESB12345678"
                     />
                     <div>
@@ -700,6 +650,7 @@ const Providers = () => {
                       </label>
                       <select
                         name="currency"
+                        defaultValue={editingProvider?.currency || 'EUR'}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         required
                       >
@@ -714,6 +665,7 @@ const Providers = () => {
                       </label>
                       <select
                         name="paymentTerms"
+                        defaultValue={editingProvider?.paymentTerms || ''}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         required
                       >
@@ -729,6 +681,7 @@ const Providers = () => {
                       label="Pedido Mínimo"
                       type="number"
                       name="minimumOrder"
+                      defaultValue={editingProvider?.minimumOrder || ''}
                       placeholder="0.00"
                       min="0"
                       step="0.01"
@@ -749,6 +702,7 @@ const Providers = () => {
                       </label>
                       <select
                         name="shippingMethod"
+                        defaultValue={editingProvider?.shippingMethod || ''}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         required
                       >
@@ -762,6 +716,7 @@ const Providers = () => {
                     <Input
                       label="Tiempo de Entrega"
                       name="deliveryTime"
+                      defaultValue={editingProvider?.deliveryTime || ''}
                       placeholder="Ej: 24-48 horas"
                       required
                     />
@@ -769,6 +724,7 @@ const Providers = () => {
                       label="Gastos de Envío"
                       type="number"
                       name="shippingCost"
+                      defaultValue={editingProvider?.shippingCost || ''}
                       placeholder="0.00"
                       min="0"
                       step="0.01"
@@ -778,6 +734,7 @@ const Providers = () => {
                       label="Envío Gratuito a partir de"
                       type="number"
                       name="freeShippingThreshold"
+                      defaultValue={editingProvider?.freeShippingThreshold || ''}
                       placeholder="0.00"
                       min="0"
                       step="0.01"
@@ -788,6 +745,7 @@ const Providers = () => {
                       </label>
                       <select
                         name="returnPolicy"
+                        defaultValue={editingProvider?.returnPolicy || ''}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       >
                         <option value="">Seleccionar política</option>
@@ -810,30 +768,32 @@ const Providers = () => {
                     <textarea
                       name="notes"
                       rows={4}
+                      defaultValue={editingProvider?.notes || ''}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       placeholder="Añade notas o comentarios relevantes sobre este proveedor..."
                     ></textarea>
                   </div>
                 </div>
-              </form>
-            </div>
 
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowNewProviderModal(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  // Here you would typically submit the form
-                  handleNewProvider({});
-                }}
-              >
-                Guardar Proveedor
-              </Button>
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowNewProviderModal(false);
+                      setEditingProvider(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                  >
+                    {editingProvider ? 'Actualizar Proveedor' : 'Guardar Proveedor'}
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
