@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Search, Filter, Download, Package, Clock, Pill, Edit, Trash, Eye, DollarSign, Activity, Building2, Tag, BarChart3, X, User, AlertTriangle } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
@@ -49,7 +48,7 @@ const ProductsServices = () => {
       (selectedType === 'products' && item.itemType === 'product') ||
       (selectedType === 'services' && item.itemType === 'service') ||
       (selectedType === 'medicines' && item.itemType === 'medicine');
-    
+
     let matchesCategory = true;
     if (selectedCategory !== 'all') {
       if (item.itemType === 'product' || item.itemType === 'service') {
@@ -61,7 +60,7 @@ const ProductsServices = () => {
 
     const matchesStatus = showInactive ? true : 
       (item.itemType === 'medicine' ? item.status === 'active' : item.isActive);
-    
+
     return matchesSearch && matchesType && matchesCategory && matchesStatus;
   });
 
@@ -170,7 +169,7 @@ const ProductsServices = () => {
                 />
               </div>
             </div>
-            
+
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value as any)}
@@ -266,13 +265,13 @@ const ProductsServices = () => {
                 </div>
 
                 <h3 className="font-semibold text-gray-900 mb-2">{item.name}</h3>
-                
+
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <Tag className="w-4 h-4" />
                     <span>{item.itemType === 'medicine' ? item.type : item.category}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4" />
                     <span className="font-medium text-lg text-green-600">
@@ -488,7 +487,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const submitData: any = {
       name: formData.name,
       category: formData.category,
@@ -560,14 +559,14 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 label="Precio Base"
                 type="number"
                 step="0.01"
-                value={formData.basePrice}
+                value={formData.basePrice.toString()}
                 onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
                 required
               />
               <Input
                 label="IVA (%)"
                 type="number"
-                value={formData.vat}
+                value={formData.vat.toString()}
                 onChange={(e) => setFormData({ ...formData, vat: parseFloat(e.target.value) || 0 })}
                 required
               />
@@ -577,13 +576,13 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 label="Coste"
                 type="number"
                 step="0.01"
-                value={formData.cost}
+                value={formData.cost.toString()}
                 onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
               />
               <Input
                 label="Margen (%)"
                 type="number"
-                value={formData.margin}
+                value={formData.margin.toString()}
                 onChange={(e) => setFormData({ ...formData, margin: parseFloat(e.target.value) || 0 })}
               />
             </div>
@@ -603,14 +602,14 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
               <Input
                 label="Stock Actual"
                 type="number"
-                value={formData.currentStock}
+                value={formData.currentStock.toString()}
                 onChange={(e) => setFormData({ ...formData, currentStock: parseInt(e.target.value) || 0 })}
                 required
               />
               <Input
                 label="Stock Mínimo"
                 type="number"
-                value={formData.minStock}
+                value={formData.minStock.toString()}
                 onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
                 required
               />
@@ -626,14 +625,14 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 label="Precio Base"
                 type="number"
                 step="0.01"
-                value={formData.basePrice}
+                value={formData.basePrice.toString()}
                 onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
                 required
               />
               <Input
                 label="IVA (%)"
                 type="number"
-                value={formData.vat}
+                value={formData.vat.toString()}
                 onChange={(e) => setFormData({ ...formData, vat: parseFloat(e.target.value) || 0 })}
                 required
               />
@@ -643,20 +642,20 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 label="Coste"
                 type="number"
                 step="0.01"
-                value={formData.cost}
+                value={formData.cost.toString()}
                 onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
               />
               <Input
                 label="Margen (%)"
                 type="number"
-                value={formData.margin}
+                value={formData.margin.toString()}
                 onChange={(e) => setFormData({ ...formData, margin: parseFloat(e.target.value) || 0 })}
               />
             </div>
             <Input
               label="Duración (minutos)"
               type="number"
-              value={formData.duration}
+              value={formData.duration.toString()}
               onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
               required
             />
@@ -691,7 +690,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 label="Precio"
                 type="number"
                 step="0.01"
-                value={formData.basePrice}
+                value={formData.basePrice.toString()}
                 onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
                 required
               />
@@ -700,14 +699,14 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
               <Input
                 label="Stock Actual"
                 type="number"
-                value={formData.currentStock}
+                value={formData.currentStock.toString()}
                 onChange={(e) => setFormData({ ...formData, currentStock: parseInt(e.target.value) || 0 })}
                 required
               />
               <Input
                 label="Stock Mínimo"
                 type="number"
-                value={formData.minStock}
+                value={formData.minStock.toString()}
                 onChange={(e) => setFormData({ ...formData, minStock: parseInt(e.target.value) || 0 })}
                 required
               />
@@ -818,8 +817,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                   <option value="Salud">Salud</option>
                   <option value="Cuidado dental">Cuidado dental</option>
                   <option value="Camas y descanso">Camas y descanso</option>
-                  <option value="Transporte">Transporte</option>
-                  <option value="Adiestramiento">Adiestramiento</option>
+                  <option value="Transporte">Transporte</option                  <option value="Adiestramiento">Adiestramiento</option>
                   <option value="Otro">Otro</option>
                 </>
               )}
