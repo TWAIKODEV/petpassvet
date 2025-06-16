@@ -341,46 +341,6 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_patient", ["patientId"]),
 
-  // Categories for products
-  categories: defineTable({
-    name: v.string(),
-    description: v.optional(v.string()),
-    parentCategoryId: v.optional(v.id("categories")),
-    isActive: v.boolean(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_parent", ["parentCategoryId"]),
-
-  // Updated products table with category references
-  products: defineTable({
-    name: v.string(),
-    categoryId: v.id("categories"),
-    subcategoryId: v.optional(v.id("categories")),
-    description: v.optional(v.string()),
-    price: v.number(),
-    cost: v.optional(v.number()),
-    discountPrice: v.optional(v.number()),
-    stock: v.optional(v.number()),
-    minStock: v.optional(v.number()),
-    sku: v.optional(v.string()),
-    barcode: v.optional(v.string()),
-    brand: v.optional(v.string()),
-    supplier: v.optional(v.string()),
-    location: v.optional(v.string()),
-    lastUpdated: v.optional(v.string()),
-    featured: v.optional(v.boolean()),
-    rating: v.optional(v.number()),
-    reviews: v.optional(v.number()),
-    images: v.optional(v.array(v.string())),
-    status: v.string(),
-    area: v.optional(v.string()),
-    tags: v.optional(v.array(v.string())),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_category", ["categoryId"])
-    .index("by_sku", ["sku"]),
-
   // Campaigns with proper enums
   campaigns: defineTable({
     name: v.string(),
