@@ -817,7 +817,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                   <option value="Salud">Salud</option>
                   <option value="Cuidado dental">Cuidado dental</option>
                   <option value="Camas y descanso">Camas y descanso</option>
-                  <option value="Transporte">Transporte</option                  <option value="Adiestramiento">Adiestramiento</option>
+                  <option value="Transporte">Transporte</option>                  <option value="Adiestramiento">Adiestramiento</option>
                   <option value="Otro">Otro</option>
                 </>
               )}
