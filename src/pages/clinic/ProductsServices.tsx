@@ -442,19 +442,11 @@ const ProductsServices = () => {
           onSave={editingItem ? handleFormSubmit : async (formData) => {
             try {
               if (formData.itemType === 'product') {
-                const { itemType, ...productData } = formData;
-                await createProduct(productData);
+                await createProduct(formData);
               } else if (formData.itemType === 'service') {
-                const { itemType, ...serviceData } = formData;
-                await createService(serviceData);
+                await createService(formData);
               } else if (formData.itemType === 'medicine') {
-                const { itemType, category, basePrice, currentStock, description, ...medicineData } = formData;
-                await createMedicine({
-                  ...medicineData,
-                  type: category,
-                  price: basePrice,
-                  stock: currentStock
-                });
+                await createMedicine(formData);
               }
               setShowNewItemModal(false);
               setEditingItem(null);
