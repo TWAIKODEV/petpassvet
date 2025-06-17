@@ -439,43 +439,22 @@ const ProductsServices = () => {
         <ItemFormModal
           item={editingItem}
           providers={providers}
-          onSave={async (formData) => {
+          onSave={editingItem ? handleFormSubmit : async (formData) => {
             try {
-              if (editingItem) {
-                // Update existing item
-                if (editingItem.itemType === 'product') {
-                  const { itemType, ...productData } = formData;
-                  await updateProduct({ id: editingItem._id, ...productData });
-                } else if (editingItem.itemType === 'service') {
-                  const { itemType, ...serviceData } = formData;
-                  await updateService({ id: editingItem._id, ...serviceData });
-                } else if (editingItem.itemType === 'medicine') {
-                  const { itemType, category, basePrice, currentStock, description, ...medicineData } = formData;
-                  await updateMedicine({ 
-                    id: editingItem._id, 
-                    ...medicineData,
-                    type: category,
-                    price: basePrice,
-                    stock: currentStock
-                  });
-                }
-              } else {
-                // Create new item
-                if (formData.itemType === 'product') {
-                  const { itemType, ...productData } = formData;
-                  await createProduct(productData);
-                } else if (formData.itemType === 'service') {
-                  const { itemType, ...serviceData } = formData;
-                  await createService(serviceData);
-                } else if (formData.itemType === 'medicine') {
-                  const { itemType, category, basePrice, currentStock, description, ...medicineData } = formData;
-                  await createMedicine({
-                    ...medicineData,
-                    type: category,
-                    price: basePrice,
-                    stock: currentStock
-                  });
-                }
+              if (formData.itemType === 'product') {
+                const { itemType, ...productData } = formData;
+                await createProduct(productData);
+              } else if (formData.itemType === 'service') {
+                const { itemType, ...serviceData } = formData;
+                await createService(serviceData);
+              } else if (formData.itemType === 'medicine') {
+                const { itemType, category, basePrice, currentStock, description, ...medicineData } = formData;
+                await createMedicine({
+                  ...medicineData,
+                  type: category,
+                  price: basePrice,
+                  stock: currentStock
+                });
               }
               setShowNewItemModal(false);
               setEditingItem(null);
@@ -843,7 +822,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 <textarea
                   rows={3}
                   value={formData.contraindications.join('\n')}
-                  onChange={(e) => setFormData({...formData, contraindications: e.target.value.split('\n').filter(c => c.trim())})}
+                  onChange={(e) => setFormData({...formData, contraindications: e.target.value.split('\n').filter(c => c=> c.trim())})}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   placeholder="Una contraindicación por línea..."
                 />
