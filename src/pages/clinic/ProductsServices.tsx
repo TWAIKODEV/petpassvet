@@ -519,7 +519,9 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         isActive: formData.isActive,
       });
     } else if (formData.itemType === 'medicine') {
-      Object.assign(submitData, {
+      // Para medicamentos, crear un objeto específico sin itemType
+      const medicineData = {
+        name: formData.name,
         activeIngredient: formData.activeIngredient,
         manufacturer: formData.manufacturer,
         type: formData.category,
@@ -545,7 +547,11 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         excipients: formData.excipients,
         withdrawalPeriod: formData.withdrawalPeriod || undefined,
         providerId: formData.providerId || undefined,
-      });
+      };
+
+      // Para medicamentos, usar el objeto específico sin campos extra
+      onSave(medicineData);
+      return;
     }
 
     onSave(submitData);
@@ -793,7 +799,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 <textarea
                   rows={3}
                   value={formData.contraindications.join('\n')}
-                  onChange={(e) => setFormData({...formData, contraindications: e.target.value.split('\n').filter(c => c.trim())})}
+                  onChange={(e) => setFormData({...formData, contraindications: e.target.value.split('\n').filter(c => c=> c.trim())})}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   placeholder="Una contraindicación por línea..."
                 />
@@ -820,7 +826,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
               </div>
             </div>
 
-            
+
           </>
         );
 
