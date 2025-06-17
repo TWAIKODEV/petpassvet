@@ -491,13 +491,9 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     const submitData: any = {
       itemType: formData.itemType,
       name: formData.name,
+      description: formData.description,
       providerId: formData.providerId || undefined,
     };
-
-    // Solo añadir description para productos y servicios
-    if (formData.itemType === 'product' || formData.itemType === 'service') {
-      submitData.description = formData.description;
-    }
 
     if (formData.itemType === 'product') {
       Object.assign(submitData, {
@@ -523,9 +519,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         isActive: formData.isActive,
       });
     } else if (formData.itemType === 'medicine') {
-      // Para medicamentos, reemplazar completamente el objeto submitData
       Object.assign(submitData, {
-        name: formData.name,
         activeIngredient: formData.activeIngredient,
         manufacturer: formData.manufacturer,
         type: formData.category,
@@ -552,8 +546,6 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         withdrawalPeriod: formData.withdrawalPeriod || undefined,
         providerId: formData.providerId || undefined,
       });
-      // Eliminar campos que no corresponden a medicamentos
-      delete submitData.itemType;
     }
 
     onSave(submitData);
