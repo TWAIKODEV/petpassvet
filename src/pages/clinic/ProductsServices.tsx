@@ -462,7 +462,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     barcode: item?.barcode || '',
     currentStock: item?.currentStock || item?.stock || 0,
     minStock: item?.minStock || 0,
-    duration: item?.duration || 30,
+    duration: item?.duration || item?.recommendedDosage || '',
     isActive: item?.isActive !== undefined ? item.isActive : item?.status === 'active' || true,
     providerId: item?.providerId || '',
     // Medicine specific fields
@@ -489,14 +489,15 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     e.preventDefault();
 
     const submitData: any = {
+      itemType: formData.itemType,
       name: formData.name,
-      category: formData.category,
       description: formData.description,
       providerId: formData.providerId || undefined,
     };
 
     if (formData.itemType === 'product') {
       Object.assign(submitData, {
+        category: formData.category,
         basePrice: formData.basePrice,
         vat: formData.vat,
         cost: formData.cost,
@@ -509,11 +510,12 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
       });
     } else if (formData.itemType === 'service') {
       Object.assign(submitData, {
+        category: formData.category,
         basePrice: formData.basePrice,
         vat: formData.vat,
         cost: formData.cost,
         margin: formData.margin,
-        duration: formData.duration,
+        duration: parseInt(formData.duration) || 30,
         isActive: formData.isActive,
       });
     } else if (formData.itemType === 'medicine') {
@@ -524,9 +526,9 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         dosageForm: formData.dosageForm,
         species: formData.species,
         recommendedDosage: formData.recommendedDosage,
-        duration: formData.recommendedDosage,
-        registrationNumber: formData.registrationNumber,
-        reference: formData.reference,
+        duration: formData.duration,
+        registrationNumber: formData.registrationNumber || undefined,
+        reference: formData.reference || undefined,
         stock: formData.currentStock,
         minStock: formData.minStock,
         price: formData.basePrice,
@@ -535,15 +537,14 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         sideEffects: formData.sideEffects,
         interactions: formData.interactions,
         status: formData.isActive ? 'active' : 'inactive',
-        atcVetCode: formData.atcVetCode,
+        atcVetCode: formData.atcVetCode || undefined,
         prescriptionRequired: formData.prescriptionRequired,
         psychotropic: formData.psychotropic,
         antibiotic: formData.antibiotic,
         administrationRoutes: formData.administrationRoutes,
         excipients: formData.excipients,
-        withdrawalPeriod: formData.withdrawalPeriod,
+        withdrawalPeriod: formData.withdrawalPeriod || undefined,
       });
-      delete submitData.category;
     }
 
     onSave(submitData);
@@ -680,18 +681,50 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Forma Farmacéutica"
-                value={formData.dosageForm}
-                onChange={(e) => setFormData({ ...formData, dosageForm: e.target.value })}
-                required
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Forma Farmacéutica
+                </label>
+                <select
+                  value={formData.dosageForm}
+                  onChange={(e) => setFormData({ ...formData, dosageForm: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Seleccionar forma</option>
+                  <option value="Comprimidos">Comprimidos</option>
+                  <option value="Cápsulas">Cápsulas</option>
+                  <option value="Suspensión oral">Suspensión oral</option>
+                  <option value="Solución oral">Solución oral</option>
+                  <option value="Solución inyectable">Solución inyectable</option>
+                  <option value="Pomada">Pomada</option>
+                  <option value="Crema">Crema</option>
+                  <option value="Gel">Gel</option>
+                  <option value="Gotas">Gotas</option>
+                  <option value="Spray">Spray</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
               <Input
                 label="Precio"
                 type="number"
                 step="0.01"
                 value={formData.basePrice.toString()}
                 onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Posología Recomendada"
+                value={formData.recommendedDosage}
+                onChange={(e) => setFormData({ ...formData, recommendedDosage: e.target.value })}
+                required
+              />
+              <Input
+                label="Duración Recomendada"
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                 required
               />
             </div>
@@ -711,17 +744,85 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 required
               />
             </div>
-            <Input
-              label="Dosis Recomendada"
-              value={formData.recommendedDosage}
-              onChange={(e) => setFormData({ ...formData, recommendedDosage: e.target.value })}
-              required
-            />
-            <Input
-              label="Número de Registro"
-              value={formData.registrationNumber}
-              onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Número de Registro"
+                value={formData.registrationNumber}
+                onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+              />
+              <Input
+                label="Código ATC Vet"
+                value={formData.atcVetCode}
+                onChange={(e) => setFormData({ ...formData, atcVetCode: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Especies</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {['Perro', 'Gato', 'Conejo', 'Hurón', 'Ave', 'Reptil', 'Roedor', 'Équido'].map((species) => (
+                  <label key={species} className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.species.includes(species)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({...formData, species: [...formData.species, species]});
+                        } else {
+                          setFormData({...formData, species: formData.species.filter(s => s !== species)});
+                        }
+                      }}
+                      className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{species}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Indicaciones</label>
+                <textarea
+                  rows={3}
+                  value={formData.conditions.join('\n')}
+                  onChange={(e) => setFormData({...formData, conditions: e.target.value.split('\n').filter(c => c.trim())})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Una indicación por línea..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contraindicaciones</label>
+                <textarea
+                  rows={3}
+                  value={formData.contraindications.join('\n')}
+                  onChange={(e) => setFormData({...formData, contraindications: e.target.value.split('\n').filter(c => c.trim())})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Una contraindicación por línea..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Efectos Secundarios</label>
+                <textarea
+                  rows={3}
+                  value={formData.sideEffects.join('\n')}
+                  onChange={(e) => setFormData({...formData, sideEffects: e.target.value.split('\n').filter(c => c.trim())})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Un efecto secundario por línea..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Interacciones</label>
+                <textarea
+                  rows={3}
+                  value={formData.interactions.join('\n')}
+                  onChange={(e) => setFormData({...formData, interactions: e.target.value.split('\n').filter(c => c.trim())})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Una interacción por línea..."
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div className="flex items-center gap-2">
                 <input
@@ -729,8 +830,9 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                   id="prescriptionRequired"
                   checked={formData.prescriptionRequired}
                   onChange={(e) => setFormData({ ...formData, prescriptionRequired: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="prescriptionRequired" className="text-sm">Requiere receta</label>
+                <label htmlFor="prescriptionRequired" className="text-sm text-gray-700">Requiere receta</label>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -738,8 +840,9 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                   id="psychotropic"
                   checked={formData.psychotropic}
                   onChange={(e) => setFormData({ ...formData, psychotropic: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="psychotropic" className="text-sm">Psicotrópico</label>
+                <label htmlFor="psychotropic" className="text-sm text-gray-700">Psicotrópico</label>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -747,10 +850,41 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                   id="antibiotic"
                   checked={formData.antibiotic}
                   onChange={(e) => setFormData({ ...formData, antibiotic: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="antibiotic" className="text-sm">Antibiótico</label>
+                <label htmlFor="antibiotic" className="text-sm text-gray-700">Antibiótico</label>
               </div>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Vías de Administración</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {['Oral', 'Inyectable', 'Tópica', 'Oftálmica', 'Ótica', 'Nasal'].map((route) => (
+                  <label key={route} className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.administrationRoutes.includes(route)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({...formData, administrationRoutes: [...formData.administrationRoutes, route]});
+                        } else {
+                          setFormData({...formData, administrationRoutes: formData.administrationRoutes.filter(r => r !== route)});
+                        }
+                      }}
+                      className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{route}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Input
+              label="Período de Supresión"
+              value={formData.withdrawalPeriod}
+              onChange={(e) => setFormData({ ...formData, withdrawalPeriod: e.target.value })}
+              placeholder="Ej: 14 días"
+            />
           </>
         );
 
