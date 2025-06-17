@@ -95,21 +95,28 @@ const ProductsServices = () => {
       if (editingItem) {
         // Update existing item
         if (editingItem.itemType === 'product') {
-          await updateProduct({ id: editingItem._id, ...formData });
+          // Para productos en edición, crear objeto sin itemType
+          const { itemType, ...productData } = formData;
+          await updateProduct({ id: editingItem._id, ...productData });
         } else if (editingItem.itemType === 'service') {
-          await updateService({ id: editingItem._id, ...formData });
+          // Para servicios en edición, crear objeto sin itemType
+          const { itemType, ...serviceData } = formData;
+          await updateService({ id: editingItem._id, ...serviceData });
         } else if (editingItem.itemType === 'medicine') {
-          await updateMedicine({ id: editingItem._id, ...formData });
+          // Para medicamentos en edición, crear objeto sin itemType y mapear campos
+          const { itemType, category, basePrice, currentStock, ...medicineData } = formData;
+          await updateMedicine({ 
+            id: editingItem._id, 
+            ...medicineData,
+            type: category,
+            price: basePrice,
+            stock: currentStock
+          });
         }
       } else {
-        // Create new item
-        if (formData.itemType === 'product') {
-          await createProduct(formData);
-        } else if (formData.itemType === 'service') {
-          await createService(formData);
-        } else if (formData.itemType === 'medicine') {
-          await createMedicine(formData);
-        }
+        // La lógica de creación ya está correcta en el ItemFormModal
+        // No debería llegar aquí porque se maneja en el onSave del modal
+        console.error('Unexpected: handleFormSubmit called for new item creation');
       }
       setShowNewItemModal(false);
       setEditingItem(null);
@@ -436,7 +443,21 @@ const ProductsServices = () => {
         <ItemFormModal
           item={editingItem}
           providers={providers}
-          onSave={handleFormSubmit}
+          onSave={editingItem ? handleFormSubmit : async (formData) => {
+            try {
+              if (formData.itemType === 'product') {
+                await createProduct(formData);
+              } else if (formData.itemType === 'service') {
+                await createService(formData);
+              } else if (formData.itemType === 'medicine') {
+                await createMedicine(formData);
+              }
+              setShowNewItemModal(false);
+              setEditingItem(null);
+            } catch (error) {
+              console.error('Error saving item:', error);
+            }
+          }}
           onClose={() => {
             setShowNewItemModal(false);
             setEditingItem(null);
@@ -488,13 +509,6 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const submitData: any = {
-      itemType: formData.itemType,
-      name: formData.name,
-      description: formData.description,
-      providerId: formData.providerId || undefined,
-    };
-
     if (formData.itemType === 'product') {
       // Para productos, crear un objeto específico sin itemType
       const productData = {
@@ -513,7 +527,6 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         providerId: formData.providerId || undefined,
       };
       onSave(productData);
-      return;
     } else if (formData.itemType === 'service') {
       // Para servicios, crear un objeto específico sin itemType
       const serviceData = {
@@ -529,7 +542,6 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         providerId: formData.providerId || undefined,
       };
       onSave(serviceData);
-      return;
     } else if (formData.itemType === 'medicine') {
       // Para medicamentos, crear un objeto específico sin itemType
       const medicineData = {
@@ -560,10 +572,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         withdrawalPeriod: formData.withdrawalPeriod || undefined,
         providerId: formData.providerId || undefined,
       };
-
-      // Para medicamentos, usar el objeto específico sin campos extra
       onSave(medicineData);
-      return;
     }
   };
 
