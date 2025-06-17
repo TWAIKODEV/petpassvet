@@ -491,9 +491,13 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     const submitData: any = {
       itemType: formData.itemType,
       name: formData.name,
-      description: formData.description,
       providerId: formData.providerId || undefined,
     };
+
+    // Solo añadir description para productos y servicios
+    if (formData.itemType === 'product' || formData.itemType === 'service') {
+      submitData.description = formData.description;
+    }
 
     if (formData.itemType === 'product') {
       Object.assign(submitData, {
