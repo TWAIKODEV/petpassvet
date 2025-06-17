@@ -496,8 +496,11 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     };
 
     if (formData.itemType === 'product') {
-      Object.assign(submitData, {
+      // Para productos, crear un objeto específico sin itemType
+      const productData = {
+        name: formData.name,
         category: formData.category,
+        description: formData.description,
         basePrice: formData.basePrice,
         vat: formData.vat,
         cost: formData.cost,
@@ -507,17 +510,26 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         currentStock: formData.currentStock,
         minStock: formData.minStock,
         isActive: formData.isActive,
-      });
+        providerId: formData.providerId || undefined,
+      };
+      onSave(productData);
+      return;
     } else if (formData.itemType === 'service') {
-      Object.assign(submitData, {
+      // Para servicios, crear un objeto específico sin itemType
+      const serviceData = {
+        name: formData.name,
         category: formData.category,
+        description: formData.description,
         basePrice: formData.basePrice,
         vat: formData.vat,
         cost: formData.cost,
         margin: formData.margin,
         duration: parseInt(formData.duration) || 30,
         isActive: formData.isActive,
-      });
+        providerId: formData.providerId || undefined,
+      };
+      onSave(serviceData);
+      return;
     } else if (formData.itemType === 'medicine') {
       // Para medicamentos, crear un objeto específico sin itemType
       const medicineData = {
@@ -553,8 +565,6 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
       onSave(medicineData);
       return;
     }
-
-    onSave(submitData);
   };
 
   const renderFormFields = () => {
