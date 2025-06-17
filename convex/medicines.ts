@@ -29,6 +29,7 @@ export const createMedicine = mutation({
     administrationRoutes: v.optional(v.array(v.string())),
     excipients: v.optional(v.array(v.string())),
     withdrawalPeriod: v.optional(v.string()),
+    providerId: v.optional(v.id("providers")),
     aiScore: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -82,6 +83,7 @@ export const updateMedicine = mutation({
     administrationRoutes: v.optional(v.array(v.string())),
     excipients: v.optional(v.array(v.string())),
     withdrawalPeriod: v.optional(v.string()),
+    providerId: v.optional(v.id("providers")),
     aiScore: v.optional(v.number()),
   },
   handler: async (ctx, args) => {

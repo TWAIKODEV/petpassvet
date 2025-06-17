@@ -53,6 +53,7 @@ const Medicamentos: React.FC = () => {
 
   // Convex queries and mutations
   const medications = useQuery(api.medicines.getMedicines) || [];
+  const providers = useQuery(api.providers.getProviders) || [];
   const createMedicine = useMutation(api.medicines.createMedicine);
   const updateMedicine = useMutation(api.medicines.updateMedicine);
   const deleteMedicine = useMutation(api.medicines.deleteMedicine);
@@ -82,6 +83,7 @@ const Medicamentos: React.FC = () => {
     psychotropic: false,
     antibiotic: false,
     administrationRoutes: [] as string[],
+    providerId: '',
   });
 
   // Get unique medication types and species
@@ -135,6 +137,7 @@ const Medicamentos: React.FC = () => {
         psychotropic: formData.psychotropic,
         antibiotic: formData.antibiotic,
         administrationRoutes: formData.administrationRoutes,
+        providerId: formData.providerId || undefined,
       });
       setShowNewMedicationForm(false);
       resetForm();
@@ -172,6 +175,7 @@ const Medicamentos: React.FC = () => {
         psychotropic: formData.psychotropic,
         antibiotic: formData.antibiotic,
         administrationRoutes: formData.administrationRoutes,
+        providerId: formData.providerId || undefined,
       });
       setShowEditMedicationForm(false);
       setSelectedMedication(null);
@@ -219,6 +223,7 @@ const Medicamentos: React.FC = () => {
       psychotropic: medication.psychotropic || false,
       antibiotic: medication.antibiotic || false,
       administrationRoutes: medication.administrationRoutes || [],
+      providerId: medication.providerId || '',
     });
     setShowEditMedicationForm(true);
   };
@@ -248,6 +253,7 @@ const Medicamentos: React.FC = () => {
       psychotropic: false,
       antibiotic: false,
       administrationRoutes: [],
+      providerId: '',
     });
   };
 
@@ -805,6 +811,22 @@ const Medicamentos: React.FC = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+                <select
+                  value={formData.providerId}
+                  onChange={(e) => setFormData({...formData, providerId: e.target.value})}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="">Sin proveedor</option>
+                  {providers.map((provider: any) => (
+                    <option key={provider._id} value={provider._id}>
+                      {provider.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -1040,6 +1062,22 @@ const Medicamentos: React.FC = () => {
                     placeholder="Una interacción por línea..."
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+                <select
+                  value={formData.providerId}
+                  onChange={(e) => setFormData({...formData, providerId: e.target.value})}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="">Sin proveedor</option>
+                  {providers.map((provider: any) => (
+                    <option key={provider._id} value={provider._id}>
+                      {provider.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex items-center">

@@ -786,13 +786,15 @@ export default defineSchema({
     administrationRoutes: v.optional(v.array(v.string())),
     excipients: v.optional(v.array(v.string())),
     withdrawalPeriod: v.optional(v.string()),
+    providerId: v.optional(v.id("providers")),
     aiScore: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_type", ["type"])
     .index("by_manufacturer", ["manufacturer"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_provider", ["providerId"]),
 
   // Treatments table
   treatments: defineTable({
