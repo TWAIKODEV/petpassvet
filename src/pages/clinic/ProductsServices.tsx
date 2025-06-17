@@ -523,7 +523,9 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         isActive: formData.isActive,
       });
     } else if (formData.itemType === 'medicine') {
+      // Para medicamentos, reemplazar completamente el objeto submitData
       Object.assign(submitData, {
+        name: formData.name,
         activeIngredient: formData.activeIngredient,
         manufacturer: formData.manufacturer,
         type: formData.category,
@@ -550,6 +552,8 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         withdrawalPeriod: formData.withdrawalPeriod || undefined,
         providerId: formData.providerId || undefined,
       });
+      // Eliminar campos que no corresponden a medicamentos
+      delete submitData.itemType;
     }
 
     onSave(submitData);
