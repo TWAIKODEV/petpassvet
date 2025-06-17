@@ -442,11 +442,69 @@ const ProductsServices = () => {
           onSave={editingItem ? handleFormSubmit : async (formData) => {
             try {
               if (formData.itemType === 'product') {
-                await createProduct(formData);
+                // Crear objeto de producto limpio
+                const productData = {
+                  name: formData.name,
+                  category: formData.category,
+                  description: formData.description,
+                  basePrice: formData.basePrice,
+                  vat: formData.vat,
+                  cost: formData.cost,
+                  margin: formData.margin,
+                  reference: formData.reference || undefined,
+                  barcode: formData.barcode || undefined,
+                  currentStock: formData.currentStock,
+                  minStock: formData.minStock,
+                  isActive: formData.isActive,
+                  providerId: formData.providerId || undefined,
+                };
+                await createProduct(productData);
               } else if (formData.itemType === 'service') {
-                await createService(formData);
+                // Crear objeto de servicio limpio
+                const serviceData = {
+                  name: formData.name,
+                  category: formData.category,
+                  description: formData.description,
+                  basePrice: formData.basePrice,
+                  vat: formData.vat,
+                  cost: formData.cost,
+                  margin: formData.margin,
+                  duration: formData.duration,
+                  isActive: formData.isActive,
+                  providerId: formData.providerId || undefined,
+                };
+                await createService(serviceData);
               } else if (formData.itemType === 'medicine') {
-                await createMedicine(formData);
+                // Crear objeto de medicamento limpio
+                const medicineData = {
+                  name: formData.name,
+                  activeIngredient: formData.activeIngredient,
+                  manufacturer: formData.manufacturer,
+                  type: formData.category,
+                  dosageForm: formData.dosageForm,
+                  species: formData.species,
+                  recommendedDosage: formData.recommendedDosage,
+                  duration: formData.duration,
+                  registrationNumber: formData.registrationNumber || undefined,
+                  reference: formData.reference || undefined,
+                  stock: formData.currentStock,
+                  minStock: formData.minStock,
+                  price: formData.basePrice,
+                  conditions: formData.conditions,
+                  contraindications: formData.contraindications,
+                  sideEffects: formData.sideEffects,
+                  interactions: formData.interactions,
+                  status: formData.isActive ? 'active' : 'inactive',
+                  atcVetCode: formData.atcVetCode || undefined,
+                  prescriptionRequired: formData.prescriptionRequired,
+                  psychotropic: formData.psychotropic,
+                  antibiotic: formData.antibiotic,
+                  administrationRoutes: formData.administrationRoutes,
+                  excipients: formData.excipients,
+                  withdrawalPeriod: formData.withdrawalPeriod || undefined,
+                  providerId: formData.providerId || undefined,
+                };
+                await createMedicine(medicineData);
               }
               setShowNewItemModal(false);
               setEditingItem(null);
