@@ -820,18 +820,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
               </div>
             </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="medicationStatus"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="medicationStatus" className="ml-2 text-sm text-gray-700">
-                Activo
-              </label>
-            </div>
+            
           </>
         );
 
@@ -931,18 +920,6 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                   <option value="Cardiovascular">Cardiovascular</option>
                   <option value="Dermatológico">Dermatológico</option>
                   <option value="Oftalmológico">Oftalmológico</option>
-                  <option value="Otológico">Otológico</option>
-                  <option value="Neurológico">Neurológico</option>
-                  <option value="Digestivo">Digestivo</option>
-                  <option value="Respiratorio">Respiratorio</option>
-                  <option value="Urológico">Urológico</option>
-                  <option value="Reproductivo">Reproductivo</option>
-                  <option value="Vacuna">Vacuna</option>
-                  <option value="Vitaminas">Vitaminas</option>
-                  <option value="Suplemento">Suplemento</option>
-                  <option value="Desparasitante">Desparasitante</option>
-                  <option value="Sedante">Sedante</option>
-                  <option value="Anestésico">Anestésico</option>
                   <option value="Otro">Otro</option>
                 </>
               )}
