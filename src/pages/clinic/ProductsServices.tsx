@@ -104,7 +104,7 @@ const ProductsServices = () => {
           await updateService({ id: editingItem._id, ...serviceData });
         } else if (editingItem.itemType === 'medicine') {
           // Para medicamentos en edición, crear objeto sin itemType y mapear campos
-          const { itemType, category, basePrice, currentStock, ...medicineData } = formData;
+          const { itemType, category, basePrice, currentStock, description, ...medicineData } = formData;
           await updateMedicine({ 
             id: editingItem._id, 
             ...medicineData,
@@ -113,10 +113,6 @@ const ProductsServices = () => {
             stock: currentStock
           });
         }
-      } else {
-        // La lógica de creación ya está correcta en el ItemFormModal
-        // No debería llegar aquí porque se maneja en el onSave del modal
-        console.error('Unexpected: handleFormSubmit called for new item creation');
       }
       setShowNewItemModal(false);
       setEditingItem(null);
@@ -774,7 +770,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 type="number"
                 step="0.01"
                 value={formData.basePrice.toString()}
-                onChange={(e) => setFormData({...formData, basePrice: parseFloat(e.target.value) || 0})}
+                onChange={(e) => setFormData({...formData, basePrice: parseFloat(e.target.value) || 0 })}
                 required
               />
             </div>
