@@ -516,6 +516,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     if (formData.itemType === 'product') {
       // Para productos, crear un objeto específico sin itemType
       const productData = {
+        itemType: 'product',
         name: formData.name,
         category: formData.category,
         description: formData.description,
@@ -534,6 +535,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     } else if (formData.itemType === 'service') {
       // Para servicios, crear un objeto específico sin itemType
       const serviceData = {
+        itemType: 'service',
         name: formData.name,
         category: formData.category,
         description: formData.description,
@@ -549,6 +551,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     } else if (formData.itemType === 'medicine') {
       // Para medicamentos, crear un objeto específico sin itemType
       const medicineData = {
+        itemType: 'medicine',
         name: formData.name,
         activeIngredient: formData.activeIngredient,
         manufacturer: formData.manufacturer,
