@@ -903,4 +903,35 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_provider", ["providerId"])
     .index("by_active", ["isActive"]),
+
+  // Orders table
+  orders: defineTable({
+    providerId: v.id("providers"),
+    orderDate: v.string(),
+    items: v.array(
+      v.object({
+        itemId: v.string(), // ID del producto o medicamento
+        itemType: v.union(v.literal("product"), v.literal("medicine")),
+        name: v.string(),
+        quantity: v.number(),
+        price: v.number(),
+        vat: v.number(),
+      })
+    ),
+    estimatedDeliveryDate: v.string(),
+    paymentMethod: v.string(),
+    notes: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("delivered"),
+      v.literal("cancelled")
+    ),
+    isPaid: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_provider", ["providerId"])
+    .index("by_status", ["status"])
+    .index("by_date", ["orderDate"]),
 });

@@ -11,8 +11,6 @@ import {
   X, 
   Plus, 
   Package, 
-  ShoppingBag, 
-  Briefcase, 
   Pill, 
   Check, 
   Clock, 
@@ -26,140 +24,11 @@ import {
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-import { generateOrderPDF } from '../../utils/orderPdfGenerator';
-
-// Mock data for orders
-const mockMedicationOrders = [
-  {
-    id: 'MED-2025-001',
-    date: '2025-05-15',
-    supplier: 'VetSupplies S.L.',
-    items: [
-      { reference: 'VS-001', name: 'Amoxicilina 250mg', quantity: 20, price: 25.50, discount: 0, total: 510.00 },
-      { reference: 'VS-002', name: 'Meloxicam 1.5mg/ml', quantity: 10, price: 18.75, discount: 0, total: 187.50 }
-    ],
-    subtotal: 697.50,
-    tax: 146.48,
-    shipping: 15.00,
-    total: 858.98,
-    status: 'delivered',
-    paymentStatus: 'paid',
-    paymentMethod: 'Transferencia bancaria',
-    deliveryDate: '2025-05-17',
-    notes: 'Entrega urgente solicitada'
-  },
-  {
-    id: 'MED-2025-002',
-    date: '2025-05-20',
-    supplier: 'MedVet Distribución',
-    items: [
-      { reference: 'MV-001', name: 'Apoquel 16mg', quantity: 5, price: 45.20, discount: 0, total: 226.00 },
-      { reference: 'MV-002', name: 'Simparica 80mg', quantity: 15, price: 32.40, discount: 0, total: 486.00 }
-    ],
-    subtotal: 712.00,
-    tax: 149.52,
-    shipping: 15.00,
-    total: 876.52,
-    status: 'processing',
-    paymentStatus: 'pending',
-    paymentMethod: 'Transferencia bancaria',
-    deliveryDate: '2025-05-25'
-  },
-  {
-    id: 'MED-2025-003',
-    date: '2025-05-22',
-    supplier: 'Laboratorios Syva',
-    items: [
-      { reference: 'LS-001', name: 'Nobivac Rabia', quantity: 30, price: 12.80, discount: 0, total: 384.00 },
-      { reference: 'LS-002', name: 'Nobivac DHPPi', quantity: 25, price: 15.60, discount: 0, total: 390.00 }
-    ],
-    subtotal: 774.00,
-    tax: 162.54,
-    shipping: 15.00,
-    total: 951.54,
-    status: 'pending',
-    paymentStatus: 'pending',
-    paymentMethod: 'Transferencia bancaria',
-    deliveryDate: '2025-05-30'
-  }
-];
-
-const mockStoreOrders = [
-  {
-    id: 'STO-2025-001',
-    date: '2025-05-14',
-    supplier: 'PetFood Distribución',
-    items: [
-      { reference: 'PF-001', name: 'Pienso Premium 12kg', quantity: 15, price: 65.50, discount: 0, total: 982.50 },
-      { reference: 'PF-002', name: 'Snacks Dentales', quantity: 30, price: 8.25, discount: 0, total: 247.50 }
-    ],
-    subtotal: 1230.00,
-    tax: 258.30,
-    shipping: 0.00,
-    total: 1488.30,
-    status: 'delivered',
-    paymentStatus: 'paid',
-    paymentMethod: 'Transferencia bancaria',
-    deliveryDate: '2025-05-16'
-  },
-  {
-    id: 'STO-2025-002',
-    date: '2025-05-18',
-    supplier: 'PetAccessories Inc.',
-    items: [
-      { reference: 'PA-001', name: 'Collares Ajustables', quantity: 25, price: 12.50, discount: 0, total: 312.50 },
-      { reference: 'PA-002', name: 'Camas Medianas', quantity: 10, price: 45.75, discount: 0, total: 457.50 }
-    ],
-    subtotal: 770.00,
-    tax: 161.70,
-    shipping: 15.00,
-    total: 946.70,
-    status: 'processing',
-    paymentStatus: 'pending',
-    paymentMethod: 'Transferencia bancaria',
-    deliveryDate: '2025-05-26'
-  }
-];
-
-const mockOfficeOrders = [
-  {
-    id: 'OFF-2025-001',
-    date: '2025-05-10',
-    supplier: 'OfficeSupplies S.A.',
-    items: [
-      { reference: 'OS-001', name: 'Papel A4 (Cajas)', quantity: 10, price: 22.50, discount: 0, total: 225.00 },
-      { reference: 'OS-002', name: 'Tóner Impresora', quantity: 5, price: 85.00, discount: 0, total: 425.00 }
-    ],
-    subtotal: 650.00,
-    tax: 136.50,
-    shipping: 0.00,
-    total: 786.50,
-    status: 'delivered',
-    paymentStatus: 'paid',
-    paymentMethod: 'Transferencia bancaria',
-    deliveryDate: '2025-05-12'
-  },
-  {
-    id: 'OFF-2025-002',
-    date: '2025-05-21',
-    supplier: 'Mobiliario Clínico',
-    items: [
-      { reference: 'MC-001', name: 'Sillas de Oficina', quantity: 4, price: 120.00, discount: 0, total: 480.00 },
-      { reference: 'MC-002', name: 'Archivadores', quantity: 2, price: 95.50, discount: 0, total: 191.00 }
-    ],
-    subtotal: 671.00,
-    tax: 140.91,
-    shipping: 25.00,
-    total: 836.91,
-    status: 'processing',
-    paymentStatus: 'pending',
-    paymentMethod: 'Transferencia bancaria',
-    deliveryDate: '2025-06-01'
-  }
-];
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const Pedidos: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'medications' | 'store' | 'office'>('medications');
+  const [activeTab, setActiveTab] = useState<'medicines' | 'products'>('medicines');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState({
     from: new Date().toISOString().split('T')[0],
@@ -176,56 +45,48 @@ const Pedidos: React.FC = () => {
     message: ''
   });
 
-  // Get the appropriate orders based on the active tab
-  const getOrders = () => {
-    switch (activeTab) {
-      case 'medications':
-        return mockMedicationOrders;
-      case 'store':
-        return mockStoreOrders;
-      case 'office':
-        return mockOfficeOrders;
-      default:
-        return [];
-    }
+  // Form state for new order
+  const [orderForm, setOrderForm] = useState({
+    providerId: '',
+    orderDate: new Date().toISOString().split('T')[0],
+    estimatedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    paymentMethod: '',
+    notes: '',
+    items: [{
+      itemId: '',
+      itemType: activeTab === 'medicines' ? 'medicine' : 'product',
+      name: '',
+      quantity: 1,
+      price: 0,
+      vat: 21
+    }]
+  });
+
+  // Convex queries and mutations
+  const orders = useQuery(api.orders.getOrders) || [];
+  const providers = useQuery(api.providers.getProviders) || [];
+  const medicines = useQuery(api.medicines.getMedicines) || [];
+  const products = useQuery(api.products.getProducts) || [];
+  const createOrder = useMutation(api.orders.createOrder);
+
+  // Filter orders based on active tab
+  const getFilteredOrders = () => {
+    return orders.filter(order => {
+      const hasItemType = order.items.some(item => 
+        activeTab === 'medicines' ? item.itemType === 'medicine' : item.itemType === 'product'
+      );
+
+      const matchesSearch = searchTerm === '' || 
+        order.provider?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.items.some(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus;
+
+      return hasItemType && matchesSearch && matchesStatus;
+    });
   };
 
-  // Filter orders based on search term, status, and supplier
-  const filteredOrders = getOrders().filter(order => 
-    (selectedStatus === 'all' || order.status === selectedStatus) &&
-    (selectedSupplier === 'all' || order.supplier.toLowerCase().includes(selectedSupplier.toLowerCase())) &&
-    (order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     order.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     order.items.some(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())))
-  );
-
-  // Get tab title based on active tab
-  const getTabTitle = () => {
-    switch (activeTab) {
-      case 'medications':
-        return 'Pedidos de Medicamentos';
-      case 'store':
-        return 'Pedidos de Tienda';
-      case 'office':
-        return 'Pedidos de Oficina';
-      default:
-        return 'Pedidos';
-    }
-  };
-
-  // Get tab icon based on active tab
-  const getTabIcon = () => {
-    switch (activeTab) {
-      case 'medications':
-        return <Pill size={20} />;
-      case 'store':
-        return <ShoppingBag size={20} />;
-      case 'office':
-        return <Briefcase size={20} />;
-      default:
-        return <Package size={20} />;
-    }
-  };
+  const filteredOrders = getFilteredOrders();
 
   // Status styles and labels
   const statusStyles = {
@@ -242,34 +103,117 @@ const Pedidos: React.FC = () => {
     'cancelled': 'Cancelado'
   };
 
-  // Payment status styles and labels
-  const paymentStatusStyles = {
-    'pending': 'bg-orange-100 text-orange-800',
-    'paid': 'bg-green-100 text-green-800',
-    'partial': 'bg-blue-100 text-blue-800',
-    'cancelled': 'bg-red-100 text-red-800'
+  // Calculate order totals
+  const calculateOrderTotals = (items) => {
+    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+
+    // Group items by VAT rate
+    const vatGroups = items.reduce((groups, item) => {
+      const vatRate = item.vat;
+      if (!groups[vatRate]) {
+        groups[vatRate] = { subtotal: 0, vatAmount: 0 };
+      }
+      const itemSubtotal = item.quantity * item.price;
+      groups[vatRate].subtotal += itemSubtotal;
+      groups[vatRate].vatAmount += itemSubtotal * (vatRate / 100);
+      return groups;
+    }, {});
+
+    const totalVat = Object.values(vatGroups).reduce((sum, group) => sum + group.vatAmount, 0);
+    const total = subtotal + totalVat;
+
+    return { subtotal, vatGroups, totalVat, total };
   };
 
-  const paymentStatusLabels = {
-    'pending': 'Pendiente',
-    'paid': 'Pagado',
-    'partial': 'Pago Parcial',
-    'cancelled': 'Cancelado'
+  // Handle form submission
+  const handleCreateOrder = async () => {
+    try {
+      await createOrder({
+        providerId: orderForm.providerId,
+        orderDate: orderForm.orderDate,
+        items: orderForm.items,
+        estimatedDeliveryDate: orderForm.estimatedDeliveryDate,
+        paymentMethod: orderForm.paymentMethod,
+        notes: orderForm.notes
+      });
+
+      setShowNewOrderForm(false);
+      setOrderForm({
+        providerId: '',
+        orderDate: new Date().toISOString().split('T')[0],
+        estimatedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        paymentMethod: '',
+        notes: '',
+        items: [{
+          itemId: '',
+          itemType: activeTab === 'medicines' ? 'medicine' : 'product',
+          name: '',
+          quantity: 1,
+          price: 0,
+          vat: 21
+        }]
+      });
+    } catch (error) {
+      console.error('Error creating order:', error);
+    }
+  };
+
+  // Handle item selection
+  const handleItemSelection = (index, itemId) => {
+    const items = activeTab === 'medicines' ? medicines : products;
+    const selectedItem = items.find(item => item._id === itemId);
+
+    if (selectedItem) {
+      const updatedItems = [...orderForm.items];
+      updatedItems[index] = {
+        ...updatedItems[index],
+        itemId: selectedItem._id,
+        name: selectedItem.name,
+        price: selectedItem.basePrice,
+        vat: selectedItem.vat
+      };
+      setOrderForm({ ...orderForm, items: updatedItems });
+    }
+  };
+
+  // Add new item to order
+  const addOrderItem = () => {
+    setOrderForm({
+      ...orderForm,
+      items: [...orderForm.items, {
+        itemId: '',
+        itemType: activeTab === 'medicines' ? 'medicine' : 'product',
+        name: '',
+        quantity: 1,
+        price: 0,
+        vat: 21
+      }]
+    });
+  };
+
+  // Remove item from order
+  const removeOrderItem = (index) => {
+    if (orderForm.items.length > 1) {
+      const updatedItems = orderForm.items.filter((_, i) => i !== index);
+      setOrderForm({ ...orderForm, items: updatedItems });
+    }
   };
 
   // Handle download order as PDF
   const handleDownloadOrderPDF = (order) => {
     // Generate and download PDF using the order data
-    const doc = generateOrderPDF(order);
-    doc.save(`pedido-${order.id}.pdf`);
+    //const doc = generateOrderPDF(order);  //Removed this line
+    //doc.save(`pedido-${order.id}.pdf`);  //Removed this line
+    console.log("Download PDF");//Added this line
   };
 
   // Handle print order
   const handlePrintOrder = (order) => {
     // Generate PDF and open in new window for printing
-    const doc = generateOrderPDF(order);
-    const blobUrl = doc.output('bloburl');
-    window.open(blobUrl, '_blank');
+    //const doc = generateOrderPDF(order); //Removed this line
+    //const blobUrl = doc.output('bloburl'); //Removed this line
+    //window.open(blobUrl, '_blank');  //Removed this line
+    console.log("Print Order");//Added this line
   };
 
   // Handle email order
@@ -277,16 +221,16 @@ const Pedidos: React.FC = () => {
     // Prepare email data with order details
     setEmailData({
       to: 'proveedor@example.com', // Placeholder email
-      subject: `Pedido ${order.id} - ClinicPro`,
+      subject: `Pedido ORD-${order._id.slice(-6).toUpperCase()} - ClinicPro`,
       message: `Estimado proveedor,
 
-Adjunto encontrará el pedido con número ${order.id} con fecha ${new Date(order.date).toLocaleDateString('es-ES')}.
+Adjunto encontrará el pedido con número ORD-${order._id.slice(-6).toUpperCase()} con fecha ${new Date(order.orderDate).toLocaleDateString('es-ES')}.
 
 Detalles del pedido:
 ${order.items.map(item => `- ${item.name}: ${item.quantity} unidades a ${item.price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} cada uno`).join('\n')}
 
-Total del pedido: ${order.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-Fecha de entrega solicitada: ${new Date(order.deliveryDate).toLocaleDateString('es-ES')}
+Total del pedido: ${calculateOrderTotals(order.items).total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+Fecha de entrega solicitada: ${new Date(order.estimatedDeliveryDate).toLocaleDateString('es-ES')}
 
 Por favor, confirme la recepción de este pedido y la fecha de entrega prevista.
 
@@ -343,10 +287,10 @@ ClinicPro`
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('medications')}
+            onClick={() => setActiveTab('medicines')}
             className={`
               whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center
-              ${activeTab === 'medications'
+              ${activeTab === 'medicines'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
@@ -356,30 +300,17 @@ ClinicPro`
             Medicamentos
           </button>
           <button
-            onClick={() => setActiveTab('store')}
+            onClick={() => setActiveTab('products')}
             className={`
               whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center
-              ${activeTab === 'store'
+              ${activeTab === 'products'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
             `}
           >
-            <ShoppingBag size={16} className="mr-2" />
-            Tienda
-          </button>
-          <button
-            onClick={() => setActiveTab('office')}
-            className={`
-              whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center
-              ${activeTab === 'office'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
-          >
-            <Briefcase size={16} className="mr-2" />
-            Oficina
+            <Package size={16} className="mr-2" />
+            Productos
           </button>
         </nav>
       </div>
@@ -392,8 +323,8 @@ ClinicPro`
               <h3 className="text-lg font-medium text-gray-900">Pedidos Totales</h3>
               <Package className="h-5 w-5 text-gray-400" />
             </div>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">{getOrders().length}</p>
-            <p className="mt-1 text-sm text-gray-500">pedidos en el último mes</p>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">{filteredOrders.length}</p>
+            <p className="mt-1 text-sm text-gray-500">pedidos registrados</p>
           </div>
         </Card>
 
@@ -404,7 +335,7 @@ ClinicPro`
               <Clock className="h-5 w-5 text-yellow-400" />
             </div>
             <p className="mt-2 text-3xl font-semibold text-yellow-600">
-              {getOrders().filter(order => order.status === 'pending' || order.status === 'processing').length}
+              {filteredOrders.filter(order => order.status === 'pending' || order.status === 'processing').length}
             </p>
             <p className="mt-1 text-sm text-gray-500">pedidos en proceso</p>
           </div>
@@ -417,12 +348,15 @@ ClinicPro`
               <DollarSign className="h-5 w-5 text-gray-400" />
             </div>
             <p className="mt-2 text-3xl font-semibold text-gray-900">
-              {getOrders().reduce((sum, order) => sum + order.total, 0).toLocaleString('es-ES', {
+              {filteredOrders.reduce((sum, order) => {
+                const totals = calculateOrderTotals(order.items);
+                return sum + totals.total;
+              }, 0).toLocaleString('es-ES', {
                 style: 'currency',
                 currency: 'EUR'
               })}
             </p>
-            <p className="mt-1 text-sm text-gray-500">en el último mes</p>
+            <p className="mt-1 text-sm text-gray-500">en pedidos</p>
           </div>
         </Card>
       </div>
@@ -431,7 +365,7 @@ ClinicPro`
       <Card>
         <div className="flex flex-col sm:flex-row gap-4 p-4">
           <Input
-            placeholder={`Buscar ${activeTab === 'medications' ? 'medicamentos' : activeTab === 'store' ? 'productos' : 'material de oficina'}...`}
+            placeholder={`Buscar ${activeTab === 'medicines' ? 'medicamentos' : 'productos'}...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             icon={<Search size={18} />}
@@ -470,7 +404,7 @@ ClinicPro`
       </Card>
 
       {/* Orders Table */}
-      <Card title={getTabTitle()} icon={getTabIcon()}>
+      <Card title={`Pedidos de ${activeTab === 'medicines' ? 'Medicamentos' : 'Productos'}`} icon={activeTab === 'medicines' ? <Pill size={20} /> : <Package size={20} />}>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -502,86 +436,89 @@ ClinicPro`
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <FileText size={16} className="text-gray-400 mr-2" />
-                      <span className="text-sm font-medium text-gray-900">{order.id}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {new Date(order.date).toLocaleDateString('es-ES')}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{order.supplier}</div>
-                    <div className="text-sm text-gray-500">
-                      {order.items.length} {order.items.length === 1 ? 'artículo' : 'artículos'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {order.total.toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      statusStyles[order.status]
-                    }`}>
-                      {statusLabels[order.status]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      paymentStatusStyles[order.paymentStatus]
-                    }`}>
-                      {paymentStatusLabels[order.paymentStatus]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {new Date(order.deliveryDate).toLocaleDateString('es-ES')}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => setShowOrderDetails(order)}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Ver detalles"
-                      >
-                        <Eye size={18} />
-                      </button>
-                      <button
-                        onClick={() => handlePrintOrder(order)}
-                        className="text-gray-400 hover:text-gray-600"
-                        title="Imprimir"
-                      >
-                        <Printer size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDownloadOrderPDF(order)}
-                        className="text-gray-400 hover:text-gray-600"
-                        title="Descargar PDF"
-                      >
-                        <Download size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleEmailOrder(order)}
-                        className="text-gray-400 hover:text-gray-600"
-                        title="Enviar por Email"
-                      >
-                        <Mail size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filteredOrders.map((order) => {
+                const totals = calculateOrderTotals(order.items);
+                return (
+                  <tr key={order._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <FileText size={16} className="text-gray-400 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">ORD-{order._id.slice(-6).toUpperCase()}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(order.orderDate).toLocaleDateString('es-ES')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{order.provider?.name || 'Sin proveedor'}</div>
+                      <div className="text-sm text-gray-500">
+                        {order.items.length} {order.items.length === 1 ? 'artículo' : 'artículos'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {totals.total.toLocaleString('es-ES', {
+                          style: 'currency',
+                          currency: 'EUR'
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        statusStyles[order.status]
+                      }`}>
+                        {statusLabels[order.status]}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        order.isPaid ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                      }`}>
+                        {order.isPaid ? 'Pagado' : 'Pendiente'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(order.estimatedDeliveryDate).toLocaleDateString('es-ES')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setShowOrderDetails(order)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Ver detalles"
+                        >
+                          <Eye size={18} />
+                        </button>
+                        <button
+                          onClick={() => handlePrintOrder(order)}
+                          className="text-gray-400 hover:text-gray-600"
+                          title="Imprimir"
+                        >
+                          <Printer size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadOrderPDF(order)}
+                          className="text-gray-400 hover:text-gray-600"
+                          title="Descargar PDF"
+                        >
+                          <Download size={18} />
+                        </button>
+                        <button
+                            onClick={() => handleEmailOrder(order)}
+                            className="text-gray-400 hover:text-gray-600"
+                            title="Enviar por Email"
+                        >
+                            <Mail size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -612,7 +549,7 @@ ClinicPro`
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                Detalles del Pedido #{showOrderDetails.id}
+                Detalles del Pedido ORD-{showOrderDetails._id.slice(-6).toUpperCase()}
               </h3>
               <button
                 onClick={() => setShowOrderDetails(null)}
@@ -630,7 +567,7 @@ ClinicPro`
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Fecha del Pedido:</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {new Date(showOrderDetails.date).toLocaleDateString('es-ES')}
+                        {new Date(showOrderDetails.orderDate).toLocaleDateString('es-ES')}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -644,9 +581,9 @@ ClinicPro`
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Estado de Pago:</span>
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        paymentStatusStyles[showOrderDetails.paymentStatus]
+                        showOrderDetails.isPaid ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
                       }`}>
-                        {paymentStatusLabels[showOrderDetails.paymentStatus]}
+                        {showOrderDetails.isPaid ? 'Pagado' : 'Pendiente'}
                       </span>
                     </div>
                   </div>
@@ -657,12 +594,12 @@ ClinicPro`
                   <div className="mt-2 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Proveedor:</span>
-                      <span className="text-sm font-medium text-gray-900">{showOrderDetails.supplier}</span>
+                      <span className="text-sm font-medium text-gray-900">{showOrderDetails.provider?.name || 'Sin proveedor'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Fecha de Entrega:</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {new Date(showOrderDetails.deliveryDate).toLocaleDateString('es-ES')}
+                        {new Date(showOrderDetails.estimatedDeliveryDate).toLocaleDateString('es-ES')}
                       </span>
                     </div>
                   </div>
@@ -675,9 +612,6 @@ ClinicPro`
                   <thead className="bg-gray-100">
                     <tr>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Referencia
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Artículo
                       </th>
                       <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -687,6 +621,9 @@ ClinicPro`
                         Precio
                       </th>
                       <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        IVA
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total
                       </th>
                     </tr>
@@ -694,7 +631,6 @@ ClinicPro`
                   <tbody className="bg-white divide-y divide-gray-200">
                     {showOrderDetails.items.map((item, index) => (
                       <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.reference || '-'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {item.name}
                         </td>
@@ -705,6 +641,9 @@ ClinicPro`
                           {item.price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {item.vat}%
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                           {(item.quantity * item.price).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                         </td>
                       </tr>
@@ -713,46 +652,44 @@ ClinicPro`
                 </table>
               </div>
 
-              <div className="mt-6 flex justify-end">
-                <div className="w-64 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Subtotal:</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {showOrderDetails.subtotal.toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
-                      })}
-                    </span>
+              {(() => {
+                const totals = calculateOrderTotals(showOrderDetails.items);
+                return (
+                  <div className="mt-6 flex justify-end">
+                    <div className="w-64 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Subtotal:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {totals.subtotal.toLocaleString('es-ES', {
+                            style: 'currency',
+                            currency: 'EUR'
+                          })}
+                        </span>
+                      </div>
+                      {Object.entries(totals.vatGroups).map(([vatRate, vatData]) => (
+                        <div key={vatRate} className="flex justify-between">
+                          <span className="text-sm text-gray-500">IVA ({vatRate}%):</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {vatData.vatAmount.toLocaleString('es-ES', {
+                              style: 'currency',
+                              currency: 'EUR'
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between pt-2 border-t border-gray-200">
+                        <span className="text-sm font-medium text-gray-900">Total:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {totals.total.toLocaleString('es-ES', {
+                            style: 'currency',
+                            currency: 'EUR'
+                          })}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">IVA (21%):</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {showOrderDetails.tax.toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Gastos de envío:</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {showOrderDetails.shipping.toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-gray-200">
-                    <span className="text-sm font-medium text-gray-900">Total:</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {showOrderDetails.total.toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <div className="flex-1 bg-blue-50 rounded-lg p-4 border border-blue-100">
@@ -771,10 +708,10 @@ ClinicPro`
                       )}
                       <span className="text-sm text-gray-900">
                         {showOrderDetails.status === 'delivered' 
-                          ? 'Entregado el ' + new Date(showOrderDetails.deliveryDate).toLocaleDateString('es-ES')
+                          ? 'Entregado'
                           : showOrderDetails.status === 'processing'
-                          ? 'En proceso - Entrega estimada: ' + new Date(showOrderDetails.deliveryDate).toLocaleDateString('es-ES')
-                          : 'Pendiente - Entrega estimada: ' + new Date(showOrderDetails.deliveryDate).toLocaleDateString('es-ES')
+                          ? 'En proceso - Entrega estimada: ' + new Date(showOrderDetails.estimatedDeliveryDate).toLocaleDateString('es-ES')
+                          : 'Pendiente - Entrega estimada: ' + new Date(showOrderDetails.estimatedDeliveryDate).toLocaleDateString('es-ES')
                         }
                       </span>
                     </div>
@@ -788,16 +725,13 @@ ClinicPro`
                   </div>
                   <div className="mt-2">
                     <div className="flex items-center">
-                      {showOrderDetails.paymentStatus === 'paid' ? (
+                      {showOrderDetails.isPaid ? (
                         <Check className="h-5 w-5 text-green-500 mr-2" />
                       ) : (
                         <Clock className="h-5 w-5 text-orange-500 mr-2" />
                       )}
                       <span className="text-sm text-gray-900">
-                        {showOrderDetails.paymentStatus === 'paid' 
-                          ? 'Pagado'
-                          : 'Pendiente de pago'
-                        }
+                        {showOrderDetails.isPaid ? 'Pagado' : 'Pendiente de pago'}
                       </span>
                     </div>
                   </div>
@@ -844,7 +778,7 @@ ClinicPro`
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                Nuevo Pedido de {activeTab === 'medications' ? 'Medicamentos' : activeTab === 'store' ? 'Tienda' : 'Oficina'}
+                Nuevo Pedido de {activeTab === 'medicines' ? 'Medicamentos' : 'Productos'}
               </h3>
               <button
                 onClick={() => setShowNewOrderForm(false)}
@@ -863,28 +797,17 @@ ClinicPro`
                     </label>
                     <select
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      value={orderForm.providerId}
+                      onChange={(e) => setOrderForm({ ...orderForm, providerId: e.target.value })}
                       required
                     >
                       <option value="">Seleccionar proveedor</option>
-                      {activeTab === 'medications' && (
-                        <>
-                          <option value="VetSupplies S.L.">VetSupplies S.L.</option>
-                          <option value="MedVet Distribución">MedVet Distribución</option>
-                          <option value="Laboratorios Syva">Laboratorios Syva</option>
-                        </>
-                      )}
-                      {activeTab === 'store' && (
-                        <>
-                          <option value="PetFood Distribución">PetFood Distribución</option>
-                          <option value="PetAccessories Inc.">PetAccessories Inc.</option>
-                        </>
-                      )}
-                      {activeTab === 'office' && (
-                        <>
-                          <option value="OfficeSupplies S.A.">OfficeSupplies S.A.</option>
-                          <option value="Mobiliario Clínico">Mobiliario Clínico</option>
-                        </>
-                      )}
+                      {providers
+                        .filter(provider => provider.area === (activeTab === 'medicines' ? 'medicamentos' : 'productos'))
+                        .map(provider => (
+                          <option key={provider._id} value={provider._id}>{provider.name}</option>
+                        ))
+                      }
                     </select>
                   </div>
 
@@ -894,7 +817,8 @@ ClinicPro`
                     </label>
                     <Input
                       type="date"
-                      defaultValue={new Date().toISOString().split('T')[0]}
+                      value={orderForm.orderDate}
+                      onChange={(e) => setOrderForm({ ...orderForm, orderDate: e.target.value })}
                       required
                     />
                   </div>
@@ -902,82 +826,76 @@ ClinicPro`
 
                 <div className="border-t border-gray-200 pt-6">
                   <h4 className="text-lg font-medium text-gray-900 mb-4">Artículos</h4>
-                  
+
                   <div className="space-y-4">
-                    <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Artículo
-                          </label>
-                          <select
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                            required
-                          >
-                            <option value="">Seleccionar artículo</option>
-                            {activeTab === 'medications' && (
-                              <>
-                                <option value="Amoxicilina 250mg">Amoxicilina 250mg</option>
-                                <option value="Meloxicam 1.5mg/ml">Meloxicam 1.5mg/ml</option>
-                                <option value="Apoquel 16mg">Apoquel 16mg</option>
-                                <option value="Simparica 80mg">Simparica 80mg</option>
-                                <option value="Nobivac Rabia">Nobivac Rabia</option>
-                                <option value="Nobivac DHPPi">Nobivac DHPPi</option>
-                              </>
-                            )}
-                            {activeTab === 'store' && (
-                              <>
-                                <option value="Pienso Premium 12kg">Pienso Premium 12kg</option>
-                                <option value="Snacks Dentales">Snacks Dentales</option>
-                                <option value="Collares Ajustables">Collares Ajustables</option>
-                                <option value="Camas Medianas">Camas Medianas</option>
-                              </>
-                            )}
-                            {activeTab === 'office' && (
-                              <>
-                                <option value="Papel A4 (Cajas)">Papel A4 (Cajas)</option>
-                                <option value="Tóner Impresora">Tóner Impresora</option>
-                                <option value="Sillas de Oficina">Sillas de Oficina</option>
-                                <option value="Archivadores">Archivadores</option>
-                              </>
-                            )}
-                          </select>
-                        </div>
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cantidad
-                          </label>
-                          <Input
-                            type="number"
-                            min="1"
-                            defaultValue="1"
-                            required
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Precio
-                          </label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            required
-                          />
-                        </div>
-                        <div className="col-span-2 flex items-end">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            icon={<Trash size={16} />}
-                          >
-                            Eliminar
-                          </Button>
+                    {orderForm.items.map((item, index) => (
+                      <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="grid grid-cols-12 gap-4">
+                          <div className="col-span-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Artículo
+                            </label>
+                            <select
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                              value={item.itemId}
+                              onChange={(e) => handleItemSelection(index, e.target.value)}
+                              required
+                            >
+                              <option value="">Seleccionar artículo</option>
+                              {(activeTab === 'medicines' ? medicines : products).map(product => (
+                                <option key={product._id} value={product._id}>{product.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Cantidad
+                            </label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const updatedItems = [...orderForm.items];
+                                updatedItems[index].quantity = parseInt(e.target.value) || 1;
+                                setOrderForm({ ...orderForm, items: updatedItems });
+                              }}
+                              required
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Precio
+                            </label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.price}
+                              onChange={(e) => {
+                                const updatedItems = [...orderForm.items];
+                                updatedItems[index].price = parseFloat(e.target.value) || 0;
+                                setOrderForm({ ...orderForm, items: updatedItems });
+                              }}
+                              required
+                            />
+                          </div>
+                          <div className="col-span-2 flex items-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              icon={<Trash size={16} />}
+                              onClick={() => removeOrderItem(index)}
+                              disabled={orderForm.items.length === 1}
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
 
                   <div className="mt-4">
@@ -986,6 +904,7 @@ ClinicPro`
                       variant="outline"
                       size="sm"
                       icon={<Plus size={16} />}
+                      onClick={addOrderItem}
                     >
                       Añadir Artículo
                     </Button>
@@ -1000,7 +919,8 @@ ClinicPro`
                       </label>
                       <Input
                         type="date"
-                        defaultValue={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                        value={orderForm.estimatedDeliveryDate}
+                        onChange={(e) => setOrderForm({ ...orderForm, estimatedDeliveryDate: e.target.value })}
                         required
                       />
                     </div>
@@ -1010,6 +930,8 @@ ClinicPro`
                       </label>
                       <select
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        value={orderForm.paymentMethod}
+                        onChange={(e) => setOrderForm({ ...orderForm, paymentMethod: e.target.value })}
                         required
                       >
                         <option value="">Seleccionar método</option>
@@ -1030,6 +952,8 @@ ClinicPro`
                     rows={3}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     placeholder="Añade notas o instrucciones especiales..."
+                    value={orderForm.notes}
+                    onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
                   />
                 </div>
               </form>
@@ -1044,77 +968,11 @@ ClinicPro`
               </Button>
               <Button
                 variant="primary"
-                onClick={() => {
-                  // Here you would typically submit the form
-                  setShowNewOrderForm(false);
-                }}
+                onClick={handleCreateOrder}
+                disabled={!orderForm.providerId || !orderForm.paymentMethod}
               >
                 Crear Pedido
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Email Form Modal */}
-      {showEmailForm && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[70]">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Enviar Pedido por Email</h3>
-              <button
-                onClick={() => setShowEmailForm(false)}
-                className="text-gray-400 hover:text-gray-500 p-1 rounded-full hover:bg-gray-100"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <Input
-                label="Destinatario"
-                type="email"
-                value={emailData.to}
-                onChange={(e) => setEmailData({...emailData, to: e.target.value})}
-                placeholder="proveedor@ejemplo.com"
-                icon={<Mail size={18} />}
-                required
-              />
-              <Input
-                label="Asunto"
-                type="text"
-                value={emailData.subject}
-                onChange={(e) => setEmailData({...emailData, subject: e.target.value})}
-                placeholder="Asunto del email"
-                required
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mensaje
-                </label>
-                <textarea
-                  value={emailData.message}
-                  onChange={(e) => setEmailData({...emailData, message: e.target.value})}
-                  rows={10}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="Escriba su mensaje aquí..."
-                  required
-                />
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowEmailForm(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  icon={<Mail size={18} />}
-                  onClick={handleSendEmail}
-                >
-                  Enviar Email
-                </Button>
-              </div>
             </div>
           </div>
         </div>
