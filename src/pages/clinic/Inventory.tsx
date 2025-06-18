@@ -1,43 +1,83 @@
-import React, { useState } from 'react';
-import { Plus, Search, Filter, Download, AlertTriangle, Package, ArrowDown, ArrowUp, RefreshCw } from 'lucide-react';
+
+import React, { useState, useMemo } from 'react';
+import { Plus, Search, Filter, Download, AlertTriangle, Package, RefreshCw } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-
-const mockInventory = [
-  {
-    id: '1',
-    name: 'Jeringuillas 5ml',
-    category: 'Material Clínico',
-    stock: 150,
-    minStock: 50,
-    location: 'Almacén A-1',
-    provider: 'VetSupplies S.L.',
-    lastUpdated: '2025-05-20',
-    status: 'ok'
-  },
-  {
-    id: '2',
-    name: 'Vendas Elásticas',
-    category: 'Material Clínico',
-    stock: 30,
-    minStock: 40,
-    location: 'Almacén B-2',
-    provider: 'MedVet Distribución',
-    lastUpdated: '2025-05-19',
-    status: 'low'
-  }
-];
 
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  const filteredItems = mockInventory.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.provider.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Convex queries
+  const products = useQuery(api.products.getProducts) || [];
+  const services = useQuery(api.services.getServices) || [];
+  const medicines = useQuery(api.medicines.getMedicines) || [];
+  const providers = useQuery(api.providers.getProviders) || [];
+
+  // Combine all items with consistent structure
+  const allItems = useMemo(() => {
+    const combinedItems = [
+      ...products.map(item => ({
+        id: item._id,
+        name: item.name,
+        category: item.category,
+        stock: item.currentStock,
+        minStock: item.minStock,
+        provider: item.provider?.name || 'Sin proveedor',
+        lastUpdated: new Date(item.updatedAt).toISOString().split('T')[0],
+        status: item.currentStock === 0 ? 'out' : item.currentStock <= item.minStock ? 'low' : 'ok',
+        itemType: 'product' as const
+      })),
+      ...services.map(item => ({
+        id: item._id,
+        name: item.name,
+        category: item.category,
+        stock: item.currentStock,
+        minStock: item.minStock,
+        provider: item.provider?.name || 'Sin proveedor',
+        lastUpdated: new Date(item.updatedAt).toISOString().split('T')[0],
+        status: item.currentStock === 0 ? 'out' : item.currentStock <= item.minStock ? 'low' : 'ok',
+        itemType: 'service' as const
+      })),
+      ...medicines.map(item => ({
+        id: item._id,
+        name: item.name,
+        category: item.type, // medicines use 'type' field instead of 'category'
+        stock: item.stock,
+        minStock: item.minStock,
+        provider: providers.find(p => p._id === item.providerId)?.name || 'Sin proveedor',
+        lastUpdated: new Date(item.updatedAt).toISOString().split('T')[0],
+        status: item.stock === 0 ? 'out' : item.stock <= item.minStock ? 'low' : 'ok',
+        itemType: 'medicine' as const
+      }))
+    ];
+    return combinedItems;
+  }, [products, services, medicines, providers]);
+
+  // Calculate statistics
+  const totalStock = allItems.reduce((sum, item) => sum + item.stock, 0);
+  const lowStockItems = allItems.filter(item => item.status === 'low' || item.status === 'out').length;
+
+  // Filter items based on search term, category, and status
+  const filteredItems = useMemo(() => {
+    return allItems.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           item.provider.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCategory = selectedCategory === 'all' || 
+                             (selectedCategory === 'products' && item.itemType === 'product') ||
+                             (selectedCategory === 'services' && item.itemType === 'service') ||
+                             (selectedCategory === 'medicines' && item.itemType === 'medicine');
+      
+      const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
+      
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [allItems, searchTerm, selectedCategory, selectedStatus]);
 
   return (
     <div className="space-y-6">
@@ -68,15 +108,15 @@ const Inventory = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <div className="p-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-gray-900">Stock Total</h3>
               <Package className="h-5 w-5 text-gray-400" />
             </div>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">1,234</p>
-            <p className="mt-1 text-sm text-gray-500">productos en inventario</p>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">{totalStock.toLocaleString()}</p>
+            <p className="mt-1 text-sm text-gray-500">unidades en inventario</p>
           </div>
         </Card>
 
@@ -86,22 +126,8 @@ const Inventory = () => {
               <h3 className="text-lg font-medium text-gray-900">Stock Bajo</h3>
               <AlertTriangle className="h-5 w-5 text-yellow-400" />
             </div>
-            <p className="mt-2 text-3xl font-semibold text-yellow-600">8</p>
+            <p className="mt-2 text-3xl font-semibold text-yellow-600">{lowStockItems}</p>
             <p className="mt-1 text-sm text-gray-500">productos por debajo del mínimo</p>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="p-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Movimientos</h3>
-              <div className="flex space-x-2">
-                <ArrowUp className="h-5 w-5 text-green-500" />
-                <ArrowDown className="h-5 w-5 text-red-500" />
-              </div>
-            </div>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">156</p>
-            <p className="mt-1 text-sm text-gray-500">en los últimos 30 días</p>
           </div>
         </Card>
       </div>
@@ -122,9 +148,9 @@ const Inventory = () => {
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
             <option value="all">Todas las categorías</option>
-            <option value="clinical">Material Clínico</option>
-            <option value="medication">Medicamentos</option>
-            <option value="equipment">Equipamiento</option>
+            <option value="products">Productos</option>
+            <option value="services">Servicios</option>
+            <option value="medicines">Medicamentos</option>
           </select>
           <select
             className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -139,8 +165,13 @@ const Inventory = () => {
           <Button
             variant="outline"
             icon={<RefreshCw size={18} />}
+            onClick={() => {
+              setSearchTerm('');
+              setSelectedCategory('all');
+              setSelectedStatus('all');
+            }}
           >
-            Actualizar
+            Limpiar
           </Button>
         </div>
       </Card>
@@ -155,13 +186,13 @@ const Inventory = () => {
                   Producto
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tipo
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Categoría
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Stock
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ubicación
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Proveedor
@@ -175,44 +206,62 @@ const Inventory = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredItems.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{item.category}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        item.stock > item.minStock
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {item.stock} uds
-                      </span>
-                      {item.stock <= item.minStock && (
-                        <AlertTriangle className="ml-2 h-4 w-4 text-yellow-400" />
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.location}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.provider}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(item.lastUpdated).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button variant="outline" size="sm">
-                      Gestionar
-                    </Button>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No se encontraron elementos
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredItems.map((item) => (
+                  <tr key={`${item.itemType}-${item.id}`} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        item.itemType === 'product' ? 'bg-blue-100 text-blue-800' :
+                        item.itemType === 'service' ? 'bg-purple-100 text-purple-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {item.itemType === 'product' ? 'Producto' :
+                         item.itemType === 'service' ? 'Servicio' : 'Medicamento'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{item.category}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          item.status === 'ok' ? 'bg-green-100 text-green-800' :
+                          item.status === 'low' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {item.stock} uds
+                        </span>
+                        {item.status !== 'ok' && (
+                          <AlertTriangle className="ml-2 h-4 w-4 text-yellow-400" />
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        Mín: {item.minStock}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.provider}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(item.lastUpdated).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Button variant="outline" size="sm">
+                        Gestionar
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
