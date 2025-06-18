@@ -21,7 +21,9 @@ interface Medication {
   reference?: string;
   stock: number;
   minStock: number;
-  price: number;
+  basePrice: number;
+  vat: number;
+  cost: number;
   conditions: string[];
   contraindications: string[];
   sideEffects: string[];
@@ -72,7 +74,9 @@ const Medicamentos: React.FC = () => {
     reference: '',
     stock: 0,
     minStock: 0,
-    price: 0,
+    basePrice: 0,
+    vat: 0,
+    cost: 0,
     conditions: [] as string[],
     contraindications: [] as string[],
     sideEffects: [] as string[],
@@ -126,7 +130,9 @@ const Medicamentos: React.FC = () => {
         reference: formData.reference || undefined,
         stock: formData.stock,
         minStock: formData.minStock,
-        price: formData.price,
+        basePrice: formData.basePrice,
+        vat: formData.vat,
+        cost: formData.cost,
         conditions: formData.conditions,
         contraindications: formData.contraindications,
         sideEffects: formData.sideEffects,
@@ -164,7 +170,9 @@ const Medicamentos: React.FC = () => {
         reference: formData.reference || undefined,
         stock: formData.stock,
         minStock: formData.minStock,
-        price: formData.price,
+        basePrice: formData.basePrice,
+        vat: formData.vat,
+        cost: formData.cost,
         conditions: formData.conditions,
         contraindications: formData.contraindications,
         sideEffects: formData.sideEffects,
@@ -212,7 +220,9 @@ const Medicamentos: React.FC = () => {
       reference: medication.reference || '',
       stock: medication.stock,
       minStock: medication.minStock,
-      price: medication.price,
+      basePrice: medication.basePrice,
+      vat: medication.vat,
+      cost: medication.cost,
       conditions: medication.conditions,
       contraindications: medication.contraindications,
       sideEffects: medication.sideEffects,
@@ -242,7 +252,9 @@ const Medicamentos: React.FC = () => {
       reference: '',
       stock: 0,
       minStock: 0,
-      price: 0,
+      basePrice: 0,
+      vat: 0,
+      cost: 0,
       conditions: [],
       contraindications: [],
       sideEffects: [],
@@ -259,7 +271,7 @@ const Medicamentos: React.FC = () => {
 
   const totalMedications = medications.length;
   const lowStockMedications = medications.filter(med => med.stock <= med.minStock).length;
-  const totalValue = medications.reduce((sum, med) => sum + (med.stock * med.price), 0);
+  const totalValue = medications.reduce((sum, med) => sum + (med.stock * med.basePrice), 0);
 
   return (
     <div className="space-y-6">
@@ -438,7 +450,7 @@ const Medicamentos: React.FC = () => {
                   <div>
                     <p className="text-xs text-gray-500">Precio</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {medication.price.toLocaleString('es-ES', {
+                      {medication.basePrice.toLocaleString('es-ES', {
                         style: 'currency',
                         currency: 'EUR'
                       })}
@@ -538,7 +550,7 @@ const Medicamentos: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {medication.price.toLocaleString('es-ES', {
+                        {medication.basePrice.toLocaleString('es-ES', {
                           style: 'currency',
                           currency: 'EUR'
                         })}
@@ -736,11 +748,27 @@ const Medicamentos: React.FC = () => {
                   required
                 />
                 <Input
-                  label="Precio"
+                  label="Precio Base"
                   type="number"
                   step="0.01"
-                  value={formData.price.toString()}
-                  onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
+                  value={formData.basePrice.toString()}
+                  onChange={(e) => setFormData({...formData, basePrice: parseFloat(e.target.value) || 0})}
+                  required
+                />
+                <Input
+                  label="IVA (%)"
+                  type="number"
+                  step="0.01"
+                  value={formData.vat.toString()}
+                  onChange={(e) => setFormData({...formData, vat: parseFloat(e.target.value) || 0})}
+                  required
+                />
+                <Input
+                  label="Coste"
+                  type="number"
+                  step="0.01"
+                  value={formData.cost.toString()}
+                  onChange={(e) => setFormData({...formData, cost: parseFloat(e.target.value) || 0})}
                   required
                 />
               </div>
@@ -989,11 +1017,27 @@ const Medicamentos: React.FC = () => {
                   required
                 />
                 <Input
-                  label="Precio"
+                  label="Precio Base"
                   type="number"
                   step="0.01"
-                  value={formData.price.toString()}
-                  onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
+                  value={formData.basePrice.toString()}
+                  onChange={(e) => setFormData({...formData, basePrice: parseFloat(e.target.value) || 0})}
+                  required
+                />
+                <Input
+                  label="IVA (%)"
+                  type="number"
+                  step="0.01"
+                  value={formData.vat.toString()}
+                  onChange={(e) => setFormData({...formData, vat: parseFloat(e.target.value) || 0})}
+                  required
+                />
+                <Input
+                  label="Coste"
+                  type="number"
+                  step="0.01"
+                  value={formData.cost.toString()}
+                  onChange={(e) => setFormData({...formData, cost: parseFloat(e.target.value) || 0})}
                   required
                 />
               </div>
@@ -1295,7 +1339,7 @@ const Medicamentos: React.FC = () => {
                       <div>
                         <p className="text-sm font-medium text-gray-500">Precio</p>
                         <p className="mt-1 text-sm font-medium text-gray-900">
-                          {selectedMedication.price.toLocaleString('es-ES', {
+                          {selectedMedication.basePrice.toLocaleString('es-ES', {
                             style: 'currency',
                             currency: 'EUR'
                           })}
