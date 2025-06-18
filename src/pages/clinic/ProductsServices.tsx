@@ -454,7 +454,7 @@ const ProductsServices = () => {
                 await createMedicine({
                   ...medicineData,
                   type: category,
-                  price: basePrice,
+                  basePrice: basePrice || 0,
                   stock: currentStock,
                   vat: vat,
                   cost: cost,
@@ -824,7 +824,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                     type="number"
                     value={formData.duration || 0}
                     onChange={(e) => setFormData({...formData, duration: parseInt(e.target.value) || 0})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     required
                   />
                 </div>
