@@ -104,12 +104,15 @@ const ProductsServices = () => {
           await updateService({ id: editingItem._id, ...serviceData });
         } else if (editingItem.itemType === 'medicine') {
           // Para medicamentos en edición, crear objeto sin itemType y mapear campos
-          const { itemType, category, currentStock, description, ...medicineData } = formData;
+          const { itemType, category, basePrice, vat, cost, currentStock, description, ...medicineData } = formData;
           await updateMedicine({ 
             id: editingItem._id, 
             ...medicineData,
             type: category,
-            stock: currentStock
+            basePrice: basePrice || 0,
+            stock: currentStock || 0,
+            vat: vat || 21,
+            cost: cost || 0
           });
         }
       }
@@ -121,7 +124,8 @@ const ProductsServices = () => {
   };
 
   const getPrice = (item: any) => {
-    return item.basePrice;
+    if (item.itemType === 'medicine') return item.basePrice || 0;
+    return item.basePrice || 0;
   };
 
   const getIcon = (itemType: string) => {
@@ -568,7 +572,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
           reference: item.reference || '',
           currentStock: item.stock || 0,
           minStock: item.minStock || 0,
-          basePrice: item.price || 0,
+          basePrice: item.basePrice || 0,
           duration: item.duration || '',
           atcVetCode: item.atcVetCode || '',
           prescriptionRequired: item.prescriptionRequired || false,
