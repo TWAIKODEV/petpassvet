@@ -104,13 +104,12 @@ const ProductsServices = () => {
           await updateService({ id: editingItem._id, ...serviceData });
         } else if (editingItem.itemType === 'medicine') {
           // Para medicamentos en edición, crear objeto sin itemType y mapear campos
-          const { itemType, category, basePrice, vat, cost, currentStock, description, ...medicineData } = formData;
+          const { itemType, category, basePrice, vat, cost, description, ...medicineData } = formData;
           await updateMedicine({ 
             id: editingItem._id, 
             ...medicineData,
             type: category,
             basePrice: basePrice || 0,
-            stock: currentStock || 0,
             vat: vat || 21,
             cost: cost || 0
           });
@@ -124,7 +123,6 @@ const ProductsServices = () => {
   };
 
   const getPrice = (item: any) => {
-    if (item.itemType === 'medicine') return item.basePrice || 0;
     return item.basePrice || 0;
   };
 
@@ -454,7 +452,7 @@ const ProductsServices = () => {
                 await createMedicine({
                   ...medicineData,
                   type: category,
-                  basePrice: basePrice || 0,
+                  basePrice: basePrice,
                   stock: currentStock,
                   vat: vat,
                   cost: cost,
@@ -689,7 +687,7 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         reference: formData.reference || undefined,
         stock: formData.currentStock,
         minStock: formData.minStock,
-        price: formData.basePrice,
+        basePrice: formData.basePrice,
         vat: formData.vat,
         cost: formData.cost,
         conditions: formData.conditions,
