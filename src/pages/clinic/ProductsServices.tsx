@@ -104,12 +104,11 @@ const ProductsServices = () => {
           await updateService({ id: editingItem._id, ...serviceData });
         } else if (editingItem.itemType === 'medicine') {
           // Para medicamentos en edición, crear objeto sin itemType y mapear campos
-          const { itemType, category, basePrice, currentStock, description, ...medicineData } = formData;
+          const { itemType, category, currentStock, description, ...medicineData } = formData;
           await updateMedicine({ 
             id: editingItem._id, 
             ...medicineData,
             type: category,
-            price: basePrice,
             stock: currentStock
           });
         }
@@ -448,12 +447,14 @@ const ProductsServices = () => {
                 const { itemType, ...serviceData } = formData;
                 await createService(serviceData);
               } else if (formData.itemType === 'medicine') {
-                const { itemType, category, basePrice, currentStock, description, ...medicineData } = formData;
+                const { itemType, category, basePrice, vat, cost, currentStock, description, ...medicineData } = formData;
                 await createMedicine({
                   ...medicineData,
                   type: category,
                   price: basePrice,
-                  stock: currentStock
+                  stock: currentStock,
+                  vat: vat,
+                  cost: cost,
                 });
               }
               setShowNewItemModal(false);
@@ -686,6 +687,8 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         stock: formData.currentStock,
         minStock: formData.minStock,
         price: formData.basePrice,
+        vat: formData.vat,
+        cost: formData.cost,
         conditions: formData.conditions,
         contraindications: formData.contraindications,
         sideEffects: formData.sideEffects,
@@ -936,12 +939,26 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 required
               />
               <Input
-                label="Precio"
+                label="Precio Base"
                 type="number"
                 step="0.01"
                 value={formData.basePrice.toString()}
-                onChange={(e) => setFormData({...formData, basePrice: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
                 required
+              />
+                            <Input
+                label="IVA (%)"
+                type="number"
+                value={formData.vat.toString()}
+                onChange={(e) => setFormData({ ...formData, vat: parseFloat(e.target.value) || 0 })}
+                required
+              />
+                            <Input
+                label="Coste"
+                type="number"
+                step="0.01"
+                value={formData.cost.toString()}
+                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
               />
             </div>
 
