@@ -121,7 +121,6 @@ const ProductsServices = () => {
   };
 
   const getPrice = (item: any) => {
-    if (item.itemType === 'medicine') return item.price;
     return item.basePrice;
   };
 
