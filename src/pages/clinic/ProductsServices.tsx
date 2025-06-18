@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Download, Package, Clock, Pill, Edit, Trash, Eye, DollarSign, Activity, Building2, Tag, BarChart3, X, User, AlertTriangle } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -510,6 +510,125 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
     withdrawalPeriod: item?.withdrawalPeriod || '',
   });
 
+  useEffect(() => {
+    if (item) {
+      const baseFormData = {
+        itemType: item.itemType,
+        name: item.name,
+        category: item.category || item.type || '',
+        description: item.description || '',
+        basePrice: item.basePrice || item.price || 0,
+        vat: item.vat || 21,
+        cost: item.cost || 0,
+        margin: item.margin || 0,
+        reference: item.reference || '',
+        barcode: item.barcode || '',
+        isActive: item.isActive !== undefined ? item.isActive : item.status === 'active' || true,
+        providerId: item.providerId || '',
+        activeIngredient: item.activeIngredient || '',
+        manufacturer: item.manufacturer || '',
+        dosageForm: item.dosageForm || '',
+        species: item.species || [],
+        recommendedDosage: item.recommendedDosage || '',
+        conditions: item.conditions || [],
+        contraindications: item.contraindications || [],
+        sideEffects: item.sideEffects || [],
+        interactions: item.interactions || [],
+        registrationNumber: item.registrationNumber || '',
+        atcVetCode: item.atcVetCode || '',
+        prescriptionRequired: item.prescriptionRequired || false,
+        psychotropic: item.psychotropic || false,
+        antibiotic: item.antibiotic || false,
+        administrationRoutes: item.administrationRoutes || [],
+        excipients: item.excipients || [],
+        withdrawalPeriod: item.withdrawalPeriod || '',
+      };
+
+      // Set form data based on item type
+      if (item.itemType === 'service') {
+        setFormData({
+          ...baseFormData,
+          duration: item.duration || 30,
+          currentStock: item.currentStock || 0,
+          minStock: item.minStock || 5,
+        });
+      } else if (item.itemType === 'medicine') {
+        setFormData({
+          ...baseFormData,
+          activeIngredient: item.activeIngredient || '',
+          manufacturer: item.manufacturer || '',
+          dosageForm: item.dosageForm || '',
+          species: item.species || [],
+          recommendedDosage: item.recommendedDosage || '',
+          conditions: item.conditions || [],
+          contraindications: item.contraindications || [],
+          sideEffects: item.sideEffects || [],
+          interactions: item.interactions || [],
+          registrationNumber: item.registrationNumber || '',
+          reference: item.reference || '',
+          currentStock: item.stock || 0,
+          minStock: item.minStock || 0,
+          basePrice: item.price || 0,
+          duration: item.duration || '',
+          atcVetCode: item.atcVetCode || '',
+          prescriptionRequired: item.prescriptionRequired || false,
+          psychotropic: item.psychotropic || false,
+          antibiotic: item.antibiotic || false,
+          administrationRoutes: item.administrationRoutes || [],
+          excipients: item.excipients || [],
+          withdrawalPeriod: item.withdrawalPeriod || '',
+        });
+      } else {
+        setFormData({
+          ...baseFormData,
+          currentStock: item.currentStock || 0,
+          minStock: item.minStock || 0,
+        });
+      }
+    }
+  }, [item]);
+
+  const resetForm = () => {
+    setFormData({
+      itemType: 'product',
+      name: '',
+      category: '',
+      description: '',
+      basePrice: 0,
+      vat: 21,
+      cost: 0,
+      margin: 0,
+      duration: 30,
+      currentStock: 0,
+      minStock: 5,
+      isActive: true,
+      providerId: undefined,
+      // Medicine specific fields
+      activeIngredient: '',
+      manufacturer: '',
+      type: '',
+      dosageForm: '',
+      species: [],
+      recommendedDosage: '',
+      registrationNumber: '',
+      reference: '',
+      stock: 0,
+      price: 0,
+      conditions: [],
+      contraindications: [],
+      sideEffects: [],
+      interactions: [],
+      status: 'active',
+      atcVetCode: '',
+      prescriptionRequired: false,
+      psychotropic: false,
+      antibiotic: false,
+      administrationRoutes: [],
+      excipients: [],
+      withdrawalPeriod: ''
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -546,6 +665,8 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
         duration: parseInt(formData.duration) || 30,
         isActive: formData.isActive,
         providerId: formData.providerId || undefined,
+        currentStock: formData.currentStock,
+        minStock: formData.minStock
       };
       onSave(serviceData);
     } else if (formData.itemType === 'medicine') {
@@ -686,13 +807,51 @@ const ItemFormModal = ({ item, providers, onSave, onClose }: any) => {
                 onChange={(e) => setFormData({ ...formData, margin: parseFloat(e.target.value) || 0 })}
               />
             </div>
-            <Input
-              label="Duración (minutos)"
-              type="number"
-              value={formData.duration.toString()}
-              onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
-              required
-            />
+            {/* Duration field for services */}
+            {formData.itemType === 'service' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Duración (minutos)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.duration || 0}
+                    onChange={(e) => setFormData({...formData, duration: parseInt(e.target.value) || 0})}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    required
+                  />
+                </div>
+
+                {/* Stock fields for services */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Stock Actual
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.currentStock || 0}
+                      onChange={(e) => setFormData({...formData, currentStock: parseInt(e.target.value) || 0})}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Stock Mínimo
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.minStock || 0}
+                      onChange={(e) => setFormData({...formData, minStock: parseInt(e.target.value) || 0})}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </>
         );
 

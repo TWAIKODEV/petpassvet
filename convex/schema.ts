@@ -891,6 +891,8 @@ export default defineSchema({
     cost: v.number(),
     margin: v.number(),
     duration: v.number(), // en minutos
+    currentStock: v.number(),
+    minStock: v.number(),
     isActive: v.boolean(),
     providerId: v.optional(v.id("providers")),
     createdAt: v.number(),
