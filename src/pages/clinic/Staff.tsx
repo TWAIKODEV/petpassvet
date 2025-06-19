@@ -174,26 +174,41 @@ const Staff = () => {
         .filter(([_, selected]) => selected)
         .map(([day, _]) => day);
 
-      // Create separate schedules for non-consecutive days
-      const scheduleIds = [];
+      // Group consecutive days into single schedules
+      const groupedDays: string[][] = [];
+      let currentGroup: string[] = [];
 
-      for (const day of selectedDaysArray) {
-        const dayMask = {
-          monday: 1,
-          tuesday: 2,
-          wednesday: 4,
-          thursday: 8,
-          friday: 16,
-          saturday: 32,
-          sunday: 64
-        }[day];
+      for (let i = 0; i < selectedDaysArray.length; i++) {
+        const day = selectedDaysArray[i];
+        currentGroup.push(day);
+
+        if (i === selectedDaysArray.length - 1 ||
+            selectedDaysArray[i + 1] !== getNextDay(day)) {
+          groupedDays.push(currentGroup);
+          currentGroup = [];
+        }
+      }
+
+      const scheduleIds: string[] = [];
+      for (const group of groupedDays) {
+        let weekdayMask = 0;
+        for (const day of group) {
+          weekdayMask |= {
+            monday: 1,
+            tuesday: 2,
+            wednesday: 4,
+            thursday: 8,
+            friday: 16,
+            saturday: 32,
+            sunday: 64
+          }[day] || 0; // Provide a default value in case of an unexpected day
+        }
 
         const scheduleId = await createSchedule({
           startTime: scheduleForm.startTime,
           endTime: scheduleForm.endTime,
-          weekdayMask: dayMask
+          weekdayMask: weekdayMask
         });
-
         scheduleIds.push(scheduleId);
       }
 
@@ -280,6 +295,18 @@ const Staff = () => {
 
   const handlePrintPayroll = (employee: any, payroll: any) => {
     generatePayrollPDF(employee, payroll);
+  };
+
+  const getNextDay = (day: string): string | undefined => {
+    switch (day) {
+      case 'monday': return 'tuesday';
+      case 'tuesday': return 'wednesday';
+      case 'wednesday': return 'thursday';
+      case 'thursday': return 'friday';
+      case 'friday': return 'saturday';
+      case 'saturday': return 'sunday';
+      default: return undefined;
+    }
   };
 
   return (
