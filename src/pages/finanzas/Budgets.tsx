@@ -72,7 +72,7 @@ const Budgets = () => {
         area: item.itemType,
         quantity: item.quantity,
         price: item.price,
-        discount: item.discount,
+        discount: item.discount || 0,
         vat: item.vat,
         amount: item.price * item.quantity
       })),
@@ -100,7 +100,7 @@ const Budgets = () => {
         area: item.itemType,
         quantity: item.quantity,
         price: item.price,
-        discount: item.discount,
+        discount: item.discount || 0,
         vat: item.vat,
         amount: item.price * item.quantity
       })),
@@ -499,64 +499,49 @@ const Budgets = () => {
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500">Detalles del Presupuesto</h4>
-                  <div className="mt-2 border rounded-lg overflow-hidden">
+                  <h4 className="text-sm font-medium text-gray-500 mb-4">Artículos</h4>
+                  <div className="border rounded-lg overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artículo</th>
                           <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
-                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Descuento</th>
-                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
-                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                          <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Precio</th>
+                          <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
+                          <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {previewBudget.products.map((item: any, index: number) => {
-                          const subtotal = item.price * item.quantity;
-                          const discountAmount = subtotal * (item.discount / 100);
+                          const price = item.price;
+                          const quantity = item.quantity;
+                          const discount = item.discount || 0;
+                          const vat = item.vat;
+                          
+                          const subtotal = price * quantity;
+                          const discountAmount = subtotal * (discount / 100);
                           const afterDiscount = subtotal - discountAmount;
-                          const taxAmount = afterDiscount * (item.vat / 100);
+                          const taxAmount = afterDiscount * (vat / 100);
                           const total = afterDiscount + taxAmount;
                           
                           return (
                             <tr key={index}>
                               <td className="px-6 py-4 text-sm text-gray-900">
                                 <span className="font-semibold">{item.name}</span>
-                                <br />
-                                <span className="text-gray-500 text-xs capitalize">{item.itemType}</span>
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-900 text-center">
-                                {item.quantity}
+                                {quantity}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-900 text-right">
-                                {item.price.toLocaleString('es-ES', {
+                              <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                                {price.toLocaleString('es-ES', {
                                   style: 'currency',
                                   currency: 'EUR'
                                 })}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-900 text-right">
-                                {item.discount}%
-                                {item.discount > 0 && (
-                                  <div className="text-xs text-gray-500">
-                                    -{discountAmount.toLocaleString('es-ES', {
-                                      style: 'currency',
-                                      currency: 'EUR'
-                                    })}
-                                  </div>
-                                )}
+                              <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                                {vat}%
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-900 text-right">
-                                {item.vat}%
-                                <div className="text-xs text-gray-500">
-                                  {taxAmount.toLocaleString('es-ES', {
-                                    style: 'currency',
-                                    currency: 'EUR'
-                                  })}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
+                              <td className="px-6 py-4 text-sm font-medium text-gray-900 text-center">
                                 {total.toLocaleString('es-ES', {
                                   style: 'currency',
                                   currency: 'EUR'
@@ -565,17 +550,72 @@ const Budgets = () => {
                             </tr>
                           );
                         })}
-                        <tr className="bg-gray-50">
-                          <td colSpan={5} className="px-6 py-4 text-sm font-medium text-gray-900 text-right">Total</td>
-                          <td className="px-6 py-4 text-sm font-bold text-gray-900 text-right">
-                            {calculateBudgetTotal(previewBudget.products).toLocaleString('es-ES', {
-                              style: 'currency',
-                              currency: 'EUR'
-                            })}
-                          </td>
-                        </tr>
                       </tbody>
                     </table>
+                    
+                    {/* Summary section */}
+                    <div className="bg-gray-50 px-6 py-4 border-t">
+                      <div className="flex justify-end">
+                        <div className="w-64 space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Subtotal:</span>
+                            <span className="font-medium">
+                              {(() => {
+                                const subtotal = previewBudget.products.reduce((sum: number, item: any) => {
+                                  const price = item.price * item.quantity;
+                                  const discount = (item.discount || 0) / 100;
+                                  return sum + (price * (1 - discount));
+                                }, 0);
+                                return subtotal.toLocaleString('es-ES', {
+                                  style: 'currency',
+                                  currency: 'EUR'
+                                });
+                              })()}
+                            </span>
+                          </div>
+                          
+                          {/* VAT breakdown */}
+                          {(() => {
+                            const vatBreakdown: { [key: number]: number } = {};
+                            previewBudget.products.forEach((item: any) => {
+                              const price = item.price * item.quantity;
+                              const discount = (item.discount || 0) / 100;
+                              const afterDiscount = price * (1 - discount);
+                              const vatAmount = afterDiscount * (item.vat / 100);
+                              
+                              if (!vatBreakdown[item.vat]) {
+                                vatBreakdown[item.vat] = 0;
+                              }
+                              vatBreakdown[item.vat] += vatAmount;
+                            });
+                            
+                            return Object.entries(vatBreakdown).map(([rate, amount]) => (
+                              <div key={rate} className="flex justify-between text-sm">
+                                <span className="text-gray-600">IVA ({rate}%):</span>
+                                <span className="font-medium">
+                                  {amount.toLocaleString('es-ES', {
+                                    style: 'currency',
+                                    currency: 'EUR'
+                                  })}
+                                </span>
+                              </div>
+                            ));
+                          })()}
+                          
+                          <div className="border-t pt-2">
+                            <div className="flex justify-between text-base font-bold">
+                              <span>Total:</span>
+                              <span>
+                                {calculateBudgetTotal(previewBudget.products).toLocaleString('es-ES', {
+                                  style: 'currency',
+                                  currency: 'EUR'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

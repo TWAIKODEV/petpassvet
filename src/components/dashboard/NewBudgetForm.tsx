@@ -744,69 +744,103 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                   </div>
 
                   <div className="mt-8">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          <th className="text-left py-3 px-4 text-gray-700 font-medium">Descripción</th>
-                          <th className="text-center py-3 px-4 text-gray-700 font-medium">Cantidad</th>
-                          <th className="text-right py-3 px-4 text-gray-700 font-medium">Precio</th>
-                          <th className="text-right py-3 px-4 text-gray-700 font-medium">Descuento</th>
-                          <th className="text-right py-3 px-4 text-gray-700 font-medium">IVA</th>
-                          <th className="text-right py-3 px-4 text-gray-700 font-medium">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {budgetItems.map((item, index) => {
-                          const price = parseFloat(item.price) || 0;
-                          const quantity = parseFloat(item.quantity) || 1;
-                          const discount = parseFloat(item.discount) || 0;
-                          const subtotal = price * quantity;
-                          const discountAmount = subtotal * (discount / 100);
-                          const afterDiscount = subtotal - discountAmount;
-                          const tax = afterDiscount * (item.vat / 100);
-                          const total = afterDiscount + tax;
-                          
-                          return (
-                            <tr key={item.id}>
-                              <td className="py-4 px-4">
-                                <p className="font-medium text-gray-900">{item.name}</p>
-                                <p className="text-sm text-gray-500 capitalize">{item.itemType}</p>
-                              </td>
-                              <td className="text-center py-4 px-4 text-gray-900">
-                                {quantity}
-                              </td>
-                              <td className="text-right py-4 px-4 text-gray-900">
-                                {price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                              </td>
-                              <td className="text-right py-4 px-4 text-gray-900">
-                                {discount > 0 ? 
-                                  `${discount}% (${discountAmount.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })})` : 
-                                  '0%'}
-                              </td>
-                              <td className="text-right py-4 px-4 text-gray-900">
-                                {item.vat}%
-                                <div className="text-xs text-gray-500">
-                                  {tax.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                    <h4 className="text-lg font-medium text-gray-900 mb-4">Artículos</h4>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="text-left py-3 px-4 text-gray-700 font-medium uppercase text-xs">Artículo</th>
+                            <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">Cantidad</th>
+                            <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">Precio</th>
+                            <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">IVA</th>
+                            <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {budgetItems.map((item, index) => {
+                            const price = parseFloat(item.price) || 0;
+                            const quantity = parseFloat(item.quantity) || 1;
+                            const discount = parseFloat(item.discount) || 0;
+                            const subtotal = price * quantity;
+                            const discountAmount = subtotal * (discount / 100);
+                            const afterDiscount = subtotal - discountAmount;
+                            const tax = afterDiscount * (item.vat / 100);
+                            const total = afterDiscount + tax;
+                            
+                            return (
+                              <tr key={item.id}>
+                                <td className="py-4 px-4">
+                                  <p className="font-medium text-gray-900">{item.name}</p>
+                                </td>
+                                <td className="text-center py-4 px-4 text-gray-900">
+                                  {quantity}
+                                </td>
+                                <td className="text-center py-4 px-4 text-gray-900">
+                                  {price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                </td>
+                                <td className="text-center py-4 px-4 text-gray-900">
+                                  {item.vat}%
+                                </td>
+                                <td className="text-center py-4 px-4 text-gray-900 font-medium">
+                                  {total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      
+                      {/* Summary section */}
+                      <div className="bg-gray-50 px-4 py-4 border-t">
+                        <div className="flex justify-end">
+                          <div className="w-64 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Subtotal:</span>
+                              <span className="font-medium">
+                                {calculateTotal().subtotal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                              </span>
+                            </div>
+                            
+                            {/* VAT breakdown */}
+                            {(() => {
+                              const vatBreakdown: { [key: number]: number } = {};
+                              budgetItems.forEach((item) => {
+                                const price = parseFloat(item.price) || 0;
+                                const quantity = parseFloat(item.quantity) || 1;
+                                const discount = parseFloat(item.discount) || 0;
+                                const subtotal = price * quantity;
+                                const discountAmount = subtotal * (discount / 100);
+                                const afterDiscount = subtotal - discountAmount;
+                                const vatAmount = afterDiscount * (item.vat / 100);
+                                
+                                if (!vatBreakdown[item.vat]) {
+                                  vatBreakdown[item.vat] = 0;
+                                }
+                                vatBreakdown[item.vat] += vatAmount;
+                              });
+                              
+                              return Object.entries(vatBreakdown).map(([rate, amount]) => (
+                                <div key={rate} className="flex justify-between text-sm">
+                                  <span className="text-gray-600">IVA ({rate}%):</span>
+                                  <span className="font-medium">
+                                    {amount.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                  </span>
                                 </div>
-                              </td>
-                              <td className="text-right py-4 px-4 text-gray-900 font-medium">
-                                {total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t-2 border-gray-900">
-                          <td colSpan={5} className="py-4 px-4 text-right font-medium text-gray-900">
-                            Total General:
-                          </td>
-                          <td className="text-right py-4 px-4 font-bold text-gray-900 text-lg">
-                            {calculateTotal().total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                              ));
+                            })()}
+                            
+                            <div className="border-t pt-2">
+                              <div className="flex justify-between text-base font-bold">
+                                <span>Total:</span>
+                                <span>
+                                  {calculateTotal().total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-8 space-y-4">

@@ -233,85 +233,108 @@ export const generateBudgetPDF = (data: BudgetData): jsPDF => {
   addText(data.clientEmail, 120, 80);
   addText(data.clientPhone, 120, 85);
 
+  // Articles section
+  let yPos = 110;
+  doc.setFontSize(14);
+  addText('Artículos', 20, yPos);
+  yPos += 10;
+
   // Table Header
-  const tableTop = 105;
-  doc.setFillColor(240, 240, 240);
-  doc.rect(20, tableTop, 170, 8, 'F');
+  doc.setFillColor(248, 249, 250);
+  doc.rect(20, yPos, 170, 8, 'F');
 
   doc.setFontSize(10);
-  addText('Descripción', 25, tableTop + 6);
-  addText('Precio', 100, tableTop + 6);
-  addText('Descuento', 125, tableTop + 6);
-  addText('Base Imponible', 150, tableTop + 6);
-  addText('IVA (21%)', 175, tableTop + 6);
+  addText('ARTÍCULO', 25, yPos + 6);
+  addText('CANTIDAD', 80, yPos + 6, { align: 'center' });
+  addText('PRECIO', 120, yPos + 6, { align: 'center' });
+  addText('IVA', 150, yPos + 6, { align: 'center' });
+  addText('TOTAL', 175, yPos + 6, { align: 'center' });
 
   // Table Content
-  let yPos = tableTop + 15;
-  let totalBase = 0;
-  let totalTax = 0;
+  yPos += 15;
+  let subtotal = 0;
+  const vatBreakdown: { [key: number]: number } = {};
 
   data.items.forEach(item => {
+    const price = parseFloat(item.amount.toString()) || 0;
+    const quantity = item.quantity || 1;
+    const discount = item.discount || 0;
+    const vat = item.vat || 21;
+
+    // Calculate amounts
+    const itemSubtotal = price * quantity;
+    const discountAmount = itemSubtotal * (discount / 100);
+    const afterDiscount = itemSubtotal - discountAmount;
+    const vatAmount = afterDiscount * (vat / 100);
+    const total = afterDiscount + vatAmount;
+
     addText(item.description, 25, yPos);
-    addText(`Área: ${item.area}`, 25, yPos + 5, { fontSize: 8 });
 
-    const price = item.amount.toLocaleString('es-ES', { 
+    addText(quantity.toString(), 80, yPos, { align: 'center' });
+
+    addText(price.toLocaleString('es-ES', { 
       style: 'currency', 
       currency: 'EUR' 
-    });
-    addText(price, 100, yPos, { align: 'right' });
+    }), 120, yPos, { align: 'center' });
 
-    // Calculate discount if applicable
-    let discountText = '0%';
-    let baseAmount = item.amount;
+    addText(`${vat}%`, 150, yPos, { align: 'center' });
 
-    if (item.discount && item.discount > 0) {
-      discountText = `${item.discount}%`;
-      const discountAmount = item.amount * (item.discount / 100);
-      baseAmount = item.amount - discountAmount;
+    addText(total.toLocaleString('es-ES', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    }), 175, yPos, { align: 'center' });
+
+    subtotal += afterDiscount;
+    
+    // Group VAT amounts by rate
+    if (!vatBreakdown[vat]) {
+      vatBreakdown[vat] = 0;
     }
+    vatBreakdown[vat] += vatAmount;
 
-    addText(discountText, 125, yPos, { align: 'right' });
+    yPos += 12;
+  });
 
-    const baseAmountText = baseAmount.toLocaleString('es-ES', { 
+  // Add spacing
+  yPos += 10;
+
+  // Subtotal
+  doc.setLineWidth(0.5);
+  doc.line(20, yPos, 190, yPos);
+  yPos += 8;
+
+  doc.setFontSize(10);
+  addText('Subtotal:', 145, yPos);
+  addText(subtotal.toLocaleString('es-ES', { 
+    style: 'currency', 
+    currency: 'EUR' 
+  }), 175, yPos, { align: 'center' });
+
+  yPos += 8;
+
+  // VAT breakdown
+  Object.entries(vatBreakdown).forEach(([rate, amount]) => {
+    addText(`IVA (${rate}%):`, 145, yPos);
+    addText(amount.toLocaleString('es-ES', { 
       style: 'currency', 
       currency: 'EUR' 
-    });
-    addText(baseAmountText, 150, yPos, { align: 'right' });
-
-    const tax = (baseAmount * 0.21).toLocaleString('es-ES', { 
-      style: 'currency', 
-      currency: 'EUR' 
-    });
-    addText(tax, 175, yPos, { align: 'right' });
-
-    totalBase += baseAmount;
-    totalTax += baseAmount * 0.21;
-
-    yPos += 15;
+    }), 175, yPos, { align: 'center' });
+    yPos += 8;
   });
 
   // Total
-  doc.setLineWidth(0.5);
-  doc.line(20, yPos, 190, yPos);
-
-  yPos += 10;
-  doc.setFontSize(10);
-  addText('Base Imponible:', 130, yPos);
-  addText(totalBase.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' }), 175, yPos, { align: 'right' });
-
+  yPos += 5;
+  doc.setLineWidth(1);
+  doc.line(145, yPos, 190, yPos);
   yPos += 8;
-  addText('IVA (21%):', 130, yPos);
-  addText(totalTax.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' }), 175, yPos, { align: 'right' });
 
-  yPos += 10;
-  doc.setLineWidth(0.5);
-  doc.line(130, yPos, 190, yPos);
-
-  yPos += 8;
   doc.setFontSize(12);
-  addText('Total:', 130, yPos);
-  const grandTotal = (totalBase + totalTax).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
-  addText(grandTotal, 175, yPos, { align: 'right' });
+  addText('Total:', 145, yPos);
+  const finalTotal = subtotal + Object.values(vatBreakdown).reduce((sum, amount) => sum + amount, 0);
+  addText(finalTotal.toLocaleString('es-ES', { 
+    style: 'currency', 
+    currency: 'EUR' 
+  }), 175, yPos, { align: 'center' });
 
   // Notes
   if (data.notes) {
