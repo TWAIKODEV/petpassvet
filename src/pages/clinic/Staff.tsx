@@ -38,7 +38,7 @@ import { generatePayrollPDF } from '../../utils/payrollPdfGenerator';
 const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-  const [activeTab, setActiveTab<'informacion' | 'nominas'>('informacion');
+  const [activeTab, setActiveTab] = useState<'informacion' | 'nominas'>('informacion');
   const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
