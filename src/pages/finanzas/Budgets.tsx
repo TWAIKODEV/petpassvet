@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, Filter, Download, Calendar, RefreshCw, FileText, Eye, Printer, X, Mail, MessageSquare, Phone, Plus } from 'lucide-react';
 import Card from '../../components/common/Card';
@@ -6,84 +7,8 @@ import Input from '../../components/common/Input';
 import { generateBudgetPDF } from '../../utils/pdfGenerator';
 import * as XLSX from 'xlsx';
 import NewBudgetForm from '../../components/dashboard/NewBudgetForm';
-
-// Mock data for budgets
-const mockBudgets = [
-  {
-    id: '1',
-    number: 'PRES-202505001',
-    date: '2025-05-21',
-    validUntil: '2025-06-21',
-    client: {
-      name: 'María García',
-      nif: 'B12345678',
-      email: 'maria.garcia@example.com',
-      phone: '+34 666 777 888'
-    },
-    pet: {
-      name: 'Luna',
-      species: 'Perro',
-      breed: 'Labrador',
-      age: 3
-    },
-    area: 'Veterinaria',
-    concept: 'Consulta General + Vacunación',
-    professional: 'Dr. Alejandro Ramírez',
-    amount: 150.00,
-    status: 'pending',
-    shared: false
-  },
-  {
-    id: '2',
-    number: 'PRES-202505002',
-    date: '2025-05-20',
-    validUntil: '2025-06-20',
-    client: {
-      name: 'Carlos Rodríguez',
-      nif: 'Y8765432M',
-      email: 'carlos.rodriguez@example.com',
-      phone: '+34 666 888 999'
-    },
-    pet: {
-      name: 'Rocky',
-      species: 'Perro',
-      breed: 'Pastor Alemán',
-      age: 5
-    },
-    area: 'Peluquería',
-    concept: 'Corte y Baño',
-    professional: 'Ana López',
-    amount: 85.50,
-    status: 'accepted',
-    shared: true,
-    shareMethod: 'email'
-  },
-  {
-    id: '3',
-    number: 'PRES-202505003',
-    date: '2025-05-19',
-    validUntil: '2025-06-19',
-    client: {
-      name: 'Laura Martínez',
-      nif: 'Z9876543X',
-      email: 'laura.martinez@example.com',
-      phone: '+34 666 999 000'
-    },
-    pet: {
-      name: 'Milo',
-      species: 'Gato',
-      breed: 'Siamés',
-      age: 2
-    },
-    area: 'Veterinaria',
-    concept: 'Revisión Dental + Limpieza',
-    professional: 'Dr. Miguel Torres',
-    amount: 120.00,
-    status: 'rejected',
-    shared: true,
-    shareMethod: 'whatsapp'
-  }
-];
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const Budgets = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -112,36 +37,46 @@ const Budgets = () => {
   const [showSmsForm, setShowSmsForm] = useState(false);
   const [showNewBudgetForm, setShowNewBudgetForm] = useState(false);
 
+  // Get budgets from database
+  const budgets = useQuery(api.budgets.getBudgets) || [];
+  const updateBudgetShared = useMutation(api.budgets.updateBudgetShared);
+
   // Filter budgets based on search term and selected status
-  const filteredBudgets = mockBudgets.filter(budget => 
+  const filteredBudgets = budgets.filter(budget => 
     (selectedStatus === 'all' || budget.status === selectedStatus) &&
-    (budget.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     budget.pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (budget.patient?.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     budget.patient?.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     budget.patient?.pets?.[0]?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      budget.number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleNewBudget = (budgetData: any) => {
-    // Here you would typically make an API call to save the new budget
     console.log('New budget data:', budgetData);
     setShowNewBudgetForm(false);
   };
 
   const handleDownloadBudget = (budget: any) => {
+    if (!budget.patient) return;
+
     const data = {
       budgetNumber: budget.number,
       date: budget.date,
       validUntil: budget.validUntil,
-      clientName: budget.client.name,
-      clientAddress: "Dirección del cliente",
-      clientNif: budget.client.nif,
-      clientEmail: budget.client.email,
-      clientPhone: budget.client.phone,
-      items: [{
-        description: budget.concept,
-        area: budget.area,
-        amount: budget.amount
-      }],
-      notes: ""
+      clientName: `${budget.patient.firstName} ${budget.patient.lastName}`,
+      clientAddress: budget.billingAddress || budget.patient.address || "Dirección no especificada",
+      clientNif: budget.nif || "NIF no especificado",
+      clientEmail: budget.patient.email,
+      clientPhone: budget.patient.phone,
+      items: budget.products.map((item: any) => ({
+        description: item.name,
+        area: item.itemType,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+        vat: item.vat,
+        amount: item.price * item.quantity
+      })),
+      notes: budget.notes || ""
     };
 
     const doc = generateBudgetPDF(data);
@@ -149,21 +84,27 @@ const Budgets = () => {
   };
 
   const handlePrintBudget = (budget: any) => {
+    if (!budget.patient) return;
+
     const data = {
       budgetNumber: budget.number,
       date: budget.date,
       validUntil: budget.validUntil,
-      clientName: budget.client.name,
-      clientAddress: "Dirección del cliente",
-      clientNif: budget.client.nif,
-      clientEmail: budget.client.email,
-      clientPhone: budget.client.phone,
-      items: [{
-        description: budget.concept,
-        area: budget.area,
-        amount: budget.amount
-      }],
-      notes: ""
+      clientName: `${budget.patient.firstName} ${budget.patient.lastName}`,
+      clientAddress: budget.billingAddress || budget.patient.address || "Dirección no especificada",
+      clientNif: budget.nif || "NIF no especificado",
+      clientEmail: budget.patient.email,
+      clientPhone: budget.patient.phone,
+      items: budget.products.map((item: any) => ({
+        description: item.name,
+        area: item.itemType,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+        vat: item.vat,
+        amount: item.price * item.quantity
+      })),
+      notes: budget.notes || ""
     };
 
     const doc = generateBudgetPDF(data);
@@ -176,19 +117,19 @@ const Budgets = () => {
     
     // Pre-populate sharing forms with client data
     setEmailData({
-      to: budget.client.email || '',
+      to: budget.patient?.email || '',
       subject: `Presupuesto ${budget.number} - ClinicPro`,
-      message: `Estimado/a ${budget.client.name},\n\nAdjunto encontrará el presupuesto solicitado con número ${budget.number}.\n\nEl presupuesto es válido hasta el ${new Date(budget.validUntil).toLocaleDateString('es-ES')}.\n\nSi tiene alguna pregunta, no dude en contactarnos.\n\nSaludos cordiales,\nEquipo ClinicPro`
+      message: `Estimado/a ${budget.patient?.firstName} ${budget.patient?.lastName},\n\nAdjunto encontrará el presupuesto solicitado con número ${budget.number}.\n\nEl presupuesto es válido hasta el ${new Date(budget.validUntil).toLocaleDateString('es-ES')}.\n\nSi tiene alguna pregunta, no dude en contactarnos.\n\nSaludos cordiales,\nEquipo ClinicPro`
     });
     
     setWhatsappData({
-      number: budget.client.phone || '',
-      message: `Hola ${budget.client.name}, le enviamos el presupuesto solicitado con número ${budget.number}. El presupuesto es válido hasta el ${new Date(budget.validUntil).toLocaleDateString('es-ES')}. Saludos, ClinicPro.`
+      number: budget.patient?.phone || '',
+      message: `Hola ${budget.patient?.firstName}, le enviamos el presupuesto solicitado con número ${budget.number}. El presupuesto es válido hasta el ${new Date(budget.validUntil).toLocaleDateString('es-ES')}. Saludos, ClinicPro.`
     });
     
     setSmsData({
-      number: budget.client.phone || '',
-      message: `ClinicPro: Su presupuesto ${budget.number} por ${budget.amount.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} está disponible hasta ${new Date(budget.validUntil).toLocaleDateString('es-ES')}.`
+      number: budget.patient?.phone || '',
+      message: `ClinicPro: Su presupuesto ${budget.number} está disponible hasta ${new Date(budget.validUntil).toLocaleDateString('es-ES')}.`
     });
   };
 
@@ -203,83 +144,82 @@ const Budgets = () => {
     setShowShareOptions(false);
   };
 
-  const handleSendEmail = () => {
-    // In a real app, this would send an email with the budget attached
+  const handleSendEmail = async () => {
     console.log('Sending email:', emailData);
     
-    // Close the form
-    setShowEmailForm(false);
-    
-    // Update the budget status to indicate it was shared
     if (previewBudget) {
-      const updatedBudget = { ...previewBudget, shared: true, shareMethod: 'email' };
-      // Here you would typically update the budget in your database
-      console.log('Updated budget:', updatedBudget);
+      await updateBudgetShared({
+        id: previewBudget._id,
+        shareMethod: 'email'
+      });
     }
+    
+    setShowEmailForm(false);
   };
 
-  const handleSendWhatsapp = () => {
-    // In a real app, this would send a WhatsApp message with the budget
+  const handleSendWhatsapp = async () => {
     console.log('Sending WhatsApp:', whatsappData);
     
-    // For demo purposes, we'll open a WhatsApp web link
     const encodedMessage = encodeURIComponent(whatsappData.message);
     const whatsappUrl = `https://wa.me/${whatsappData.number.replace(/\D/g, '')}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
     
-    // Close the form
-    setShowWhatsappForm(false);
-    
-    // Update the budget status to indicate it was shared
     if (previewBudget) {
-      const updatedBudget = { ...previewBudget, shared: true, shareMethod: 'whatsapp' };
-      // Here you would typically update the budget in your database
-      console.log('Updated budget:', updatedBudget);
+      await updateBudgetShared({
+        id: previewBudget._id,
+        shareMethod: 'whatsapp'
+      });
     }
+    
+    setShowWhatsappForm(false);
   };
 
-  const handleSendSms = () => {
-    // In a real app, this would send an SMS with the budget
+  const handleSendSms = async () => {
     console.log('Sending SMS:', smsData);
     
-    // For demo purposes, we'll try to open the native SMS app
     const encodedMessage = encodeURIComponent(smsData.message);
     const smsUrl = `sms:${smsData.number}?body=${encodedMessage}`;
     window.location.href = smsUrl;
     
-    // Close the form
-    setShowSmsForm(false);
-    
-    // Update the budget status to indicate it was shared
     if (previewBudget) {
-      const updatedBudget = { ...previewBudget, shared: true, shareMethod: 'sms' };
-      // Here you would typically update the budget in your database
-      console.log('Updated budget:', updatedBudget);
+      await updateBudgetShared({
+        id: previewBudget._id,
+        shareMethod: 'sms'
+      });
     }
+    
+    setShowSmsForm(false);
   };
 
   const handleExportExcel = () => {
-    const excelData = mockBudgets.map(budget => ({
+    const excelData = budgets.map(budget => ({
       'Nº Presupuesto': budget.number,
       'Fecha': new Date(budget.date).toLocaleDateString('es-ES'),
       'Válido hasta': new Date(budget.validUntil).toLocaleDateString('es-ES'),
-      'Cliente': budget.client.name,
-      'NIF/CIF': budget.client.nif,
-      'Mascota': `${budget.pet.name} (${budget.pet.species} ${budget.pet.breed}, ${budget.pet.age} años)`,
-      'Área': budget.area,
-      'Concepto': budget.concept,
-      'Profesional': budget.professional,
-      'Importe': budget.amount,
+      'Cliente': `${budget.patient?.firstName} ${budget.patient?.lastName}`,
+      'NIF/CIF': budget.nif || 'No especificado',
+      'Mascota': budget.patient?.pets?.[0] ? `${budget.patient.pets[0].name} (${budget.patient.pets[0].species} ${budget.patient.pets[0].breed})` : 'No especificada',
+      'Importe': budget.products.reduce((total: number, item: any) => {
+        const subtotal = item.price * item.quantity * (1 - item.discount / 100);
+        return total + subtotal * (1 + item.vat / 100);
+      }, 0),
       'Estado': budget.status === 'pending' ? 'Pendiente' : 
                 budget.status === 'accepted' ? 'Aceptado' : 'Rechazado',
-      'Compartido': budget.shared ? 'Sí' : 'No',
-      'Método': budget.shareMethod || '-'
+      'Compartido': budget.shared.length > 0 ? 'Sí' : 'No',
+      'Métodos': budget.shared.join(', ')
     }));
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(excelData);
     XLSX.utils.book_append_sheet(wb, ws, 'Presupuestos');
     XLSX.writeFile(wb, 'presupuestos.xlsx');
+  };
+
+  const calculateBudgetTotal = (products: any[]) => {
+    return products.reduce((total, item) => {
+      const subtotal = item.price * item.quantity * (1 - item.discount / 100);
+      return total + subtotal * (1 + item.vat / 100);
+    }, 0);
   };
 
   // Status styles and labels
@@ -395,9 +335,6 @@ const Budgets = () => {
                   Mascota
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Concepto
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Importe
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -413,7 +350,7 @@ const Budgets = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredBudgets.map((budget) => (
-                <tr key={budget.id} className="hover:bg-gray-50">
+                <tr key={budget._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <FileText size={16} className="text-gray-400 mr-2" />
@@ -431,25 +368,25 @@ const Budgets = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{budget.client.name}</div>
-                    <div className="text-sm text-gray-500">{budget.client.nif}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{budget.pet.name}</div>
-                    <div className="text-sm text-gray-500">
-                      {budget.pet.species} {budget.pet.breed}, {budget.pet.age} años
+                    <div className="text-sm font-medium text-gray-900">
+                      {budget.patient ? `${budget.patient.firstName} ${budget.patient.lastName}` : 'Cliente no encontrado'}
                     </div>
+                    <div className="text-sm text-gray-500">{budget.nif || 'NIF no especificado'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      <span className="font-semibold">{budget.area}</span>
-                      <br />
-                      {budget.concept}
+                    <div className="text-sm font-medium text-gray-900">
+                      {budget.patient?.pets?.[0]?.name || 'No especificada'}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {budget.patient?.pets?.[0] ? 
+                        `${budget.patient.pets[0].species} ${budget.patient.pets[0].breed}` : 
+                        ''
+                      }
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {budget.amount.toLocaleString('es-ES', {
+                      {calculateBudgetTotal(budget.products).toLocaleString('es-ES', {
                         style: 'currency',
                         currency: 'EUR'
                       })}
@@ -463,13 +400,13 @@ const Budgets = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {budget.shared ? (
-                      <div className="flex items-center">
-                        {shareMethodIcons[budget.shareMethod]}
-                        <span className="ml-1 text-sm text-gray-900">
-                          {budget.shareMethod === 'email' ? 'Email' : 
-                           budget.shareMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
-                        </span>
+                    {budget.shared.length > 0 ? (
+                      <div className="flex items-center space-x-1">
+                        {budget.shared.map((method: string) => (
+                          <div key={method} className="flex items-center">
+                            {shareMethodIcons[method as keyof typeof shareMethodIcons]}
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <span className="text-sm text-gray-500">No</span>
@@ -527,14 +464,21 @@ const Budgets = () => {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Cliente</h4>
-                    <p className="mt-1 text-sm text-gray-900">{previewBudget.client.name}</p>
-                    <p className="text-sm text-gray-500">{previewBudget.client.nif}</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {previewBudget.patient ? `${previewBudget.patient.firstName} ${previewBudget.patient.lastName}` : 'Cliente no encontrado'}
+                    </p>
+                    <p className="text-sm text-gray-500">{previewBudget.nif || 'NIF no especificado'}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Mascota</h4>
-                    <p className="mt-1 text-sm text-gray-900">{previewBudget.pet.name}</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {previewBudget.patient?.pets?.[0]?.name || 'No especificada'}
+                    </p>
                     <p className="text-sm text-gray-500">
-                      {previewBudget.pet.species} {previewBudget.pet.breed}, {previewBudget.pet.age} años
+                      {previewBudget.patient?.pets?.[0] ? 
+                        `${previewBudget.patient.pets[0].species} ${previewBudget.patient.pets[0].breed}` : 
+                        ''
+                      }
                     </p>
                   </div>
                 </div>
@@ -560,39 +504,71 @@ const Budgets = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
-                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Importe</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artículo</th>
+                          <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Descuento</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        <tr>
-                          <td className="px-6 py-4 text-sm text-gray-900">
-                            <span className="font-semibold">{previewBudget.area}</span>
-                            <br />
-                            {previewBudget.concept}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-900 text-right">
-                            {previewBudget.amount.toLocaleString('es-ES', {
-                              style: 'currency',
-                              currency: 'EUR'
-                            })}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 text-sm text-gray-900">
-                            IVA (21%)
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-900 text-right">
-                            {(previewBudget.amount * 0.21).toLocaleString('es-ES', {
-                              style: 'currency',
-                              currency: 'EUR'
-                            })}
-                          </td>
-                        </tr>
+                        {previewBudget.products.map((item: any, index: number) => {
+                          const subtotal = item.price * item.quantity;
+                          const discountAmount = subtotal * (item.discount / 100);
+                          const afterDiscount = subtotal - discountAmount;
+                          const taxAmount = afterDiscount * (item.vat / 100);
+                          const total = afterDiscount + taxAmount;
+                          
+                          return (
+                            <tr key={index}>
+                              <td className="px-6 py-4 text-sm text-gray-900">
+                                <span className="font-semibold">{item.name}</span>
+                                <br />
+                                <span className="text-gray-500 text-xs capitalize">{item.itemType}</span>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                                {item.quantity}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900 text-right">
+                                {item.price.toLocaleString('es-ES', {
+                                  style: 'currency',
+                                  currency: 'EUR'
+                                })}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900 text-right">
+                                {item.discount}%
+                                {item.discount > 0 && (
+                                  <div className="text-xs text-gray-500">
+                                    -{discountAmount.toLocaleString('es-ES', {
+                                      style: 'currency',
+                                      currency: 'EUR'
+                                    })}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900 text-right">
+                                {item.vat}%
+                                <div className="text-xs text-gray-500">
+                                  {taxAmount.toLocaleString('es-ES', {
+                                    style: 'currency',
+                                    currency: 'EUR'
+                                  })}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
+                                {total.toLocaleString('es-ES', {
+                                  style: 'currency',
+                                  currency: 'EUR'
+                                })}
+                              </td>
+                            </tr>
+                          );
+                        })}
                         <tr className="bg-gray-50">
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900">Total</td>
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
-                            {(previewBudget.amount * 1.21).toLocaleString('es-ES', {
+                          <td colSpan={5} className="px-6 py-4 text-sm font-medium text-gray-900 text-right">Total</td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-900 text-right">
+                            {calculateBudgetTotal(previewBudget.products).toLocaleString('es-ES', {
                               style: 'currency',
                               currency: 'EUR'
                             })}
@@ -603,33 +579,35 @@ const Budgets = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Profesional</h4>
-                    <p className="mt-1 text-sm text-gray-900">{previewBudget.professional}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Estado</h4>
-                    <p className="mt-1">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        statusStyles[previewBudget.status]
-                      }`}>
-                        {statusLabels[previewBudget.status]}
-                      </span>
-                    </p>
-                  </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Estado</h4>
+                  <p className="mt-1">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      statusStyles[previewBudget.status]
+                    }`}>
+                      {statusLabels[previewBudget.status]}
+                    </span>
+                  </p>
                 </div>
 
-                {previewBudget.shared && (
+                {previewBudget.shared.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Compartido vía</h4>
-                    <p className="mt-1 flex items-center">
-                      {shareMethodIcons[previewBudget.shareMethod]}
-                      <span className="ml-1 text-sm text-gray-900">
-                        {previewBudget.shareMethod === 'email' ? 'Email' : 
-                         previewBudget.shareMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
-                      </span>
-                    </p>
+                    <div className="mt-1 flex items-center space-x-2">
+                      {previewBudget.shared.map((method: string) => (
+                        <div key={method} className="flex items-center">
+                          {shareMethodIcons[method as keyof typeof shareMethodIcons]}
+                          <span className="ml-1 text-sm text-gray-900 capitalize">{method}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {previewBudget.notes && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Notas</h4>
+                    <p className="mt-1 text-sm text-gray-900">{previewBudget.notes}</p>
                   </div>
                 )}
               </div>

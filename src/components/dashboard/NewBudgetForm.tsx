@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { X, Search, Calendar, Euro, FileText, Printer, Download, Receipt, Mail, MessageSquare, Phone, Share2, Plus, Trash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../common/Button';
 import Input from '../common/Input';
-import { mockPatients } from '../../data/mockData';
 import { generateBudgetPDF } from '../../utils/pdfGenerator';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 interface NewBudgetFormProps {
   onClose: () => void;
@@ -13,10 +15,13 @@ interface NewBudgetFormProps {
 
 interface BudgetItem {
   id: string;
-  serviceArea: string;
-  product: string;
+  itemId: string;
+  itemType: 'product' | 'service' | 'medicine';
+  name: string;
+  quantity: string;
   price: string;
   discount: string;
+  vat: number;
 }
 
 const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
@@ -36,10 +41,13 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([
     {
       id: Date.now().toString(),
-      serviceArea: '',
-      product: '',
+      itemId: '',
+      itemType: 'product',
+      name: '',
+      quantity: '1',
       price: '',
-      discount: '0'
+      discount: '0',
+      vat: 21
     }
   ]);
   const [formData, setFormData] = useState({
@@ -64,48 +72,67 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
   const [showWhatsappForm, setShowWhatsappForm] = useState(false);
   const [showSmsForm, setShowSmsForm] = useState(false);
 
+  // Fetch data from database
+  const patients = useQuery(api.patients.getPatients) || [];
+  const budgetItemsData = useQuery(api.budgets.getBudgetItems);
+  const createBudget = useMutation(api.budgets.createBudget);
+  const updateBudgetShared = useMutation(api.budgets.updateBudgetShared);
+
   // Check if budget can be generated
   const canGenerateBudget = 
     selectedPatient && 
     budgetItems.length > 0 &&
     budgetItems.every(item => 
-      item.serviceArea.trim() !== '' && 
-      item.product.trim() !== '' && 
+      item.itemId !== '' && 
+      item.name.trim() !== '' && 
       item.price !== ''
     );
 
-  const filteredPatients = mockPatients.filter(patient => 
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredPatients = patients.filter(patient => 
+    `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    patient.pets?.some(pet => pet.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.phone.includes(searchTerm)
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPatient) return;
 
-    const budgetInfo = {
-      ...formData,
-      ...budgetData,
-      items: budgetItems,
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.name,
-      petName: selectedPatient.pet.name,
-      status: 'pending',
-      shareMethod
-    };
+    try {
+      const budgetId = await createBudget({
+        patientId: selectedPatient._id,
+        date: formData.date,
+        validUntil: budgetData.validUntil,
+        number: budgetData.number,
+        products: budgetItems.map(item => ({
+          itemId: item.itemId,
+          itemType: item.itemType,
+          name: item.name,
+          quantity: parseFloat(item.quantity) || 1,
+          price: parseFloat(item.price) || 0,
+          discount: parseFloat(item.discount) || 0,
+          vat: item.vat
+        })),
+        nif: budgetData.clientInfo.nif,
+        billingAddress: budgetData.clientInfo.address,
+        notes: formData.notes || budgetData.notes,
+        status: 'pending',
+        shared: shareMethod ? [shareMethod] : []
+      });
 
-    onSubmit(budgetInfo);
-    onClose();
+      onSubmit({ budgetId, budgetNumber: budgetData.number });
+      onClose();
 
-    // Navigate to a confirmation page or back to dashboard
-    navigate('/dashboard', { 
-      state: { 
-        newBudget: true,
-        budgetNumber: budgetData.number
-      } 
-    });
+      navigate('/finanzas/presupuestos', { 
+        state: { 
+          newBudget: true,
+          budgetNumber: budgetData.number
+        } 
+      });
+    } catch (error) {
+      console.error('Error creating budget:', error);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -135,11 +162,32 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
     }));
   };
 
-  const handleItemChange = (id: string, field: keyof BudgetItem, value: string) => {
+  const handleItemChange = (id: string, field: keyof BudgetItem, value: string | number) => {
     setBudgetItems(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, [field]: value } : item
-      )
+      prev.map(item => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+          
+          // If itemId changes, find the selected item and update name, price, and vat
+          if (field === 'itemId' && budgetItemsData) {
+            const allItems = [
+              ...budgetItemsData.products,
+              ...budgetItemsData.services,
+              ...budgetItemsData.medicines
+            ];
+            const selectedItem = allItems.find(i => i._id === value);
+            if (selectedItem) {
+              updatedItem.name = selectedItem.name;
+              updatedItem.price = selectedItem.basePrice.toString();
+              updatedItem.vat = selectedItem.vat;
+              updatedItem.itemType = selectedItem.type;
+            }
+          }
+          
+          return updatedItem;
+        }
+        return item;
+      })
     );
   };
 
@@ -148,10 +196,13 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
       ...prev, 
       {
         id: Date.now().toString(),
-        serviceArea: '',
-        product: '',
+        itemId: '',
+        itemType: 'product',
+        name: '',
+        quantity: '1',
         price: '',
-        discount: '0'
+        discount: '0',
+        vat: 21
       }
     ]);
   };
@@ -173,16 +224,19 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
       budgetNumber: budgetData.number,
       date: formData.date,
       validUntil: budgetData.validUntil,
-      clientName: selectedPatient.name,
-      clientAddress: budgetData.clientInfo.address || "Dirección no especificada",
+      clientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
+      clientAddress: budgetData.clientInfo.address || selectedPatient.address || "Dirección no especificada",
       clientNif: budgetData.clientInfo.nif || "NIF no especificado",
       clientEmail: selectedPatient.email,
       clientPhone: selectedPatient.phone,
       items: budgetItems.map(item => ({
-        description: item.product,
-        area: item.serviceArea,
-        amount: parseFloat(item.price),
-        discount: parseFloat(item.discount) || 0
+        description: item.name,
+        area: item.itemType,
+        quantity: parseFloat(item.quantity) || 1,
+        price: parseFloat(item.price) || 0,
+        discount: parseFloat(item.discount) || 0,
+        vat: item.vat,
+        amount: (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 1)
       })),
       notes: formData.notes || budgetData.notes
     };
@@ -197,9 +251,13 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
     // Calculate total amount for message
     const totalAmount = budgetItems.reduce((sum, item) => {
       const price = parseFloat(item.price) || 0;
+      const quantity = parseFloat(item.quantity) || 1;
       const discount = parseFloat(item.discount) || 0;
-      const discountAmount = price * (discount / 100);
-      return sum + (price - discountAmount);
+      const subtotal = price * quantity;
+      const discountAmount = subtotal * (discount / 100);
+      const afterDiscount = subtotal - discountAmount;
+      const tax = afterDiscount * (item.vat / 100);
+      return sum + afterDiscount + tax;
     }, 0);
     
     const formattedTotal = totalAmount.toLocaleString('es-ES', { 
@@ -211,14 +269,14 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
       setEmailData({
         to: selectedPatient.email || '',
         subject: `Presupuesto ${budgetData.number} - ClinicPro`,
-        message: `Estimado/a ${selectedPatient.name},\n\nAdjunto encontrará el presupuesto solicitado con número ${budgetData.number} por un importe total de ${formattedTotal} (IVA incluido).\n\nEl presupuesto es válido hasta el ${new Date(budgetData.validUntil).toLocaleDateString('es-ES')}.\n\nSi tiene alguna pregunta, no dude en contactarnos.\n\nSaludos cordiales,\nEquipo ClinicPro`
+        message: `Estimado/a ${selectedPatient.firstName} ${selectedPatient.lastName},\n\nAdjunto encontrará el presupuesto solicitado con número ${budgetData.number} por un importe total de ${formattedTotal} (IVA incluido).\n\nEl presupuesto es válido hasta el ${new Date(budgetData.validUntil).toLocaleDateString('es-ES')}.\n\nSi tiene alguna pregunta, no dude en contactarnos.\n\nSaludos cordiales,\nEquipo ClinicPro`
       });
       setShowEmailForm(true);
     } 
     else if (method === 'whatsapp') {
       setWhatsappData({
         number: selectedPatient.phone || '',
-        message: `Hola ${selectedPatient.name}, le enviamos el presupuesto solicitado con número ${budgetData.number} por un importe de ${formattedTotal} (IVA incluido). El presupuesto es válido hasta el ${new Date(budgetData.validUntil).toLocaleDateString('es-ES')}. Saludos, ClinicPro.`
+        message: `Hola ${selectedPatient.firstName}, le enviamos el presupuesto solicitado con número ${budgetData.number} por un importe de ${formattedTotal} (IVA incluido). El presupuesto es válido hasta el ${new Date(budgetData.validUntil).toLocaleDateString('es-ES')}. Saludos, ClinicPro.`
       });
       setShowWhatsappForm(true);
     }
@@ -232,38 +290,29 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
   };
 
   const handleSendEmail = () => {
-    // In a real app, this would send an email with the budget attached
     console.log('Sending email:', emailData);
-    
-    // Close the form and proceed with form submission
     setShowEmailForm(false);
     handleSubmit(new Event('submit') as any);
   };
 
   const handleSendWhatsapp = () => {
-    // In a real app, this would send a WhatsApp message with the budget
     console.log('Sending WhatsApp:', whatsappData);
     
-    // For demo purposes, we'll open a WhatsApp web link
     const encodedMessage = encodeURIComponent(whatsappData.message);
     const whatsappUrl = `https://wa.me/${whatsappData.number.replace(/\D/g, '')}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
     
-    // Close the form and proceed with form submission
     setShowWhatsappForm(false);
     handleSubmit(new Event('submit') as any);
   };
 
   const handleSendSms = () => {
-    // In a real app, this would send an SMS with the budget
     console.log('Sending SMS:', smsData);
     
-    // For demo purposes, we'll try to open the native SMS app
     const encodedMessage = encodeURIComponent(smsData.message);
     const smsUrl = `sms:${smsData.number}?body=${encodedMessage}`;
     window.location.href = smsUrl;
     
-    // Close the form and proceed with form submission
     setShowSmsForm(false);
     handleSubmit(new Event('submit') as any);
   };
@@ -271,15 +320,17 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
   const calculateTotal = () => {
     return budgetItems.reduce((totals, item) => {
       const price = parseFloat(item.price) || 0;
+      const quantity = parseFloat(item.quantity) || 1;
       const discount = parseFloat(item.discount) || 0;
-      const discountAmount = price * (discount / 100);
-      const subtotal = price - discountAmount;
-      const tax = subtotal * 0.21; // 21% IVA
+      const subtotal = price * quantity;
+      const discountAmount = subtotal * (discount / 100);
+      const afterDiscount = subtotal - discountAmount;
+      const tax = afterDiscount * (item.vat / 100);
       
       return {
-        subtotal: totals.subtotal + subtotal,
+        subtotal: totals.subtotal + afterDiscount,
         tax: totals.tax + tax,
-        total: totals.total + subtotal + tax
+        total: totals.total + afterDiscount + tax
       };
     }, { subtotal: 0, tax: 0, total: 0 });
   };
@@ -314,18 +365,20 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                   <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
                     {filteredPatients.map(patient => (
                       <button
-                        key={patient.id}
+                        key={patient._id}
                         type="button"
                         className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start"
                         onClick={() => setSelectedPatient(patient)}
                       >
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{patient.name}</p>
+                          <p className="text-sm font-medium text-gray-900">{patient.firstName} {patient.lastName}</p>
                           <p className="text-sm text-gray-500">{patient.email} • {patient.phone}</p>
                           <div className="mt-1">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {patient.pet.name} • {patient.pet.breed} • {patient.pet.sex === 'male' ? 'Macho' : 'Hembra'}
-                            </span>
+                            {patient.pets && patient.pets.length > 0 && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {patient.pets[0].name} • {patient.pets[0].breed} • {patient.pets[0].sex === 'male' ? 'Macho' : 'Hembra'}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -344,11 +397,13 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-sm font-medium text-blue-900">Cliente Seleccionado</h3>
-                      <p className="mt-1 text-sm text-blue-700">{selectedPatient.name}</p>
+                      <p className="mt-1 text-sm text-blue-700">{selectedPatient.firstName} {selectedPatient.lastName}</p>
                       <div className="mt-1">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {selectedPatient.pet.name} • {selectedPatient.pet.breed}
-                        </span>
+                        {selectedPatient.pets && selectedPatient.pets.length > 0 && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {selectedPatient.pets[0].name} • {selectedPatient.pets[0].breed}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <button
@@ -414,7 +469,7 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                       icon={<Plus size={16} />}
                       onClick={addBudgetItem}
                     >
-                      Añadir Producto/Servicio
+                      Añadir Artículo
                     </Button>
                   </div>
                   
@@ -422,7 +477,7 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                     {budgetItems.map((item, index) => (
                       <div key={item.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
                         <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-sm font-medium text-gray-700">Producto/Servicio #{index + 1}</h4>
+                          <h4 className="text-sm font-medium text-gray-700">Artículo #{index + 1}</h4>
                           {budgetItems.length > 1 && (
                             <button
                               type="button"
@@ -437,38 +492,71 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Área de Servicio
+                              Tipo de Artículo
                             </label>
                             <select
-                              value={item.serviceArea}
-                              onChange={(e) => handleItemChange(item.id, 'serviceArea', e.target.value)}
+                              value={item.itemType}
+                              onChange={(e) => handleItemChange(item.id, 'itemType', e.target.value as 'product' | 'service' | 'medicine')}
                               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                               required
                             >
-                              <option value="">Seleccionar área</option>
-                              <option value="Veterinaria">Veterinaria</option>
-                              <option value="Peluquería">Peluquería</option>
-                              <option value="Farmacia">Farmacia</option>
-                              <option value="Tienda">Tienda</option>
+                              <option value="product">Producto</option>
+                              <option value="service">Servicio</option>
+                              <option value="medicine">Medicamento</option>
                             </select>
                           </div>
 
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Producto/Servicio
+                              Artículo
+                            </label>
+                            <select
+                              value={item.itemId}
+                              onChange={(e) => handleItemChange(item.id, 'itemId', e.target.value)}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                              required
+                            >
+                              <option value="">Seleccionar artículo</option>
+                              {budgetItemsData && (
+                                <>
+                                  {item.itemType === 'product' && budgetItemsData.products.map(product => (
+                                    <option key={product._id} value={product._id}>
+                                      {product.name} - {product.basePrice.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                    </option>
+                                  ))}
+                                  {item.itemType === 'service' && budgetItemsData.services.map(service => (
+                                    <option key={service._id} value={service._id}>
+                                      {service.name} - {service.basePrice.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                    </option>
+                                  ))}
+                                  {item.itemType === 'medicine' && budgetItemsData.medicines.map(medicine => (
+                                    <option key={medicine._id} value={medicine._id}>
+                                      {medicine.name} - {medicine.basePrice.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                    </option>
+                                  ))}
+                                </>
+                              )}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Cantidad
                             </label>
                             <Input
-                              type="text"
-                              value={item.product}
-                              onChange={(e) => handleItemChange(item.id, 'product', e.target.value)}
-                              placeholder="Descripción del producto o servicio"
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
+                              placeholder="1"
+                              min="1"
+                              step="1"
                               required
                             />
                           </div>
 
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Precio
+                              Precio Unitario
                             </label>
                             <Input
                               type="number"
@@ -492,6 +580,21 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                               placeholder="0"
                               min="0"
                               max="100"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              IVA (%)
+                            </label>
+                            <Input
+                              type="number"
+                              value={item.vat}
+                              onChange={(e) => handleItemChange(item.id, 'vat', parseFloat(e.target.value) || 0)}
+                              placeholder="21"
+                              min="0"
+                              max="100"
+                              disabled
                             />
                           </div>
                         </div>
@@ -629,8 +732,8 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                     <h3 className="text-lg font-medium text-gray-900 mb-4">Datos del Cliente</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="font-medium text-gray-900">{selectedPatient.name}</p>
-                        <p className="text-gray-600 mt-1">{budgetData.clientInfo.address || "Dirección no especificada"}</p>
+                        <p className="font-medium text-gray-900">{selectedPatient.firstName} {selectedPatient.lastName}</p>
+                        <p className="text-gray-600 mt-1">{budgetData.clientInfo.address || selectedPatient.address || "Dirección no especificada"}</p>
                         <p className="text-gray-600">NIF/CIF: {budgetData.clientInfo.nif || "No especificado"}</p>
                       </div>
                       <div className="text-right">
@@ -645,27 +748,32 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                       <thead>
                         <tr className="bg-gray-50">
                           <th className="text-left py-3 px-4 text-gray-700 font-medium">Descripción</th>
+                          <th className="text-center py-3 px-4 text-gray-700 font-medium">Cantidad</th>
                           <th className="text-right py-3 px-4 text-gray-700 font-medium">Precio</th>
                           <th className="text-right py-3 px-4 text-gray-700 font-medium">Descuento</th>
-                          <th className="text-right py-3 px-4 text-gray-700 font-medium">Base Imponible</th>
-                          <th className="text-right py-3 px-4 text-gray-700 font-medium">IVA (21%)</th>
+                          <th className="text-right py-3 px-4 text-gray-700 font-medium">IVA</th>
                           <th className="text-right py-3 px-4 text-gray-700 font-medium">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {budgetItems.map((item, index) => {
                           const price = parseFloat(item.price) || 0;
+                          const quantity = parseFloat(item.quantity) || 1;
                           const discount = parseFloat(item.discount) || 0;
-                          const discountAmount = price * (discount / 100);
-                          const baseAmount = price - discountAmount;
-                          const tax = baseAmount * 0.21;
-                          const total = baseAmount + tax;
+                          const subtotal = price * quantity;
+                          const discountAmount = subtotal * (discount / 100);
+                          const afterDiscount = subtotal - discountAmount;
+                          const tax = afterDiscount * (item.vat / 100);
+                          const total = afterDiscount + tax;
                           
                           return (
                             <tr key={item.id}>
                               <td className="py-4 px-4">
-                                <p className="font-medium text-gray-900">{item.product}</p>
-                                <p className="text-sm text-gray-500">Área: {item.serviceArea}</p>
+                                <p className="font-medium text-gray-900">{item.name}</p>
+                                <p className="text-sm text-gray-500 capitalize">{item.itemType}</p>
+                              </td>
+                              <td className="text-center py-4 px-4 text-gray-900">
+                                {quantity}
                               </td>
                               <td className="text-right py-4 px-4 text-gray-900">
                                 {price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
@@ -676,10 +784,10 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                                   '0%'}
                               </td>
                               <td className="text-right py-4 px-4 text-gray-900">
-                                {baseAmount.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                              </td>
-                              <td className="text-right py-4 px-4 text-gray-900">
-                                {tax.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                {item.vat}%
+                                <div className="text-xs text-gray-500">
+                                  {tax.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                </div>
                               </td>
                               <td className="text-right py-4 px-4 text-gray-900 font-medium">
                                 {total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
@@ -690,12 +798,8 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                       </tbody>
                       <tfoot>
                         <tr className="border-t-2 border-gray-900">
-                          <td colSpan={3} className="py-4 px-4"></td>
-                          <td className="text-right py-4 px-4 font-medium text-gray-900">
-                            {calculateTotal().subtotal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                          </td>
-                          <td className="text-right py-4 px-4 font-medium text-gray-900">
-                            {calculateTotal().tax.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                          <td colSpan={5} className="py-4 px-4 text-right font-medium text-gray-900">
+                            Total General:
                           </td>
                           <td className="text-right py-4 px-4 font-bold text-gray-900 text-lg">
                             {calculateTotal().total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}

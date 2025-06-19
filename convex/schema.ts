@@ -934,4 +934,38 @@ export default defineSchema({
     .index("by_provider", ["providerId"])
     .index("by_status", ["status"])
     .index("by_date", ["orderDate"]),
+
+  // Budgets table
+  budgets: defineTable({
+    patientId: v.id("patients"),
+    date: v.string(),
+    validUntil: v.string(),
+    number: v.string(),
+    products: v.array(
+      v.object({
+        itemId: v.string(), // ID del producto, servicio o medicina
+        itemType: v.union(v.literal("product"), v.literal("service"), v.literal("medicine")),
+        name: v.string(),
+        quantity: v.number(),
+        price: v.number(),
+        discount: v.number(), // Porcentaje de descuento
+        vat: v.number(),
+      })
+    ),
+    nif: v.optional(v.string()),
+    billingAddress: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("rejected")
+    ),
+    shared: v.array(v.union(v.literal("email"), v.literal("whatsapp"), v.literal("sms"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_patient", ["patientId"])
+    .index("by_status", ["status"])
+    .index("by_date", ["date"])
+    .index("by_number", ["number"]),
 });
