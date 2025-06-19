@@ -507,6 +507,7 @@ const Budgets = () => {
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Artículo</th>
                           <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                           <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Precio</th>
+                          <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Descuento</th>
                           <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
                           <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
                         </tr>
@@ -537,6 +538,9 @@ const Budgets = () => {
                                   style: 'currency',
                                   currency: 'EUR'
                                 })}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                                {discount}%
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-900 text-center">
                                 {vat}%

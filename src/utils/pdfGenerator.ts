@@ -29,8 +29,11 @@ interface BudgetData {
   items: Array<{
     description: string;
     area: string;
+    quantity: number;
+    price: number;
+    discount: number;
+    vat: number;
     amount: number;
-    discount?: number;
   }>;
   notes?: string;
 }
@@ -245,8 +248,9 @@ export const generateBudgetPDF = (data: BudgetData): jsPDF => {
 
   doc.setFontSize(10);
   addText('ARTÍCULO', 25, yPos + 6);
-  addText('CANTIDAD', 80, yPos + 6, { align: 'center' });
-  addText('PRECIO', 120, yPos + 6, { align: 'center' });
+  addText('CANTIDAD', 70, yPos + 6, { align: 'center' });
+  addText('PRECIO', 100, yPos + 6, { align: 'center' });
+  addText('DESC.', 125, yPos + 6, { align: 'center' });
   addText('IVA', 150, yPos + 6, { align: 'center' });
   addText('TOTAL', 175, yPos + 6, { align: 'center' });
 
@@ -256,7 +260,7 @@ export const generateBudgetPDF = (data: BudgetData): jsPDF => {
   const vatBreakdown: { [key: number]: number } = {};
 
   data.items.forEach(item => {
-    const price = parseFloat(item.amount.toString()) || 0;
+    const price = item.price || 0;
     const quantity = item.quantity || 1;
     const discount = item.discount || 0;
     const vat = item.vat || 21;
@@ -270,12 +274,14 @@ export const generateBudgetPDF = (data: BudgetData): jsPDF => {
 
     addText(item.description, 25, yPos);
 
-    addText(quantity.toString(), 80, yPos, { align: 'center' });
+    addText(quantity.toString(), 70, yPos, { align: 'center' });
 
     addText(price.toLocaleString('es-ES', { 
       style: 'currency', 
       currency: 'EUR' 
-    }), 120, yPos, { align: 'center' });
+    }), 100, yPos, { align: 'center' });
+
+    addText(`${discount}%`, 125, yPos, { align: 'center' });
 
     addText(`${vat}%`, 150, yPos, { align: 'center' });
 

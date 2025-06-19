@@ -214,7 +214,32 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
   };
 
   const handlePrintBudget = () => {
-    window.print();
+    if (!selectedPatient) return;
+
+    const data = {
+      budgetNumber: budgetData.number,
+      date: formData.date,
+      validUntil: budgetData.validUntil,
+      clientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
+      clientAddress: budgetData.clientInfo.address || selectedPatient.address || "Dirección no especificada",
+      clientNif: budgetData.clientInfo.nif || "NIF no especificado",
+      clientEmail: selectedPatient.email,
+      clientPhone: selectedPatient.phone,
+      items: budgetItems.map(item => ({
+        description: item.name,
+        area: item.itemType,
+        quantity: parseFloat(item.quantity) || 1,
+        price: parseFloat(item.price) || 0,
+        discount: parseFloat(item.discount) || 0,
+        vat: item.vat,
+        amount: (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 1)
+      })),
+      notes: formData.notes || budgetData.notes
+    };
+
+    const doc = generateBudgetPDF(data);
+    const blobUrl = doc.output('bloburl');
+    window.open(blobUrl, '_blank');
   };
 
   const handleDownloadBudget = () => {
@@ -752,6 +777,7 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                             <th className="text-left py-3 px-4 text-gray-700 font-medium uppercase text-xs">Artículo</th>
                             <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">Cantidad</th>
                             <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">Precio</th>
+                            <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">Descuento</th>
                             <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">IVA</th>
                             <th className="text-center py-3 px-4 text-gray-700 font-medium uppercase text-xs">Total</th>
                           </tr>
@@ -777,6 +803,9 @@ const NewBudgetForm: React.FC<NewBudgetFormProps> = ({ onClose, onSubmit }) => {
                                 </td>
                                 <td className="text-center py-4 px-4 text-gray-900">
                                   {price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                                </td>
+                                <td className="text-center py-4 px-4 text-gray-900">
+                                  {discount}%
                                 </td>
                                 <td className="text-center py-4 px-4 text-gray-900">
                                   {item.vat}%
