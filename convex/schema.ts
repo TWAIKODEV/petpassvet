@@ -968,4 +968,61 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_date", ["date"])
     .index("by_number", ["number"]),
+
+  // Schedules table
+  schedules: defineTable({
+    startTime: v.string(), // Formato HH:MM
+    endTime: v.string(), // Formato HH:MM
+    weekdayMask: v.number(), // Máscara de bits para días de la semana (1=Lunes, 2=Martes, 4=Miércoles, etc.)
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
+
+  // Employees table
+  employees: defineTable({
+    nombre: v.string(),
+    apellidos: v.string(),
+    fechaNacimiento: v.string(),
+    genero: v.union(v.literal("masculino"), v.literal("femenino"), v.literal("otro")),
+    email: v.string(),
+    dni: v.string(),
+    numeroSeguridadSocial: v.string(),
+    telefono: v.string(),
+    formacionAcademica: v.array(v.string()),
+    titulos: v.array(v.string()),
+    tipoContrato: v.string(),
+    jornadaLaboral: v.string(),
+    scheduleIds: v.array(v.id("schedules")), // Array de horarios
+    trabajoFinesSemana: v.boolean(),
+    turnoNoche: v.boolean(),
+    puesto: v.string(),
+    departamento: v.union(v.literal("veterinaria"), v.literal("peluqueria"), v.literal("administracion")),
+    salarioBase: v.number(),
+    pagas: v.number(), // 12, 14, etc.
+    diasVacaciones: v.number(),
+    convenioColectivo: v.string(),
+    periodoPrueba: v.string(),
+    centroTrabajo: v.string(),
+    modalidad: v.union(v.literal("presencial"), v.literal("teletrabajo"), v.literal("hibrida")),
+    fechaInicio: v.string(),
+    notas: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_email", ["email"])
+    .index("by_departamento", ["departamento"])
+    .index("by_dni", ["dni"]),
+
+  // Payrolls table
+  payrolls: defineTable({
+    employeeId: v.id("employees"),
+    periodo: v.number(), // 1-12 para meses, 13 y 14 para pagas extras
+    importeNeto: v.number(),
+    fechaEmision: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_employee", ["employeeId"])
+    .index("by_periodo", ["periodo"])
+    .index("by_fecha", ["fechaEmision"]),
 });

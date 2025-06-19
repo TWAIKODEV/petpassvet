@@ -23,540 +23,345 @@ import {
   User,
   Check,
   Upload,
-  FileCheck
+  FileCheck,
+  Edit,
+  Trash2,
+  Users
 } from 'lucide-react';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-import NewEmployeeForm from '../../components/staff/NewEmployeeForm';
 import { generatePayrollPDF } from '../../utils/payrollPdfGenerator';
-
-// Mock data for employees
-const mockStaff = [
-  {
-    id: '1',
-    name: 'Dr. Alejandro Ramírez',
-    role: 'Veterinario Senior',
-    department: 'Veterinaria',
-    email: 'alejandro.ramirez@clinica.com',
-    phone: '+34 666 777 888',
-    location: 'Sede Central Madrid',
-    startDate: '2024-01-15',
-    contractType: 'Indefinido',
-    workingHours: 'Jornada Completa',
-    salary: {
-      gross: 45000,
-      socialSecurity: 13500,
-      net: 36450,
-      totalCost: 58500
-    },
-    schedule: {
-      hours: 40,
-      shifts: ['Lunes a Viernes', '9:00 - 17:00']
-    },
-    status: 'active',
-    hasContract: true,
-    contract: {
-      file: 'contrato_ramirez.pdf',
-      startDate: '2024-01-15',
-      endDate: null,
-      type: 'Indefinido',
-      position: 'Veterinario Senior',
-      salary: 45000,
-      salaryType: 'annual',
-      payments: 14,
-      workingHours: 'Jornada Completa',
-      schedule: {
-        monday: true,
-        tuesday: true,
-        wednesday: true,
-        thursday: true,
-        friday: true,
-        saturday: false,
-        sunday: false
-      }
-    }
-  },
-  {
-    id: '2',
-    name: 'Ana López',
-    role: 'Auxiliar Veterinario',
-    department: 'Veterinaria',
-    email: 'ana.lopez@clinica.com',
-    phone: '+34 666 888 999',
-    location: 'Sede Central Madrid',
-    startDate: '2024-02-01',
-    contractType: 'Temporal',
-    workingHours: 'Jornada Completa',
-    salary: {
-      gross: 24000,
-      socialSecurity: 7200,
-      net: 19440,
-      totalCost: 31200
-    },
-    schedule: {
-      hours: 40,
-      shifts: ['Lunes a Viernes', '8:00 - 16:00']
-    },
-    status: 'active',
-    hasContract: true,
-    contract: {
-      file: 'contrato_lopez.pdf',
-      startDate: '2024-02-01',
-      endDate: '2025-02-01',
-      type: 'Temporal',
-      position: 'Auxiliar Veterinario',
-      salary: 24000,
-      salaryType: 'annual',
-      payments: 12,
-      workingHours: 'Jornada Completa',
-      schedule: {
-        monday: true,
-        tuesday: true,
-        wednesday: true,
-        thursday: true,
-        friday: true,
-        saturday: false,
-        sunday: false
-      }
-    }
-  },
-  {
-    id: '3',
-    name: 'Carlos Rodríguez',
-    role: 'Peluquero Canino',
-    department: 'Peluquería',
-    email: 'carlos.rodriguez@clinica.com',
-    phone: '+34 666 999 000',
-    location: 'Sucursal Norte',
-    startDate: '2024-03-15',
-    contractType: 'Indefinido',
-    workingHours: 'Jornada Completa',
-    salary: {
-      gross: 22000,
-      socialSecurity: 6600,
-      net: 17820,
-      totalCost: 28600
-    },
-    schedule: {
-      hours: 40,
-      shifts: ['Lunes a Viernes', '9:00 - 17:00']
-    },
-    status: 'active',
-    hasContract: false
-  },
-  {
-    id: '4',
-    name: 'Laura Martínez',
-    role: 'Recepcionista',
-    department: 'Administración',
-    email: 'laura.martinez@clinica.com',
-    phone: '+34 666 000 111',
-    location: 'Sede Central Madrid',
-    startDate: '2024-01-20',
-    contractType: 'Indefinido',
-    workingHours: 'Media Jornada',
-    salary: {
-      gross: 20000,
-      socialSecurity: 6000,
-      net: 16200,
-      totalCost: 26000
-    },
-    schedule: {
-      hours: 20,
-      shifts: ['Lunes a Viernes', '8:00 - 12:00']
-    },
-    status: 'inactive',
-    hasContract: true,
-    contract: {
-      file: 'contrato_martinez.pdf',
-      startDate: '2024-01-20',
-      endDate: null,
-      type: 'Indefinido',
-      position: 'Recepcionista',
-      salary: 20000,
-      salaryType: 'annual',
-      payments: 12,
-      workingHours: 'Media Jornada',
-      schedule: {
-        monday: true,
-        tuesday: true,
-        wednesday: true,
-        thursday: true,
-        friday: true,
-        saturday: false,
-        sunday: false
-      }
-    }
-  },
-  {
-    id: '5',
-    name: 'Miguel Torres',
-    role: 'Veterinario',
-    department: 'Veterinaria',
-    email: 'miguel.torres@clinica.com',
-    phone: '+34 666 111 222',
-    location: 'Sucursal Sur',
-    startDate: '2024-02-15',
-    contractType: 'Indefinido',
-    workingHours: 'Jornada Completa',
-    salary: {
-      gross: 40000,
-      socialSecurity: 12000,
-      net: 32400,
-      totalCost: 52000
-    },
-    schedule: {
-      hours: 40,
-      shifts: ['Lunes a Viernes', '10:00 - 18:00']
-    },
-    status: 'active',
-    hasContract: false
-  }
-];
-
-// Mock payroll data
-const mockPayrolls = [
-  {
-    id: '1',
-    employeeId: '1',
-    period: 'Mayo 2025',
-    date: '2025-05-30',
-    amount: 3037.50,
-    status: 'paid'
-  },
-  {
-    id: '2',
-    employeeId: '1',
-    period: 'Abril 2025',
-    date: '2025-04-30',
-    amount: 3037.50,
-    status: 'paid'
-  },
-  {
-    id: '3',
-    employeeId: '1',
-    period: 'Marzo 2025',
-    date: '2025-03-30',
-    amount: 3037.50,
-    status: 'paid'
-  },
-  {
-    id: '4',
-    employeeId: '2',
-    period: 'Mayo 2025',
-    date: '2025-05-30',
-    amount: 1620.00,
-    status: 'paid'
-  },
-  {
-    id: '5',
-    employeeId: '2',
-    period: 'Abril 2025',
-    date: '2025-04-30',
-    amount: 1620.00,
-    status: 'paid'
-  }
-];
 
 const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
-  const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'payrolls'>('info');
+  const [activeTab, setActiveTab<'informacion' | 'nominas'>('informacion');
+  const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
   const [showPayrollModal, setShowPayrollModal] = useState(false);
-  const [showContractModal, setShowContractModal] = useState(false);
-  const [showViewContractModal, setShowViewContractModal] = useState(false);
-  const [payrollData, setPayrollData] = useState({
-    employeeId: '',
-    period: '',
-    amount: '',
-    date: new Date().toISOString().split('T')[0]
-  });
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [payrollDateRange, setPayrollDateRange] = useState({
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
   });
-  const [contractData, setContractData] = useState({
-    employeeId: '',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: '',
-    type: '',
-    position: '',
-    salary: '',
-    salaryType: 'annual',
-    payments: '12',
-    workingHours: '',
-    schedule: {
-      monday: true,
-      tuesday: true,
-      wednesday: true,
-      thursday: true,
-      friday: true,
-      saturday: false,
-      sunday: false
-    },
-    isActive: true,
-    file: null
+
+  // Convex queries and mutations
+  const employees = useQuery(api.employees.getEmployees) || [];
+  const schedules = useQuery(api.schedules.getSchedules) || [];
+  const createEmployee = useMutation(api.employees.createEmployee);
+  const updateEmployee = useMutation(api.employees.updateEmployee);
+  const deleteEmployee = useMutation(api.employees.deleteEmployee);
+  const createSchedule = useMutation(api.schedules.createSchedule);
+  const createPayroll = useMutation(api.payrolls.createPayroll);
+  const employeePayrolls = useQuery(
+    api.payrolls.getPayrollsByEmployee,
+    selectedEmployee ? { employeeId: selectedEmployee._id } : "skip"
+  ) || [];
+
+  // Form states
+  const [employeeForm, setEmployeeForm] = useState({
+    nombre: '',
+    apellidos: '',
+    fechaNacimiento: '',
+    genero: 'masculino' as 'masculino' | 'femenino' | 'otro',
+    email: '',
+    dni: '',
+    numeroSeguridadSocial: '',
+    telefono: '',
+    formacionAcademica: [''],
+    titulos: [''],
+    tipoContrato: '',
+    jornadaLaboral: '',
+    scheduleIds: [] as string[],
+    trabajoFinesSemana: false,
+    turnoNoche: false,
+    puesto: '',
+    departamento: 'veterinaria' as 'veterinaria' | 'peluqueria' | 'administracion',
+    salarioBase: 0,
+    pagas: 12,
+    diasVacaciones: 22,
+    convenioColectivo: '',
+    periodoPrueba: '',
+    centroTrabajo: '',
+    modalidad: 'presencial' as 'presencial' | 'teletrabajo' | 'hibrida',
+    fechaInicio: '',
+    notas: ''
   });
 
-  const filteredStaff = mockStaff.filter(staff => 
-    (selectedDepartment === 'all' || staff.department === selectedDepartment) &&
-    (staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     staff.role.toLowerCase().includes(searchTerm.toLowerCase()))
+  const [scheduleForm, setScheduleForm] = useState({
+    startTime: '',
+    endTime: '',
+    selectedDays: {
+      monday: false,
+      tuesday: false,
+      wednesday: false,
+      thursday: false,
+      friday: false,
+      saturday: false,
+      sunday: false
+    }
+  });
+
+  const [payrollForm, setPayrollForm] = useState({
+    periodo: 1,
+    importeNeto: 0,
+    fechaEmision: new Date().toISOString().split('T')[0]
+  });
+
+  // Helper functions
+  const calculateWeekdayMask = (selectedDays: any) => {
+    let mask = 0;
+    if (selectedDays.monday) mask |= 1;
+    if (selectedDays.tuesday) mask |= 2;
+    if (selectedDays.wednesday) mask |= 4;
+    if (selectedDays.thursday) mask |= 8;
+    if (selectedDays.friday) mask |= 16;
+    if (selectedDays.saturday) mask |= 32;
+    if (selectedDays.sunday) mask |= 64;
+    return mask;
+  };
+
+  const getWeekdayNames = (mask: number) => {
+    const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const activeDays: string[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      if (mask & (1 << i)) {
+        activeDays.push(days[i]);
+      }
+    }
+
+    return activeDays;
+  };
+
+  const getPeriodName = (periodo: number) => {
+    if (periodo >= 1 && periodo <= 12) {
+      const months = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      ];
+      return months[periodo - 1];
+    } else if (periodo === 13) {
+      return 'Paga Extra Verano';
+    } else if (periodo === 14) {
+      return 'Paga Extra Navidad';
+    }
+    return 'Periodo desconocido';
+  };
+
+  // Event handlers
+  const handleCreateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createEmployee({
+        ...employeeForm,
+        formacionAcademica: employeeForm.formacionAcademica.filter(f => f.trim() !== ''),
+        titulos: employeeForm.titulos.filter(t => t.trim() !== ''),
+        scheduleIds: employeeForm.scheduleIds as any
+      });
+      setShowNewEmployeeForm(false);
+      resetEmployeeForm();
+    } catch (error) {
+      console.error('Error creating employee:', error);
+    }
+  };
+
+  const handleCreateSchedule = async () => {
+    try {
+      const selectedDaysArray = Object.entries(scheduleForm.selectedDays)
+        .filter(([_, selected]) => selected)
+        .map(([day, _]) => day);
+
+      // Create separate schedules for non-consecutive days
+      const scheduleIds = [];
+
+      for (const day of selectedDaysArray) {
+        const dayMask = {
+          monday: 1,
+          tuesday: 2,
+          wednesday: 4,
+          thursday: 8,
+          friday: 16,
+          saturday: 32,
+          sunday: 64
+        }[day];
+
+        const scheduleId = await createSchedule({
+          startTime: scheduleForm.startTime,
+          endTime: scheduleForm.endTime,
+          weekdayMask: dayMask
+        });
+
+        scheduleIds.push(scheduleId);
+      }
+
+      setEmployeeForm(prev => ({
+        ...prev,
+        scheduleIds: [...prev.scheduleIds, ...scheduleIds]
+      }));
+
+      setShowScheduleModal(false);
+      setScheduleForm({
+        startTime: '',
+        endTime: '',
+        selectedDays: {
+          monday: false,
+          tuesday: false,
+          wednesday: false,
+          thursday: false,
+          friday: false,
+          saturday: false,
+          sunday: false
+        }
+      });
+    } catch (error) {
+      console.error('Error creating schedule:', error);
+    }
+  };
+
+  const handleCreatePayroll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEmployee) return;
+
+    try {
+      await createPayroll({
+        employeeId: selectedEmployee._id,
+        ...payrollForm
+      });
+      setShowPayrollModal(false);
+      setPayrollForm({
+        periodo: 1,
+        importeNeto: 0,
+        fechaEmision: new Date().toISOString().split('T')[0]
+      });
+    } catch (error) {
+      console.error('Error creating payroll:', error);
+    }
+  };
+
+  const resetEmployeeForm = () => {
+    setEmployeeForm({
+      nombre: '',
+      apellidos: '',
+      fechaNacimiento: '',
+      genero: 'masculino',
+      email: '',
+      dni: '',
+      numeroSeguridadSocial: '',
+      telefono: '',
+      formacionAcademica: [''],
+      titulos: [''],
+      tipoContrato: '',
+      jornadaLaboral: '',
+      scheduleIds: [],
+      trabajoFinesSemana: false,
+      turnoNoche: false,
+      puesto: '',
+      departamento: 'veterinaria',
+      salarioBase: 0,
+      pagas: 12,
+      diasVacaciones: 22,
+      convenioColectivo: '',
+      periodoPrueba: '',
+      centroTrabajo: '',
+      modalidad: 'presencial',
+      fechaInicio: '',
+      notas: ''
+    });
+  };
+
+  const filteredEmployees = employees.filter(employee =>
+    `${employee.nombre} ${employee.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.puesto.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleNewEmployee = (employeeData: any) => {
-    // Here you would typically make an API call to save the new employee
-    console.log('New employee data:', employeeData);
-    setShowNewEmployeeForm(false);
-  };
-
-  const handlePrintPayroll = (employee: any) => {
-    const doc = generatePayrollPDF(employee);
-    const blobUrl = doc.output('bloburl');
-    const printWindow = window.open(blobUrl);
-    printWindow?.print();
-  };
-
-  const handleSubmitPayroll = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Submitting payroll:', payrollData);
-    // Here you would typically make an API call to create a new payroll
-    setShowPayrollModal(false);
-    // Reset form
-    setPayrollData({
-      employeeId: '',
-      period: '',
-      amount: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-  };
-
-  const handleSubmitContract = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Submitting contract:', contractData);
-    // Here you would typically make an API call to create a new contract
-    setShowContractModal(false);
-    // Reset form
-    setContractData({
-      employeeId: '',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: '',
-      type: '',
-      position: '',
-      salary: '',
-      salaryType: 'annual',
-      payments: '12',
-      workingHours: '',
-      schedule: {
-        monday: true,
-        tuesday: true,
-        wednesday: true,
-        thursday: true,
-        friday: true,
-        saturday: false,
-        sunday: false
-      },
-      isActive: true,
-      file: null
-    });
-  };
-
-  // Get employee payrolls
-  const getEmployeePayrolls = (employeeId: string) => {
-    return mockPayrolls.filter(payroll => payroll.employeeId === employeeId);
-  };
-
-  // Filter payrolls by date range
-  const filterPayrollsByDate = (payrolls: any[]) => {
-    return payrolls.filter(payroll => {
-      const payrollDate = new Date(payroll.date);
-      const fromDate = new Date(payrollDateRange.from);
-      const toDate = new Date(payrollDateRange.to);
-      return payrollDate >= fromDate && payrollDate <= toDate;
-    });
-  };
-
-  const handleViewContract = (employee: any) => {
-    setSelectedEmployee(employee);
-    setShowViewContractModal(true);
-  };
-
-  const handleAddContract = (employee: any) => {
-    setSelectedEmployee(employee);
-    setContractData({
-      ...contractData,
-      employeeId: employee.id,
-      position: employee.role,
-      workingHours: employee.workingHours
-    });
-    setShowContractModal(true);
+  const handlePrintPayroll = (employee: any, payroll: any) => {
+    generatePayrollPDF(employee, payroll);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Personal</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Gestión del personal de la clínica
-          </p>
+          <p className="text-gray-600">Gestión de empleados y nóminas</p>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            icon={<Download size={18} />}
-            className="flex-1 sm:flex-none"
-          >
-            Exportar
-          </Button>
-          <Button
-            variant="primary"
-            icon={<Plus size={18} />}
-            onClick={() => setShowNewEmployeeForm(true)}
-            className="flex-1 sm:flex-none"
-          >
-            Nuevo Empleado
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          icon={<Plus size={18} />}
+          onClick={() => setShowNewEmployeeForm(true)}
+        >
+          Nuevo Empleado
+        </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <div className="flex flex-col sm:flex-row gap-4 p-4">
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
           <Input
-            placeholder="Buscar empleados..."
+            placeholder="Buscar empleado..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             icon={<Search size={18} />}
-            className="flex-1"
           />
-          <select
-            className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            value={selectedDepartment}
-            onChange={(e) => setSelectedDepartment(e.target.value)}
-          >
-            <option value="all">Todos los departamentos</option>
-            <option value="Veterinaria">Veterinaria</option>
-            <option value="Peluquería">Peluquería</option>
-            <option value="Recepción">Recepción</option>
-            <option value="Administración">Administración</option>
-          </select>
-          <Button
-            variant="outline"
-            icon={<RefreshCw size={18} />}
-          >
-            Actualizar
-          </Button>
         </div>
-      </Card>
+      </div>
 
-      {/* Staff List */}
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Empleado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contacto
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Centro de Trabajo
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Horario Laboral
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha Alta
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStaff.map((staff) => (
-                <tr key={staff.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-blue-600 font-medium text-sm">
-                          {staff.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{staff.name}</div>
-                        <div className="text-sm text-gray-500">{staff.role}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{staff.email}</div>
-                    <div className="text-sm text-gray-500">{staff.phone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{staff.location}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{staff.schedule.shifts[0]}</div>
-                    <div className="text-sm text-gray-500">{staff.schedule.shifts[1]}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {new Date(staff.startDate).toLocaleDateString('es-ES')}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      staff.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {staff.status === 'active' ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center space-x-2 justify-end">
-                      <button
-                        onClick={() => setSelectedEmployee(staff)}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Ver detalles"
-                      >
-                        <Eye size={18} />
-                      </button>
-                      <button
-                        onClick={() => staff.hasContract ? handleViewContract(staff) : handleAddContract(staff)}
-                        className="text-blue-600 hover:text-blue-800"
-                        title={staff.hasContract ? "Ver contrato" : "Añadir contrato"}
-                      >
-                        <FileCheck size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Employees Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredEmployees.map((employee) => (
+          <Card key={employee._id}>
+            <div className="p-6">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User size={24} className="text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">
+                    {employee.nombre} {employee.apellidos}
+                  </h3>
+                  <p className="text-sm text-gray-500">{employee.puesto}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center text-sm text-gray-600">
+                  <Building2 size={16} className="mr-2" />
+                  {employee.departamento}
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <Mail size={16} className="mr-2" />
+                  {employee.email}
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <Phone size={16} className="mr-2" />
+                  {employee.telefono}
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => setSelectedEmployee(employee)}
+              >
+                Ver detalles
+              </Button>
+            </div>
+          </Card>
+        ))}
       </div>
 
       {/* Employee Details Modal */}
       {selectedEmployee && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                Detalles del Empleado
+                {selectedEmployee.nombre} {selectedEmployee.apellidos}
               </h3>
               <button
                 onClick={() => setSelectedEmployee(null)}
@@ -566,160 +371,91 @@ const Staff = () => {
               </button>
             </div>
 
-            <div className="p-6">
-              <div className="flex items-center mb-6">
-                <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-600 font-medium text-xl">
-                    {selectedEmployee.name.split(' ').map(n => n[0]).join('')}
-                  </span>
-                </div>
-                <div className="ml-4">
-                  <h2 className="text-xl font-semibold text-gray-900">{selectedEmployee.name}</h2>
-                  <p className="text-sm text-gray-500">{selectedEmployee.role} • {selectedEmployee.department}</p>
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8">
+            {/* Tabs */}
+            <div className="border-b border-gray-200">
+              <nav className="flex space-x-8 px-6">
+                {[
+                  { id: 'informacion', name: 'Información', icon: User },
+                  { id: 'nominas', name: 'Nóminas', icon: DollarSign },
+                ].map((tab) => (
                   <button
-                    onClick={() => setActiveTab('info')}
-                    className={`
-                      whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                      ${activeTab === 'info'
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                      activeTab === tab.id
                         ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }
-                    `}
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
                   >
-                    Información
+                    <tab.icon size={16} />
+                    <span>{tab.name}</span>
                   </button>
-                  <button
-                    onClick={() => setActiveTab('payrolls')}
-                    className={`
-                      whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                      ${activeTab === 'payrolls'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    Nóminas
-                  </button>
-                </nav>
-              </div>
+                ))}
+              </nav>
+            </div>
 
-              {activeTab === 'info' && (
+            {/* Tab Content */}
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              {activeTab === 'informacion' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Employee Information */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-4">Información del Empleado</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Email</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Teléfono</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee.phone}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Tipo de Contrato</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee.contractType}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Jornada</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee.workingHours}</p>
-                        <p className="text-sm text-gray-500">{selectedEmployee.schedule.hours} horas semanales</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Fecha de Incorporación</p>
-                        <p className="mt-1 text-sm text-gray-900">
-                          {new Date(selectedEmployee.startDate).toLocaleDateString('es-ES')}
-                        </p>
-                      </div>
+                    <h4 className="font-medium text-gray-900 mb-3">Datos Personales</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">DNI:</span> {selectedEmployee.dni}</div>
+                      <div><span className="font-medium">Fecha Nacimiento:</span> {selectedEmployee.fechaNacimiento}</div>
+                      <div><span className="font-medium">Género:</span> {selectedEmployee.genero}</div>
+                      <div><span className="font-medium">Teléfono:</span> {selectedEmployee.telefono}</div>
+                      <div><span className="font-medium">Email:</span> {selectedEmployee.email}</div>
+                      <div><span className="font-medium">SS:</span> {selectedEmployee.numeroSeguridadSocial}</div>
                     </div>
                   </div>
 
-                  {/* Additional Information */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-4">Información Adicional</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Centro de Trabajo</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee.location}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Horario</p>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEmployee.schedule.shifts[0]}</p>
-                        <p className="text-sm text-gray-500">{selectedEmployee.schedule.shifts[1]}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Estado</p>
-                        <span className={`mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          selectedEmployee.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {selectedEmployee.status === 'active' ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Contrato</p>
-                        <div className="mt-1 flex items-center">
-                          {selectedEmployee.hasContract ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              icon={<FileCheck size={16} />}
-                              onClick={() => handleViewContract(selectedEmployee)}
-                            >
-                              Ver contrato
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              icon={<FileText size={16} />}
-                              onClick={() => handleAddContract(selectedEmployee)}
-                            >
-                              Añadir contrato
-                            </Button>
-                          )}
+                    <h4 className="font-medium text-gray-900 mb-3">Información Laboral</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">Puesto:</span> {selectedEmployee.puesto}</div>
+                      <div><span className="font-medium">Departamento:</span> {selectedEmployee.departamento}</div>
+                      <div><span className="font-medium">Tipo Contrato:</span> {selectedEmployee.tipoContrato}</div>
+                      <div><span className="font-medium">Jornada:</span> {selectedEmployee.jornadaLaboral}</div>
+                      <div><span className="font-medium">Modalidad:</span> {selectedEmployee.modalidad}</div>
+                      <div><span className="font-medium">Fecha Inicio:</span> {selectedEmployee.fechaInicio}</div>
+                      <div><span className="font-medium">Salario Base:</span> {selectedEmployee.salarioBase.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Horarios</h4>
+                    <div className="space-y-2">
+                      {selectedEmployee.schedules?.map((schedule: any, index: number) => (
+                        <div key={index} className="text-sm bg-gray-50 p-2 rounded">
+                          <div><span className="font-medium">Horario:</span> {schedule.startTime} - {schedule.endTime}</div>
+                          <div><span className="font-medium">Días:</span> {getWeekdayNames(schedule.weekdayMask).join(', ')}</div>
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Otros Datos</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">Pagas:</span> {selectedEmployee.pagas}</div>
+                      <div><span className="font-medium">Días Vacaciones:</span> {selectedEmployee.diasVacaciones}</div>
+                      <div><span className="font-medium">Convenio:</span> {selectedEmployee.convenioColectivo}</div>
+                      <div><span className="font-medium">Período Prueba:</span> {selectedEmployee.periodoPrueba}</div>
+                      <div><span className="font-medium">Centro Trabajo:</span> {selectedEmployee.centroTrabajo}</div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {activeTab === 'payrolls' && (
+              {activeTab === 'nominas' && (
                 <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <Input
-                        type="date"
-                        label="Desde"
-                        value={payrollDateRange.from}
-                        onChange={(e) => setPayrollDateRange(prev => ({ ...prev, from: e.target.value }))}
-                      />
-                      <Input
-                        type="date"
-                        label="Hasta"
-                        value={payrollDateRange.to}
-                        onChange={(e) => setPayrollDateRange(prev => ({ ...prev, to: e.target.value }))}
-                      />
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium text-gray-900">Nóminas</h4>
                     <Button
                       variant="primary"
                       icon={<Plus size={18} />}
-                      onClick={() => {
-                        setPayrollData({
-                          ...payrollData,
-                          employeeId: selectedEmployee.id
-                        });
-                        setShowPayrollModal(true);
-                      }}
+                      onClick={() => setShowPayrollModal(true)}
                     >
                       Emitir Nómina
                     </Button>
@@ -729,100 +465,47 @@ const Staff = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Período
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Fecha
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Fecha Emisión
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Importe
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Importe Neto
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Estado
-                          </th>
-                          <th scope="col" className="relative px-6 py-3">
-                            <span className="sr-only">Acciones</span>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Acciones
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {filterPayrollsByDate(getEmployeePayrolls(selectedEmployee.id)).map((payroll) => (
-                          <tr key={payroll.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{payroll.period}</div>
+                        {employeePayrolls.map((payroll) => (
+                          <tr key={payroll._id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {getPeriodName(payroll.periodo)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {new Date(payroll.date).toLocaleDateString('es-ES')}
-                              </div>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(payroll.fechaEmision).toLocaleDateString('es-ES')}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {payroll.amount.toLocaleString('es-ES', {
-                                  style: 'currency',
-                                  currency: 'EUR'
-                                })}
-                              </div>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {payroll.importeNeto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Pagada
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <div className="flex items-center space-x-2 justify-end">
-                                <button
-                                  className="text-blue-600 hover:text-blue-800"
-                                  title="Ver"
-                                >
-                                  <Eye size={18} />
-                                </button>
-                                <button
-                                  className="text-gray-400 hover:text-gray-600"
-                                  title="Descargar"
-                                >
-                                  <DownloadIcon size={18} />
-                                </button>
-                                <button
-                                  className="text-gray-400 hover:text-gray-600"
-                                  title="Imprimir"
-                                  onClick={() => handlePrintPayroll(selectedEmployee)}
-                                >
-                                  <Printer size={18} />
-                                </button>
-                              </div>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button
+                                onClick={() => handlePrintPayroll(selectedEmployee, payroll)}
+                                className="text-blue-600 hover:text-blue-800 mr-3"
+                              >
+                                <Printer size={18} />
+                              </button>
                             </td>
                           </tr>
                         ))}
-                        {filterPayrollsByDate(getEmployeePayrolls(selectedEmployee.id)).length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                              No hay nóminas en el período seleccionado
-                            </td>
-                          </tr>
-                        )}
                       </tbody>
                     </table>
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                icon={<Printer size={18} />}
-                onClick={() => handlePrintPayroll(selectedEmployee)}
-              >
-                Imprimir Nómina
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setSelectedEmployee(null)}
-              >
-                Cerrar
-              </Button>
             </div>
           </div>
         </div>
@@ -830,20 +513,336 @@ const Staff = () => {
 
       {/* New Employee Form Modal */}
       {showNewEmployeeForm && (
-        <NewEmployeeForm
-          onClose={() => setShowNewEmployeeForm(false)}
-          onSubmit={handleNewEmployee}
-        />
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Nuevo Empleado</h3>
+              <button
+                onClick={() => setShowNewEmployeeForm(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateEmployee} className="p-6 max-h-[80vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Datos Personales */}
+                <div className="col-span-2">
+                  <h4 className="font-medium text-gray-900 mb-4">Datos Personales</h4>
+                </div>
+
+                <Input
+                  label="Nombre"
+                  value={employeeForm.nombre}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, nombre: e.target.value }))}
+                  required
+                />
+
+                <Input
+                  label="Apellidos"
+                  value={employeeForm.apellidos}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, apellidos: e.target.value }))}
+                  required
+                />
+
+                <Input
+                  label="Fecha de Nacimiento"
+                  type="date"
+                  value={employeeForm.fechaNacimiento}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
+                  required
+                />
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Género</label>
+                  <select
+                    value={employeeForm.genero}
+                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, genero: e.target.value as any }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    required
+                  >
+                    <option value="masculino">Masculino</option>
+                    <option value="femenino">Femenino</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+
+                <Input
+                  label="Email"
+                  type="email"
+                  value={employeeForm.email}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+
+                <Input
+                  label="DNI/NIE"
+                  value={employeeForm.dni}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, dni: e.target.value }))}
+                  required
+                />
+
+                <Input
+                  label="Número Seguridad Social"
+                  value={employeeForm.numeroSeguridadSocial}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, numeroSeguridadSocial: e.target.value }))}
+                  required
+                />
+
+                <Input
+                  label="Teléfono"
+                  value={employeeForm.telefono}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, telefono: e.target.value }))}
+                  required
+                />
+
+                {/* Información Laboral */}
+                <div className="col-span-2 pt-6 border-t border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-4">Información Laboral</h4>
+                </div>
+
+                <Input
+                  label="Puesto"
+                  value={employeeForm.puesto}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, puesto: e.target.value }))}
+                  required
+                />
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
+                  <select
+                    value={employeeForm.departamento}
+                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, departamento: e.target.value as any }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    required
+                  >
+                    <option value="veterinaria">Veterinaria</option>
+                    <option value="peluqueria">Peluquería</option>
+                    <option value="administracion">Administración</option>
+                  </select>
+                </div>
+
+                <Input
+                  label="Tipo de Contrato"
+                  value={employeeForm.tipoContrato}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, tipoContrato: e.target.value }))}
+                  required
+                />
+
+                <Input
+                  label="Jornada Laboral"
+                  value={employeeForm.jornadaLaboral}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, jornadaLaboral: e.target.value }))}
+                  required
+                />
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Modalidad</label>
+                  <select
+                    value={employeeForm.modalidad}
+                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, modalidad: e.target.value as any }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    required
+                  >
+                    <option value="presencial">Presencial</option>
+                    <option value="teletrabajo">Teletrabajo</option>
+                    <option value="hibrida">Híbrida</option>
+                  </select>
+                </div>
+
+                <Input
+                  label="Fecha de Inicio"
+                  type="date"
+                  value={employeeForm.fechaInicio}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, fechaInicio: e.target.value }))}
+                  required
+                />
+
+                <Input
+                  label="Salario Base"
+                  type="number"
+                  value={employeeForm.salarioBase}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, salarioBase: Number(e.target.value) }))}
+                  required
+                />
+
+                <Input
+                  label="Número de Pagas"
+                  type="number"
+                  value={employeeForm.pagas}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, pagas: Number(e.target.value) }))}
+                  required
+                />
+
+                {/* Horario */}
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Horario</label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      icon={<Plus size={16} />}
+                      onClick={() => setShowScheduleModal(true)}
+                    >
+                      Añadir Horario
+                    </Button>
+                  </div>
+                  {employeeForm.scheduleIds.length > 0 && (
+                    <div className="space-y-2">
+                      {employeeForm.scheduleIds.map((scheduleId, index) => {
+                        const schedule = schedules.find(s => s._id === scheduleId);
+                        return schedule ? (
+                          <div key={index} className="bg-gray-50 p-2 rounded text-sm">
+                            {schedule.startTime} - {schedule.endTime} | {getWeekdayNames(schedule.weekdayMask).join(', ')}
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional fields */}
+                <Input
+                  label="Convenio Colectivo"
+                  value={employeeForm.convenioColectivo}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, convenioColectivo: e.target.value }))}
+                />
+
+                <Input
+                  label="Período de Prueba"
+                  value={employeeForm.periodoPrueba}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, periodoPrueba: e.target.value }))}
+                />
+
+                <Input
+                  label="Centro de Trabajo"
+                  value={employeeForm.centroTrabajo}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, centroTrabajo: e.target.value }))}
+                />
+
+                <Input
+                  label="Días de Vacaciones"
+                  type="number"
+                  value={employeeForm.diasVacaciones}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, diasVacaciones: Number(e.target.value) }))}
+                />
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                  <textarea
+                    value={employeeForm.notas}
+                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, notas: e.target.value }))}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowNewEmployeeForm(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="primary">
+                  Crear Empleado
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
-      {/* New Payroll Modal */}
-      {showPayrollModal && (
+      {/* Schedule Modal */}
+      {showScheduleModal && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
-                Emitir Nómina
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900">Añadir Horario</h3>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <Input
+                label="Hora de Inicio"
+                type="time"
+                value={scheduleForm.startTime}
+                onChange={(e) => setScheduleForm(prev => ({ ...prev, startTime: e.target.value }))}
+                required
+              />
+
+              <Input
+                label="Hora de Fin"
+                type="time"
+                value={scheduleForm.endTime}
+                onChange={(e) => setScheduleForm(prev => ({ ...prev, endTime: e.target.value }))}
+                required
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Días de la semana</label>
+                <div className="space-y-2">
+                  {Object.entries(scheduleForm.selectedDays).map(([day, selected]) => (
+                    <label key={day} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={(e) => setScheduleForm(prev => ({
+                          ...prev,
+                          selectedDays: {
+                            ...prev.selectedDays,
+                            [day]: e.target.checked
+                          }
+                        }))}
+                        className="mr-2"
+                      />
+                      <span className="capitalize">
+                        {day === 'monday' ? 'Lunes' :
+                         day === 'tuesday' ? 'Martes' :
+                         day === 'wednesday' ? 'Miércoles' :
+                         day === 'thursday' ? 'Jueves' :
+                         day === 'friday' ? 'Viernes' :
+                         day === 'saturday' ? 'Sábado' :
+                         'Domingo'}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowScheduleModal(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleCreateSchedule}
+                >
+                  Añadir Horario
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payroll Modal */}
+      {showPayrollModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Emitir Nómina</h3>
               <button
                 onClick={() => setShowPayrollModal(false)}
                 className="text-gray-400 hover:text-gray-500"
@@ -852,471 +851,52 @@ const Staff = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitPayroll} className="p-6 space-y-4">
+            <form onSubmit={handleCreatePayroll} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Empleado
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Período</label>
                 <select
-                  value={payrollData.employeeId}
-                  onChange={(e) => setPayrollData({...payrollData, employeeId: e.target.value})}
+                  value={payrollForm.periodo}
+                  onChange={(e) => setPayrollForm(prev => ({ ...prev, periodo: Number(e.target.value) }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   required
                 >
-                  <option value="">Seleccionar empleado</option>
-                  {mockStaff.map(staff => (
-                    <option key={staff.id} value={staff.id} selected={staff.id === selectedEmployee?.id}>
-                      {staff.name} - {staff.role}
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {getPeriodName(i + 1)}
                     </option>
                   ))}
+                  <option value={13}>Paga Extra Verano</option>
+                  <option value={14}>Paga Extra Navidad</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Período
-                </label>
-                <select
-                  value={payrollData.period}
-                  onChange={(e) => setPayrollData({...payrollData, period: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  required
-                >
-                  <option value="">Seleccionar período</option>
-                  <option value="Enero 2025">Enero 2025</option>
-                  <option value="Febrero 2025">Febrero 2025</option>
-                  <option value="Marzo 2025">Marzo 2025</option>
-                  <option value="Abril 2025">Abril 2025</option>
-                  <option value="Mayo 2025">Mayo 2025</option>
-                  <option value="Junio 2025">Junio 2025</option>
-                  <option value="Julio 2025">Julio 2025</option>
-                  <option value="Agosto 2025">Agosto 2025</option>
-                  <option value="Septiembre 2025">Septiembre 2025</option>
-                  <option value="Octubre 2025">Octubre 2025</option>
-                  <option value="Noviembre 2025">Noviembre 2025</option>
-                  <option value="Diciembre 2025">Diciembre 2025</option>
-                  <option value="Extra Verano 2025">Extra Verano 2025</option>
-                  <option value="Extra Navidad 2025">Extra Navidad 2025</option>
-                </select>
-              </div>
+              <Input
+                label="Importe Neto"
+                type="number"
+                step="0.01"
+                value={payrollForm.importeNeto}
+                onChange={(e) => setPayrollForm(prev => ({ ...prev, importeNeto: Number(e.target.value) }))}
+                required
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Importe Neto
-                </label>
-                <Input
-                  type="number"
-                  value={payrollData.amount}
-                  onChange={(e) => setPayrollData({...payrollData, amount: e.target.value})}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  icon={<DollarSign size={18} />}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha de Emisión
-                </label>
-                <Input
-                  type="date"
-                  value={payrollData.date}
-                  onChange={(e) => setPayrollData({...payrollData, date: e.target.value})}
-                  required
-                />
-              </div>
+              <Input
+                label="Fecha de Emisión"
+                type="date"
+                value={payrollForm.fechaEmision}
+                onChange={(e) => setPayrollForm(prev => ({ ...prev, fechaEmision: e.target.value }))}
+                required
+              />
 
               <div className="flex justify-end space-x-3 pt-4">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={() => setShowPayrollModal(false)}
                 >
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  icon={<FileText size={18} />}
-                >
+                <Button type="submit" variant="primary">
                   Emitir Nómina
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* View Contract Modal */}
-      {showViewContractModal && selectedEmployee && selectedEmployee.hasContract && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
-                Contrato de Trabajo
-              </h3>
-              <button
-                onClick={() => setShowViewContractModal(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-blue-900">Información del Contrato</h4>
-                    <p className="text-sm text-blue-700 mt-1">Contrato activo desde {new Date(selectedEmployee.contract.startDate).toLocaleDateString('es-ES')}</p>
-                  </div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    <Check size={12} className="mr-1" />
-                    Activo
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Empleado</p>
-                  <p className="mt-1 text-sm text-gray-900">{selectedEmployee.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Puesto</p>
-                  <p className="mt-1 text-sm text-gray-900">{selectedEmployee.contract.position}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Tipo de Contrato</p>
-                  <p className="mt-1 text-sm text-gray-900">{selectedEmployee.contract.type}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Fecha de Inicio</p>
-                  <p className="mt-1 text-sm text-gray-900">{new Date(selectedEmployee.contract.startDate).toLocaleDateString('es-ES')}</p>
-                </div>
-                {selectedEmployee.contract.endDate && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Fecha de Fin</p>
-                    <p className="mt-1 text-sm text-gray-900">{new Date(selectedEmployee.contract.endDate).toLocaleDateString('es-ES')}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Salario</p>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {selectedEmployee.contract.salary.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} 
-                    {selectedEmployee.contract.salaryType === 'annual' ? ' anuales' : ' mensuales'} 
-                    {` en ${selectedEmployee.contract.payments} pagas`}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Jornada</p>
-                  <p className="mt-1 text-sm text-gray-900">{selectedEmployee.contract.workingHours}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-gray-500">Horario</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {Object.entries(selectedEmployee.contract.schedule).map(([day, enabled]) => (
-                      enabled && (
-                        <span key={day} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {day.charAt(0).toUpperCase() + day.slice(1)}
-                        </span>
-                      )
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Documento de Contrato</p>
-                    <p className="text-sm text-gray-500 mt-1">{selectedEmployee.contract.file}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={<DownloadIcon size={16} />}
-                  >
-                    Descargar
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                icon={<FileText size={18} />}
-                onClick={() => {
-                  setShowViewContractModal(false);
-                  handleAddContract(selectedEmployee);
-                }}
-              >
-                Modificar Contrato
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowViewContractModal(false)}
-              >
-                Cerrar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Contract Modal */}
-      {showContractModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
-                {selectedEmployee?.hasContract ? 'Modificar Contrato' : 'Añadir Contrato'}
-              </h3>
-              <button
-                onClick={() => setShowContractModal(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitContract} className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Empleado
-                </label>
-                <select
-                  value={contractData.employeeId}
-                  onChange={(e) => setContractData({...contractData, employeeId: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  required
-                  disabled={!!selectedEmployee}
-                >
-                  <option value="">Seleccionar empleado</option>
-                  {mockStaff.map(staff => (
-                    <option key={staff.id} value={staff.id} selected={staff.id === selectedEmployee?.id}>
-                      {staff.name} - {staff.role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Inicio
-                  </label>
-                  <Input
-                    type="date"
-                    value={contractData.startDate}
-                    onChange={(e) => setContractData({...contractData, startDate: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Fin (opcional)
-                  </label>
-                  <Input
-                    type="date"
-                    value={contractData.endDate}
-                    onChange={(e) => setContractData({...contractData, endDate: e.target.value})}
-                    min={contractData.startDate}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Contrato
-                  </label>
-                  <select
-                    value={contractData.type}
-                    onChange={(e) => setContractData({...contractData, type: e.target.value})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    required
-                  >
-                    <option value="">Seleccionar tipo</option>
-                    <option value="Indefinido">Indefinido</option>
-                    <option value="Temporal">Temporal</option>
-                    <option value="Prácticas">Prácticas</option>
-                    <option value="Formación">Formación</option>
-                    <option value="Obra y Servicio">Obra y Servicio</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Puesto
-                  </label>
-                  <Input
-                    type="text"
-                    value={contractData.position}
-                    onChange={(e) => setContractData({...contractData, position: e.target.value})}
-                    placeholder="Ej: Veterinario Senior"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Salario Bruto
-                  </label>
-                  <Input
-                    type="number"
-                    value={contractData.salary}
-                    onChange={(e) => setContractData({...contractData, salary: e.target.value})}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    icon={<DollarSign size={18} />}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo
-                  </label>
-                  <select
-                    value={contractData.salaryType}
-                    onChange={(e) => setContractData({...contractData, salaryType: e.target.value})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    required
-                  >
-                    <option value="annual">Anual</option>
-                    <option value="monthly">Mensual</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pagas
-                  </label>
-                  <select
-                    value={contractData.payments}
-                    onChange={(e) => setContractData({...contractData, payments: e.target.value})}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    required
-                  >
-                    <option value="12">12 pagas</option>
-                    <option value="14">14 pagas</option>
-                    <option value="15">15 pagas</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Horario Laboral
-                </label>
-                <select
-                  value={contractData.workingHours}
-                  onChange={(e) => setContractData({...contractData, workingHours: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  required
-                >
-                  <option value="">Seleccionar jornada</option>
-                  <option value="Jornada Completa">Jornada Completa</option>
-                  <option value="Media Jornada">Media Jornada</option>
-                  <option value="Jornada Parcial">Jornada Parcial</option>
-                  <option value="Por Horas">Por Horas</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Días Laborables
-                </label>
-                <div className="grid grid-cols-7 gap-2">
-                  {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
-                    <div key={day} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id={`day-${day}`}
-                        checked={contractData.schedule[day]}
-                        onChange={(e) => setContractData({
-                          ...contractData,
-                          schedule: {
-                            ...contractData.schedule,
-                            [day]: e.target.checked
-                          }
-                        })}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor={`day-${day}`} className="ml-2 block text-sm text-gray-900">
-                        {day.charAt(0).toUpperCase() + day.slice(1, 3)}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={contractData.isActive}
-                  onChange={(e) => setContractData({...contractData, isActive: e.target.checked})}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
-                  Contrato activo
-                </label>
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Archivos
-                </label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <label
-                        htmlFor="file-upload"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
-                      >
-                        <span>Subir archivo</span>
-                        <input id="file-upload" name="file-upload" type="file" className="sr-only" />
-                      </label>
-                      <p className="pl-1">o arrastrar y soltar</p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      PDF, DOC, DOCX hasta 10MB
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowContractModal(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  icon={<FileCheck size={18} />}
-                >
-                  {selectedEmployee?.hasContract ? 'Actualizar Contrato' : 'Guardar Contrato'}
                 </Button>
               </div>
             </form>
