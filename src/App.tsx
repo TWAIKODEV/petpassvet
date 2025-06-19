@@ -19,7 +19,6 @@ import ProductsServices from './pages/clinic/ProductsServices';
 import Inventory from './pages/clinic/Inventory';
 import Staff from './pages/clinic/Staff';
 import Medications from './pages/consultorio/Medicamentos';
-import Orders from './pages/clinic/Orders';
 import GroomingAppointments from './pages/peluqueria/GroomingAppointments';
 import GroomingHistory from './pages/peluqueria/GroomingHistory';
 import GroomingTreatments from './pages/peluqueria/GroomingTreatments';
@@ -146,7 +145,7 @@ function App() {
                 <Route path="compras/proveedores/:id" element={<ProviderProfile />} />
                 <Route path="compras/productos-servicios" element={<ProductsServices />} />
                 <Route path="compras/inventario" element={<Inventory />} />
-                <Route path="compras/pedidos" element={<Orders />} />
+                <Route path="compras/pedidos" element={<Pedidos />} />
 
                 {/* Marketing routes */}
                 <Route path="marketing" element={<WebDashboard />} />
