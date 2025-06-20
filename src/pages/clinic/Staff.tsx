@@ -42,6 +42,7 @@ const Staff = () => {
   const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showExistingSchedulesModal, setShowExistingSchedulesModal] = useState(false);
   const [payrollDateRange, setPayrollDateRange] = useState({
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
@@ -233,6 +234,15 @@ const Staff = () => {
       });
     } catch (error) {
       console.error('Error creating schedule:', error);
+    }
+  };
+
+  const handleSelectExistingSchedule = (scheduleId: string) => {
+    if (!employeeForm.scheduleIds.includes(scheduleId)) {
+      setEmployeeForm(prev => ({
+        ...prev,
+        scheduleIds: [...prev.scheduleIds, scheduleId]
+      }));
     }
   };
 
@@ -706,22 +716,44 @@ const Staff = () => {
                 <div className="col-span-2">
                   <div className="flex items-center justify-between mb-4">
                     <label className="block text-sm font-medium text-gray-700">Horario</label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      icon={<Plus size={16} />}
-                      onClick={() => setShowScheduleModal(true)}
-                    >
-                      Añadir Horario
-                    </Button>
+                    <div className="flex space-x-2">
+                      {schedules.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          icon={<Clock size={16} />}
+                          onClick={() => setShowExistingSchedulesModal(true)}
+                        >
+                          Elegir Existente
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        icon={<Plus size={16} />}
+                        onClick={() => setShowScheduleModal(true)}
+                      >
+                        Nuevo Horario
+                      </Button>
+                    </div>
                   </div>
                   {employeeForm.scheduleIds.length > 0 && (
                     <div className="space-y-2">
                       {employeeForm.scheduleIds.map((scheduleId, index) => {
                         const schedule = schedules.find(s => s._id === scheduleId);
                         return schedule ? (
-                          <div key={index} className="bg-gray-50 p-2 rounded text-sm">
-                            {schedule.startTime} - {schedule.endTime} | {getWeekdayNames(schedule.weekdayMask).join(', ')}
+                          <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
+                            <span>{schedule.startTime} - {schedule.endTime} | {getWeekdayNames(schedule.weekdayMask).join(', ')}</span>
+                            <button
+                              type="button"
+                              onClick={() => setEmployeeForm(prev => ({
+                                ...prev,
+                                scheduleIds: prev.scheduleIds.filter(id => id !== scheduleId)
+                              }))}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X size={16} />
+                            </button>
                           </div>
                         ) : null;
                       })}
@@ -927,6 +959,70 @@ const Staff = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Existing Schedules Modal */}
+      {showExistingSchedulesModal && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Seleccionar Horario Existente</h3>
+              <button
+                onClick={() => setShowExistingSchedulesModal(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-3">
+                {schedules
+                  .filter(schedule => !employeeForm.scheduleIds.includes(schedule._id))
+                  .map((schedule) => (
+                    <div
+                      key={schedule._id}
+                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        handleSelectExistingSchedule(schedule._id);
+                        setShowExistingSchedulesModal(false);
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {schedule.startTime} - {schedule.endTime}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {getWeekdayNames(schedule.weekdayMask).join(', ')}
+                          </div>
+                        </div>
+                        <div className="text-blue-600">
+                          <Plus size={20} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                {schedules.filter(schedule => !employeeForm.scheduleIds.includes(schedule._id)).length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No hay horarios disponibles para seleccionar
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExistingSchedulesModal(false)}
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
