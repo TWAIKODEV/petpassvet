@@ -20,6 +20,8 @@ import {
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const ControlHorario: React.FC = () => {
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
@@ -32,263 +34,57 @@ const ControlHorario: React.FC = () => {
     employeeId: '',
     type: '',
     description: '',
-    durationType: 'full_day',
+    durationType: 'single_day',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
-    halfDayPeriod: 'morning'
   });
 
-  // Mock data for employees
-  const employees = [
-    {
-      id: '1',
-      name: 'Dr. Alejandro Ramírez',
-      department: 'Veterinaria',
-      position: 'Veterinario Senior',
-      schedule: {
-        monday: { start: '09:00', end: '17:00' },
-        tuesday: { start: '09:00', end: '17:00' },
-        wednesday: { start: '09:00', end: '17:00' },
-        thursday: { start: '09:00', end: '17:00' },
-        friday: { start: '09:00', end: '17:00' }
-      }
-    },
-    {
-      id: '2',
-      name: 'Dra. Laura Gómez',
-      department: 'Veterinaria',
-      position: 'Veterinaria',
-      schedule: {
-        monday: { start: '10:00', end: '18:00' },
-        tuesday: { start: '10:00', end: '18:00' },
-        wednesday: { start: '10:00', end: '18:00' },
-        thursday: { start: '10:00', end: '18:00' },
-        friday: { start: '10:00', end: '16:00' }
-      }
-    },
-    {
-      id: '3',
-      name: 'Ana López',
-      department: 'Peluquería',
-      position: 'Peluquera',
-      schedule: {
-        monday: { start: '09:00', end: '17:00' },
-        tuesday: { start: '09:00', end: '17:00' },
-        wednesday: { start: '09:00', end: '17:00' },
-        thursday: { start: '09:00', end: '17:00' },
-        friday: { start: '09:00', end: '17:00' }
-      }
-    },
-    {
-      id: '4',
-      name: 'Carlos Ruiz',
-      department: 'Administración',
-      position: 'Recepcionista',
-      schedule: {
-        monday: { start: '08:00', end: '16:00' },
-        tuesday: { start: '08:00', end: '16:00' },
-        wednesday: { start: '08:00', end: '16:00' },
-        thursday: { start: '08:00', end: '16:00' },
-        friday: { start: '08:00', end: '16:00' }
-      }
-    },
-    {
-      id: '5',
-      name: 'María Sánchez',
-      department: 'Administración',
-      position: 'Contable',
-      schedule: {
-        monday: { start: '09:00', end: '17:00' },
-        tuesday: { start: '09:00', end: '17:00' },
-        wednesday: { start: '09:00', end: '17:00' },
-        thursday: { start: '09:00', end: '17:00' },
-        friday: { start: '09:00', end: '17:00' }
-      }
-    }
-  ];
+  // Fetch data from database
+  const employees = useQuery(api.employees.getEmployees) || [];
+  const timeRecordings = useQuery(api.timeRecording.getTimeRecordings) || [];
+  const absences = useQuery(api.absences.getAbsences) || [];
 
-  // Fetch attendance records
-  const fetchAttendanceRecords = () => {
-    // In a real app, this would be an API call
-    // For now, we'll generate mock data
-    return generateAttendanceRecords();
-  };
+  // Mutations
+  const createAbsence = useMutation(api.absences.createAbsence);
 
-  // Mock data for attendance records
-  const generateAttendanceRecords = () => {
-    const records = [];
-    const days = viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : 30;
-    
-    for (let i = 0; i < days; i++) {
-      const date = new Date(currentDate);
-      date.setDate(date.getDate() - i);
-      
-      for (const employee of employees) {
-        // Skip weekends
-        const dayOfWeek = date.getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-        
-        // Get schedule for the day
-        const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek].toLowerCase();
-        const schedule = employee.schedule[dayName];
-        
-        if (!schedule) continue;
-        
-        // Random variation for check-in/out times (within 10 minutes)
-        const randomMinutes = () => Math.floor(Math.random() * 10) - 5;
-        
-        const scheduledStartHour = parseInt(schedule.start.split(':')[0]);
-        const scheduledStartMinute = parseInt(schedule.start.split(':')[1]);
-        
-        const scheduledEndHour = parseInt(schedule.end.split(':')[0]);
-        const scheduledEndMinute = parseInt(schedule.end.split(':')[1]);
-        
-        const actualStartMinute = scheduledStartMinute + randomMinutes();
-        const actualEndMinute = scheduledEndMinute + randomMinutes();
-        
-        const checkIn = `${scheduledStartHour.toString().padStart(2, '0')}:${Math.abs(actualStartMinute % 60).toString().padStart(2, '0')}`;
-        const checkOut = `${scheduledEndHour.toString().padStart(2, '0')}:${Math.abs(actualEndMinute % 60).toString().padStart(2, '0')}`;
-        
-        // 5% chance of missing check-in or check-out
-        const hasMissingRecord = Math.random() < 0.05;
-        
-        records.push({
-          id: `${employee.id}-${date.toISOString().split('T')[0]}`,
-          employeeId: employee.id,
-          employeeName: employee.name,
-          department: employee.department,
-          date: date.toISOString().split('T')[0],
-          checkIn: hasMissingRecord && Math.random() < 0.5 ? null : checkIn,
-          checkOut: hasMissingRecord && Math.random() >= 0.5 ? null : checkOut,
-          status: hasMissingRecord ? 'incomplete' : 'complete'
-        });
-      }
-    }
-    
-    return records;
-  };
+  // Filter time recordings based on search term, department, and view mode
+  const filteredRecords = timeRecordings.filter(record => {
+    if (!record.employee) return false;
 
-  // Fetch absences
-  const fetchAbsences = () => {
-    // In a real app, this would be an API call
-    // For now, we'll return mock data
-    return absences;
-  };
+    const employeeName = `${record.employee.firstName} ${record.employee.lastName}`;
+    const matchesSearch = employeeName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment = selectedDepartment === 'all' || record.employee.department === selectedDepartment;
 
-  // Mock data for absences
-  const absences = [
-    {
-      id: '1',
-      employeeId: '1',
-      employeeName: 'Dr. Alejandro Ramírez',
-      department: 'Veterinaria',
-      type: 'vacation',
-      description: 'Vacaciones de verano',
-      startDate: '2025-07-15',
-      endDate: '2025-07-30',
-      status: 'approved',
-      approvedBy: 'Dra. Carmen Jiménez',
-      approvedDate: '2025-05-10'
-    },
-    {
-      id: '2',
-      employeeId: '2',
-      employeeName: 'Dra. Laura Gómez',
-      department: 'Veterinaria',
-      type: 'sick_leave',
-      description: 'Baja por enfermedad',
-      startDate: '2025-05-25',
-      endDate: '2025-05-27',
-      status: 'approved',
-      approvedBy: 'Dra. Carmen Jiménez',
-      approvedDate: '2025-05-25'
-    },
-    {
-      id: '3',
-      employeeId: '3',
-      employeeName: 'Ana López',
-      department: 'Peluquería',
-      type: 'personal',
-      description: 'Asuntos personales',
-      startDate: '2025-06-10',
-      endDate: '2025-06-10',
-      status: 'pending',
-      approvedBy: null,
-      approvedDate: null
-    },
-    {
-      id: '4',
-      employeeId: '4',
-      employeeName: 'Carlos Ruiz',
-      department: 'Administración',
-      type: 'half_day',
-      description: 'Cita médica',
-      startDate: '2025-06-05',
-      endDate: '2025-06-05',
-      status: 'approved',
-      approvedBy: 'Dra. Carmen Jiménez',
-      approvedDate: '2025-05-30'
-    },
-    {
-      id: '5',
-      employeeId: '5',
-      employeeName: 'María Sánchez',
-      department: 'Administración',
-      type: 'vacation',
-      description: 'Vacaciones de Semana Santa',
-      startDate: '2025-04-14',
-      endDate: '2025-04-18',
-      status: 'completed',
-      approvedBy: 'Dra. Carmen Jiménez',
-      approvedDate: '2025-03-01'
-    }
-  ];
-
-  // Load data on component mount and when dependencies change
-  useEffect(() => {
-    // In a real app, these would be API calls
-    const attendanceRecords = fetchAttendanceRecords();
-    const absenceRecords = fetchAbsences();
-    
-    // You would typically set these to state
-    // setAttendanceRecords(attendanceRecords);
-    // setAbsences(absenceRecords);
-  }, [currentDate, viewMode]);
-
-  const attendanceRecords = fetchAttendanceRecords();
-
-  // Filter records based on search term, department, and view mode
-  const filteredRecords = attendanceRecords.filter(record => {
-    const matchesSearch = record.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = selectedDepartment === 'all' || record.department === selectedDepartment;
-    
     // Filter by date based on view mode
     let matchesDate = true;
     if (viewMode === 'day') {
-      matchesDate = record.date === currentDate.toISOString().split('T')[0];
+      matchesDate = record.recordDate === currentDate.toISOString().split('T')[0];
     } else if (viewMode === 'week') {
-      const recordDate = new Date(record.date);
+      const recordDate = new Date(record.recordDate);
       const startOfWeek = new Date(currentDate);
       startOfWeek.setDate(currentDate.getDate() - currentDate.getDay() + 1); // Start from Monday
-      
+
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
-      
+
       matchesDate = recordDate >= startOfWeek && recordDate <= endOfWeek;
     } else if (viewMode === 'month') {
-      const recordDate = new Date(record.date);
+      const recordDate = new Date(record.recordDate);
       matchesDate = recordDate.getMonth() === currentDate.getMonth() && 
                     recordDate.getFullYear() === currentDate.getFullYear();
     }
-    
+
     return matchesSearch && matchesDepartment && matchesDate;
   });
 
   // Filter absences based on search term and department
   const filteredAbsences = absences.filter(absence => {
-    const matchesSearch = absence.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = selectedDepartment === 'all' || absence.department === selectedDepartment;
-    
+    if (!absence.employee) return false;
+
+    const employeeName = `${absence.employee.firstName} ${absence.employee.lastName}`;
+    const matchesSearch = employeeName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment = selectedDepartment === 'all' || absence.employee.department === selectedDepartment;
+
     return matchesSearch && matchesDepartment;
   });
 
@@ -307,10 +103,10 @@ const ControlHorario: React.FC = () => {
     } else if (viewMode === 'week') {
       const startOfWeek = new Date(currentDate);
       startOfWeek.setDate(currentDate.getDate() - currentDate.getDay() + 1); // Start from Monday
-      
+
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
-      
+
       return `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} - ${endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`;
     } else {
       return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
@@ -356,21 +152,32 @@ const ControlHorario: React.FC = () => {
   };
 
   // Submit new absence
-  const handleSubmitAbsence = (e: React.FormEvent) => {
+  const handleSubmitAbsence = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('New absence:', absenceForm);
-    setShowNewAbsenceModal(false);
-    
-    // Reset form
-    setAbsenceForm({
-      employeeId: '',
-      type: '',
-      description: '',
-      durationType: 'full_day',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0],
-      halfDayPeriod: 'morning'
-    });
+
+    try {
+      await createAbsence({
+        employeeId: absenceForm.employeeId as any,
+        type: absenceForm.type as any,
+        description: absenceForm.description,
+        startDate: absenceForm.startDate,
+        endDate: absenceForm.durationType === 'multiple_days' ? absenceForm.endDate : undefined,
+      });
+
+      setShowNewAbsenceModal(false);
+
+      // Reset form
+      setAbsenceForm({
+        employeeId: '',
+        type: '',
+        description: '',
+        durationType: 'single_day',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+      });
+    } catch (error) {
+      console.error('Error creating absence:', error);
+    }
   };
 
   // Get absence type label
@@ -389,37 +196,32 @@ const ControlHorario: React.FC = () => {
   };
 
   // Get absence status badge
-  const getAbsenceStatusBadge = (status: string) => {
-    if (status === 'approved') {
+  const getAbsenceStatusBadge = (approved: boolean) => {
+    if (approved) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           <CheckCircle size={12} className="mr-1" />
           Aprobada
         </span>
       );
-    } else if (status === 'pending') {
+    } else {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
           <Clock size={12} className="mr-1" />
           Pendiente
         </span>
       );
-    } else if (status === 'rejected') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-          <XCircle size={12} className="mr-1" />
-          Rechazada
-        </span>
-      );
-    } else if (status === 'completed') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          <CheckCircle size={12} className="mr-1" />
-          Completada
-        </span>
-      );
     }
-    return null;
+  };
+
+  // Get department label
+  const getDepartmentLabel = (department: string) => {
+    const labels: Record<string, string> = {
+      'veterinary': 'Veterinaria',
+      'grooming': 'Peluquería',
+      'administration': 'Administración'
+    };
+    return labels[department] || department;
   };
 
   return (
@@ -510,7 +312,7 @@ const ControlHorario: React.FC = () => {
                   {getDateRangeText()}
                 </span>
               </div>
-              
+
               <div className="flex rounded-md shadow-sm ml-auto">
                 <button
                   className={`px-3 py-2 text-sm font-medium rounded-l-md border ${
@@ -563,7 +365,7 @@ const ControlHorario: React.FC = () => {
               >
                 <option value="all">Todos los departamentos</option>
                 {departments.filter(d => d !== 'all').map(department => (
-                  <option key={department} value={department}>{department}</option>
+                  <option key={department} value={department}>{getDepartmentLabel(department)}</option>
                 ))}
               </select>
               <Button
@@ -608,38 +410,44 @@ const ControlHorario: React.FC = () => {
                   {filteredRecords.map((record) => {
                     // Calculate hours worked
                     let hoursWorked = '';
-                    if (record.checkIn && record.checkOut) {
-                      const checkInTime = record.checkIn.split(':');
-                      const checkOutTime = record.checkOut.split(':');
-                      
-                      const checkInMinutes = parseInt(checkInTime[0]) * 60 + parseInt(checkInTime[1]);
-                      const checkOutMinutes = parseInt(checkOutTime[0]) * 60 + parseInt(checkOutTime[1]);
-                      
-                      const diffMinutes = checkOutMinutes - checkInMinutes;
+                    if (record.entryDate && record.departureDate) {
+                      const entryTime = record.entryDate.split(':');
+                      const departureTime = record.departureDate.split(':');
+
+                      const entryMinutes = parseInt(entryTime[0]) * 60 + parseInt(entryTime[1]);
+                      const departureMinutes = parseInt(departureTime[0]) * 60 + parseInt(departureTime[1]);
+
+                      const diffMinutes = departureMinutes - entryMinutes;
                       const hours = Math.floor(diffMinutes / 60);
                       const minutes = diffMinutes % 60;
-                      
+
                       hoursWorked = `${hours}h ${minutes}m`;
                     }
-                    
+
+                    const isComplete = record.entryDate && record.departureDate;
+
                     return (
-                      <tr key={record.id} className="hover:bg-gray-50">
+                      <tr key={record._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                               <User size={16} className="text-blue-600" />
                             </div>
                             <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">{record.employeeName}</div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {record.employee ? `${record.employee.firstName} ${record.employee.lastName}` : 'N/A'}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{record.department}</div>
+                          <div className="text-sm text-gray-900">
+                            {record.employee ? getDepartmentLabel(record.employee.department) : 'N/A'}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {new Date(record.date).toLocaleDateString('es-ES', {
+                            {new Date(record.recordDate).toLocaleDateString('es-ES', {
                               weekday: 'short',
                               day: 'numeric',
                               month: 'short'
@@ -647,8 +455,8 @@ const ControlHorario: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {record.checkIn ? (
-                            <div className="text-sm text-gray-900">{record.checkIn}</div>
+                          {record.entryDate ? (
+                            <div className="text-sm text-gray-900">{record.entryDate}</div>
                           ) : (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                               Sin registro
@@ -656,8 +464,8 @@ const ControlHorario: React.FC = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {record.checkOut ? (
-                            <div className="text-sm text-gray-900">{record.checkOut}</div>
+                          {record.departureDate ? (
+                            <div className="text-sm text-gray-900">{record.departureDate}</div>
                           ) : (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                               Sin registro
@@ -674,7 +482,7 @@ const ControlHorario: React.FC = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {record.status === 'complete' ? (
+                          {isComplete ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               <CheckCircle size={12} className="mr-1" />
                               Completo
@@ -691,7 +499,7 @@ const ControlHorario: React.FC = () => {
                   })}
                 </tbody>
               </table>
-              
+
               {filteredRecords.length === 0 && (
                 <div className="text-center py-12">
                   <Clock size={48} className="mx-auto text-gray-400" />
@@ -724,7 +532,7 @@ const ControlHorario: React.FC = () => {
                   <CheckCircle className="h-5 w-5 text-green-500" />
                 </div>
                 <p className="mt-2 text-3xl font-semibold text-green-600">
-                  {filteredRecords.filter(r => r.status === 'complete').length}
+                  {filteredRecords.filter(r => r.entryDate && r.departureDate).length}
                 </p>
                 <p className="mt-1 text-sm text-gray-500">en el período seleccionado</p>
               </div>
@@ -737,7 +545,7 @@ const ControlHorario: React.FC = () => {
                   <XCircle className="h-5 w-5 text-red-500" />
                 </div>
                 <p className="mt-2 text-3xl font-semibold text-red-600">
-                  {filteredRecords.filter(r => r.status === 'incomplete').length}
+                  {filteredRecords.filter(r => !r.entryDate || !r.departureDate).length}
                 </p>
                 <p className="mt-1 text-sm text-gray-500">en el período seleccionado</p>
               </div>
@@ -753,20 +561,20 @@ const ControlHorario: React.FC = () => {
                   {(() => {
                     let totalMinutes = 0;
                     filteredRecords.forEach(record => {
-                      if (record.checkIn && record.checkOut) {
-                        const checkInTime = record.checkIn.split(':');
-                        const checkOutTime = record.checkOut.split(':');
-                        
-                        const checkInMinutes = parseInt(checkInTime[0]) * 60 + parseInt(checkInTime[1]);
-                        const checkOutMinutes = parseInt(checkOutTime[0]) * 60 + parseInt(checkOutTime[1]);
-                        
-                        totalMinutes += checkOutMinutes - checkInMinutes;
+                      if (record.entryDate && record.departureDate) {
+                        const entryTime = record.entryDate.split(':');
+                        const departureTime = record.departureDate.split(':');
+
+                        const entryMinutes = parseInt(entryTime[0]) * 60 + parseInt(entryTime[1]);
+                        const departureMinutes = parseInt(departureTime[0]) * 60 + parseInt(departureTime[1]);
+
+                        totalMinutes += departureMinutes - entryMinutes;
                       }
                     });
-                    
+
                     const hours = Math.floor(totalMinutes / 60);
                     const minutes = totalMinutes % 60;
-                    
+
                     return `${hours}h ${minutes}m`;
                   })()}
                 </p>
@@ -796,7 +604,7 @@ const ControlHorario: React.FC = () => {
               >
                 <option value="all">Todos los departamentos</option>
                 {departments.filter(d => d !== 'all').map(department => (
-                  <option key={department} value={department}>{department}</option>
+                  <option key={department} value={department}>{getDepartmentLabel(department)}</option>
                 ))}
               </select>
               <Button
@@ -844,24 +652,28 @@ const ControlHorario: React.FC = () => {
                   {filteredAbsences.map((absence) => {
                     // Calculate duration in days
                     const startDate = new Date(absence.startDate);
-                    const endDate = new Date(absence.endDate);
+                    const endDate = absence.endDate ? new Date(absence.endDate) : startDate;
                     const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                    
+
                     return (
-                      <tr key={absence.id} className="hover:bg-gray-50">
+                      <tr key={absence._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                               <User size={16} className="text-blue-600" />
                             </div>
                             <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">{absence.employeeName}</div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {absence.employee ? `${absence.employee.firstName} ${absence.employee.lastName}` : 'N/A'}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{absence.department}</div>
+                          <div className="text-sm text-gray-900">
+                            {absence.employee ? getDepartmentLabel(absence.employee.department) : 'N/A'}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -879,11 +691,13 @@ const ControlHorario: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {new Date(absence.endDate).toLocaleDateString('es-ES', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
+                            {absence.endDate ? 
+                              new Date(absence.endDate).toLocaleDateString('es-ES', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              }) : '-'
+                            }
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -892,22 +706,17 @@ const ControlHorario: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getAbsenceStatusBadge(absence.status)}
+                          {getAbsenceStatusBadge(absence.approved)}
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900">{absence.description}</div>
-                          {absence.approvedBy && (
-                            <div className="text-xs text-gray-500">
-                              Aprobado por: {absence.approvedBy} ({new Date(absence.approvedDate!).toLocaleDateString('es-ES')})
-                            </div>
-                          )}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-              
+
               {filteredAbsences.length === 0 && (
                 <div className="text-center py-12">
                   <CalendarDays size={48} className="mx-auto text-gray-400" />
@@ -966,7 +775,7 @@ const ControlHorario: React.FC = () => {
                   <Clock className="h-5 w-5 text-yellow-500" />
                 </div>
                 <p className="mt-2 text-3xl font-semibold text-yellow-600">
-                  {absences.filter(a => a.status === 'pending').length}
+                  {absences.filter(a => !a.approved).length}
                 </p>
                 <p className="mt-1 text-sm text-gray-500">por aprobar</p>
               </div>
@@ -1006,8 +815,8 @@ const ControlHorario: React.FC = () => {
                   >
                     <option value="">Seleccionar empleado</option>
                     {employees.map(employee => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.name} - {employee.department}
+                      <option key={employee._id} value={employee._id}>
+                        {employee.firstName} {employee.lastName} - {getDepartmentLabel(employee.department)}
                       </option>
                     ))}
                   </select>
@@ -1055,62 +864,15 @@ const ControlHorario: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Duración
                   </label>
-                  <div className="mt-1 space-y-4">
-                    <div className="flex items-center space-x-4">
-                      <input
-                        type="radio"
-                        id="half_day"
-                        name="durationType"
-                        value="half_day"
-                        checked={absenceForm.durationType === 'half_day'}
-                        onChange={handleFormChange}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                      />
-                      <label htmlFor="half_day" className="text-sm text-gray-700">
-                        Medio día
-                      </label>
-                      
-                      <input
-                        type="radio"
-                        id="full_day"
-                        name="durationType"
-                        value="full_day"
-                        checked={absenceForm.durationType === 'full_day'}
-                        onChange={handleFormChange}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                      />
-                      <label htmlFor="full_day" className="text-sm text-gray-700">
-                        Un día
-                      </label>
-                      
-                      <input
-                        type="radio"
-                        id="multiple_days"
-                        name="durationType"
-                        value="multiple_days"
-                        checked={absenceForm.durationType === 'multiple_days'}
-                        onChange={handleFormChange}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                      />
-                      <label htmlFor="multiple_days" className="text-sm text-gray-700">
-                        Varios días
-                      </label>
-                    </div>
-                    
-                    {absenceForm.durationType === 'half_day' && (
-                      <div className="pl-6">
-                        <select
-                          name="halfDayPeriod"
-                          value={absenceForm.halfDayPeriod}
-                          onChange={handleFormChange}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        >
-                          <option value="morning">Mañana</option>
-                          <option value="afternoon">Tarde</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
+                  <select
+                    name="durationType"
+                    value={absenceForm.durationType}
+                    onChange={handleFormChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  >
+                    <option value="single_day">Un día</option>
+                    <option value="multiple_days">Varios días</option>
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1126,7 +888,7 @@ const ControlHorario: React.FC = () => {
                       required
                     />
                   </div>
-                  
+
                   {absenceForm.durationType === 'multiple_days' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -1038,4 +1038,28 @@ export default defineSchema({
     .index("by_employee", ["employeeId"])
     .index("by_record_date", ["recordDate"])
     .index("by_employee_and_date", ["employeeId", "recordDate"]),
+
+  // Absences table
+  absences: defineTable({
+    employeeId: v.id("employees"),
+    type: v.union(
+      v.literal("vacation"),
+      v.literal("sick_leave"),
+      v.literal("personal"),
+      v.literal("half_day"),
+      v.literal("training"),
+      v.literal("maternity"),
+      v.literal("paternity"),
+      v.literal("other")
+    ),
+    description: v.string(),
+    startDate: v.string(), // YYYY-MM-DD format
+    endDate: v.optional(v.string()), // YYYY-MM-DD format, optional for single day absences
+    approved: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_employee", ["employeeId"])
+    .index("by_start_date", ["startDate"])
+    .index("by_approved", ["approved"]),
 });
