@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
@@ -10,19 +11,37 @@ import {
   LogOut,
   Calendar,
   AlertCircle,
-  Check
+  Check,
+  Filter
 } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { useAuth } from '../../context/AuthContext';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 const RegistrarEntradaSalida: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Get current date in YYYY-MM-DD format
+  const getCurrentDate = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  // Convex queries and mutations
+  const employees = useQuery(api.employees.getEmployees) || [];
+  const todayRecords = useQuery(api.timeRecording.getTimeRecordsByDate, { 
+    recordDate: getCurrentDate() 
+  }) || [];
+  
+  const recordEntry = useMutation(api.timeRecording.recordEntry);
+  const recordDeparture = useMutation(api.timeRecording.recordDeparture);
 
   // Update current time every second
   useEffect(() => {
@@ -53,6 +72,14 @@ const RegistrarEntradaSalida: React.FC = () => {
     });
   };
 
+  // Format time as HH:MM for storage
+  const formatTimeForStorage = (date: Date) => {
+    return date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   // Format date as weekday, day month year
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('es-ES', {
@@ -63,93 +90,72 @@ const RegistrarEntradaSalida: React.FC = () => {
     });
   };
 
-  // Mock data for employees
-  const employees = [
-    {
-      id: '1',
-      name: 'Dr. Alejandro Ramírez',
-      department: 'Veterinaria',
-      position: 'Veterinario Senior',
-      avatar: null,
-      status: 'in', // 'in', 'out', or null for no record today
-      lastCheckIn: '09:05:23',
-      lastCheckOut: null
-    },
-    {
-      id: '2',
-      name: 'Dra. Laura Gómez',
-      department: 'Veterinaria',
-      position: 'Veterinaria',
-      avatar: null,
-      status: 'out',
-      lastCheckIn: '10:02:45',
-      lastCheckOut: '14:30:12'
-    },
-    {
-      id: '3',
-      name: 'Ana López',
-      department: 'Peluquería',
-      position: 'Peluquera',
-      avatar: null,
-      status: null,
-      lastCheckIn: null,
-      lastCheckOut: null
-    },
-    {
-      id: '4',
-      name: 'Carlos Ruiz',
-      department: 'Administración',
-      position: 'Recepcionista',
-      avatar: null,
-      status: 'in',
-      lastCheckIn: '08:03:17',
-      lastCheckOut: null
-    },
-    {
-      id: '5',
-      name: 'María Sánchez',
-      department: 'Administración',
-      position: 'Contable',
-      avatar: null,
-      status: 'out',
-      lastCheckIn: '09:00:45',
-      lastCheckOut: '17:05:32'
-    }
-  ];
+  // Get employee's today record
+  const getEmployeeRecord = (employeeId: string) => {
+    return todayRecords.find(record => record.employee?._id === employeeId);
+  };
 
-  // Filter employees based on search term
-  const filteredEmployees = employees.filter(employee => 
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get employee status
+  const getEmployeeStatus = (employeeId: string) => {
+    const record = getEmployeeRecord(employeeId);
+    if (!record) return null;
+    
+    if (record.entryDate && !record.departureDate) return 'in';
+    if (record.entryDate && record.departureDate) return 'out';
+    if (!record.entryDate && record.departureDate) return 'out';
+    
+    return null;
+  };
+
+  // Filter employees based on search term and department
+  const filteredEmployees = employees.filter(employee => {
+    const matchesSearch = employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         employee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         employee.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         employee.position.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
+    
+    return matchesSearch && matchesDepartment;
+  });
 
   // Handle check-in/out
-  const handleCheckInOut = (employeeId: string, action: 'in' | 'out') => {
-    // In a real app, this would make an API call to record the check-in/out
-    console.log(`Employee ${employeeId} checked ${action} at ${formatTime(currentTime)}`);
-    
-    // Update the employee status in our mock data
-    const employeeIndex = employees.findIndex(emp => emp.id === employeeId);
-    if (employeeIndex !== -1) {
+  const handleCheckInOut = async (employeeId: string, action: 'in' | 'out') => {
+    setIsLoading(true);
+    try {
+      const currentTimeFormatted = formatTimeForStorage(currentTime);
+      const currentDate = getCurrentDate();
+      
       if (action === 'in') {
-        employees[employeeIndex].status = 'in';
-        employees[employeeIndex].lastCheckIn = formatTime(currentTime);
+        await recordEntry({
+          employeeId: employeeId as any,
+          entryTime: currentTimeFormatted,
+          recordDate: currentDate,
+        });
       } else {
-        employees[employeeIndex].status = 'out';
-        employees[employeeIndex].lastCheckOut = formatTime(currentTime);
+        await recordDeparture({
+          employeeId: employeeId as any,
+          departureTime: currentTimeFormatted,
+          recordDate: currentDate,
+        });
       }
+      
+      const employee = employees.find(emp => emp._id === employeeId);
+      setSuccessMessage(`${employee?.firstName} ${employee?.lastName} ha registrado su ${action === 'in' ? 'entrada' : 'salida'} correctamente a las ${formatTimeForStorage(currentTime)}`);
+      
+    } catch (error) {
+      console.error('Error recording time:', error);
+      setSuccessMessage('Error al registrar el tiempo. Inténtalo de nuevo.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Show success message
-    setSuccessMessage(`${employees[employeeIndex].name} ha registrado su ${action === 'in' ? 'entrada' : 'salida'} correctamente a las ${formatTime(currentTime)}`);
-    
-    // Clear selected employee
-    setSelectedEmployee(null);
   };
 
   // Get status badge
-  const getStatusBadge = (status: string | null) => {
+  const getStatusBadge = (employeeId: string) => {
+    const status = getEmployeeStatus(employeeId);
+    const record = getEmployeeRecord(employeeId);
+    
     if (status === 'in') {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -173,6 +179,11 @@ const RegistrarEntradaSalida: React.FC = () => {
       );
     }
   };
+
+  // Get current user's employee record
+  const currentUserEmployee = employees.find(emp => emp.email === user?.email);
+  const currentUserStatus = currentUserEmployee ? getEmployeeStatus(currentUserEmployee._id) : null;
+  const currentUserRecord = currentUserEmployee ? getEmployeeRecord(currentUserEmployee._id) : null;
 
   return (
     <div className="space-y-6">
@@ -224,7 +235,7 @@ const RegistrarEntradaSalida: React.FC = () => {
 
       {/* Search and Filter */}
       <Card>
-        <div className="p-4">
+        <div className="p-4 space-y-4">
           <Input
             placeholder="Buscar empleados..."
             value={searchTerm}
@@ -232,193 +243,180 @@ const RegistrarEntradaSalida: React.FC = () => {
             icon={<Search size={18} />}
             className="w-full"
           />
+          
+          {/* Department Filter */}
+          <div className="flex items-center gap-4">
+            <Filter size={18} className="text-gray-500" />
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Todos los departamentos</option>
+              <option value="veterinary">Veterinaria</option>
+              <option value="grooming">Peluquería</option>
+              <option value="administration">Administración</option>
+            </select>
+          </div>
         </div>
       </Card>
 
-      {/* Employee List */}
-      <Card title="Empleados" icon={<User size={20} />}>
-        <div className="divide-y divide-gray-200">
-          {filteredEmployees.map((employee) => (
-            <div key={employee.id} className="p-4 hover:bg-gray-50">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex items-center">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-600 font-medium">
-                      {employee.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                    </span>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">{employee.name}</p>
-                    <p className="text-xs text-gray-500">{employee.department} • {employee.position}</p>
+      {/* Quick Check In/Out for Current User */}
+      {currentUserEmployee && (
+        <Card title="Mi Registro" icon={<Clock size={20} />}>
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center">
+                <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-blue-600 font-medium text-xl">
+                    {`${currentUserEmployee.firstName[0]}${currentUserEmployee.lastName[0]}`}
+                  </span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-lg font-medium text-gray-900">
+                    {`${currentUserEmployee.firstName} ${currentUserEmployee.lastName}`}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {currentUserEmployee.position} • {currentUserEmployee.department}
+                  </p>
+                  <div className="mt-1">
+                    {getStatusBadge(currentUserEmployee._id)}
                   </div>
                 </div>
-                
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                  <div className="flex flex-col items-start">
-                    {getStatusBadge(employee.status)}
-                    <div className="mt-1 text-xs text-gray-500">
-                      {employee.lastCheckIn && (
-                        <span>Entrada: {employee.lastCheckIn}</span>
-                      )}
-                      {employee.lastCheckIn && employee.lastCheckOut && (
-                        <span> • </span>
-                      )}
-                      {employee.lastCheckOut && (
-                        <span>Salida: {employee.lastCheckOut}</span>
-                      )}
-                    </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="primary"
+                  icon={<LogIn size={18} />}
+                  disabled={currentUserStatus === 'in' || isLoading}
+                  onClick={() => handleCheckInOut(currentUserEmployee._id, 'in')}
+                >
+                  Marcar Entrada
+                </Button>
+                <Button
+                  variant="outline"
+                  icon={<LogOut size={18} />}
+                  disabled={currentUserStatus !== 'in' || isLoading}
+                  onClick={() => handleCheckInOut(currentUserEmployee._id, 'out')}
+                >
+                  Marcar Salida
+                </Button>
+              </div>
+            </div>
+            
+            <div className="mt-6 border-t border-gray-200 pt-6">
+              <h4 className="text-sm font-medium text-gray-700 mb-4">Mi registro de hoy</h4>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {formatDate(new Date())}
+                    </p>
                   </div>
-                  
-                  <div className="flex gap-2">
-                    {employee.status !== 'in' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={<LogIn size={16} />}
-                        onClick={() => handleCheckInOut(employee.id, 'in')}
-                      >
-                        Marcar Entrada
-                      </Button>
-                    )}
-                    
-                    {employee.status === 'in' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={<LogOut size={16} />}
-                        onClick={() => handleCheckInOut(employee.id, 'out')}
-                      >
-                        Marcar Salida
-                      </Button>
-                    )}
+                  <div className="flex gap-6">
+                    <div>
+                      <p className="text-xs text-gray-500">Entrada</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {currentUserRecord?.entryDate || '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Salida</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {currentUserRecord?.departureDate || '-'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Employee List */}
+      <Card title="Empleados" icon={<User size={20} />}>
+        <div className="divide-y divide-gray-200">
+          {filteredEmployees.map((employee) => {
+            const record = getEmployeeRecord(employee._id);
+            const status = getEmployeeStatus(employee._id);
+            
+            return (
+              <div key={employee._id} className="p-4 hover:bg-gray-50">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-600 font-medium">
+                        {`${employee.firstName[0]}${employee.lastName[0]}`}
+                      </span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        {`${employee.firstName} ${employee.lastName}`}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {employee.department} • {employee.position}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <div className="flex flex-col items-start">
+                      {getStatusBadge(employee._id)}
+                      <div className="mt-1 text-xs text-gray-500">
+                        {record?.entryDate && (
+                          <span>Entrada: {record.entryDate}</span>
+                        )}
+                        {record?.entryDate && record?.departureDate && (
+                          <span> • </span>
+                        )}
+                        {record?.departureDate && (
+                          <span>Salida: {record.departureDate}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      {status !== 'in' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={<LogIn size={16} />}
+                          disabled={isLoading}
+                          onClick={() => handleCheckInOut(employee._id, 'in')}
+                        >
+                          Marcar Entrada
+                        </Button>
+                      )}
+                      
+                      {status === 'in' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={<LogOut size={16} />}
+                          disabled={isLoading}
+                          onClick={() => handleCheckInOut(employee._id, 'out')}
+                        >
+                          Marcar Salida
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
           
           {filteredEmployees.length === 0 && (
             <div className="p-8 text-center">
               <User size={48} className="mx-auto text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron empleados</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Prueba con otros términos de búsqueda
+                Prueba con otros términos de búsqueda o cambia el filtro de departamento
               </p>
             </div>
           )}
-        </div>
-      </Card>
-
-      {/* Quick Check In/Out for Current User */}
-      <Card title="Mi Registro" icon={<Clock size={20} />}>
-        <div className="p-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center">
-              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-600 font-medium text-xl">
-                  {user?.name ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2) : 'AR'}
-                </span>
-              </div>
-              <div className="ml-4">
-                <p className="text-lg font-medium text-gray-900">{user?.name || 'Dr. Alejandro Ramírez'}</p>
-                <p className="text-sm text-gray-500">Veterinario Senior • Veterinaria</p>
-                <div className="mt-1">
-                  {getStatusBadge(employees[0].status)}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <Button
-                variant="primary"
-                icon={<LogIn size={18} />}
-                disabled={employees[0].status === 'in'}
-                onClick={() => handleCheckInOut('1', 'in')}
-              >
-                Marcar Entrada
-              </Button>
-              <Button
-                variant="outline"
-                icon={<LogOut size={18} />}
-                disabled={employees[0].status !== 'in'}
-                onClick={() => handleCheckInOut('1', 'out')}
-              >
-                Marcar Salida
-              </Button>
-            </div>
-          </div>
-          
-          <div className="mt-6 border-t border-gray-200 pt-6">
-            <h4 className="text-sm font-medium text-gray-700 mb-4">Mis últimos registros</h4>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Hoy</p>
-                  <p className="text-xs text-gray-500">
-                    {formatDate(new Date())}
-                  </p>
-                </div>
-                <div className="flex gap-6">
-                  <div>
-                    <p className="text-xs text-gray-500">Entrada</p>
-                    <p className="text-sm font-medium text-gray-900">{employees[0].lastCheckIn || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Salida</p>
-                    <p className="text-sm font-medium text-gray-900">{employees[0].lastCheckOut || '-'}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Ayer</p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(Date.now() - 86400000).toLocaleDateString('es-ES', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-                <div className="flex gap-6">
-                  <div>
-                    <p className="text-xs text-gray-500">Entrada</p>
-                    <p className="text-sm font-medium text-gray-900">09:02:45</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Salida</p>
-                    <p className="text-sm font-medium text-gray-900">17:05:12</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Anteayer</p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(Date.now() - 172800000).toLocaleDateString('es-ES', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-                <div className="flex gap-6">
-                  <div>
-                    <p className="text-xs text-gray-500">Entrada</p>
-                    <p className="text-sm font-medium text-gray-900">08:58:32</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Salida</p>
-                    <p className="text-sm font-medium text-gray-900">17:03:45</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </Card>
 
@@ -433,6 +431,7 @@ const RegistrarEntradaSalida: React.FC = () => {
               <li>Los registros se guardan automáticamente en el sistema.</li>
               <li>Si olvidas registrar tu entrada o salida, contacta con el departamento de RRHH.</li>
               <li>Los registros pueden realizarse desde cualquier dispositivo conectado a la red de la clínica.</li>
+              <li>El filtro de departamentos te permite encontrar empleados más fácilmente.</li>
             </ul>
           </div>
         </div>

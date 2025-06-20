@@ -1025,4 +1025,17 @@ export default defineSchema({
     .index("by_employee", ["employeeId"])
     .index("by_period", ["period"])
     .index("by_date", ["issueDate"]),
+
+  // Time Recording table
+  timeRecording: defineTable({
+    employeeId: v.id("employees"),
+    entryDate: v.optional(v.string()), // HH:MM format
+    departureDate: v.optional(v.string()), // HH:MM format
+    recordDate: v.string(), // YYYY-MM-DD format
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_employee", ["employeeId"])
+    .index("by_record_date", ["recordDate"])
+    .index("by_employee_and_date", ["employeeId", "recordDate"]),
 });
