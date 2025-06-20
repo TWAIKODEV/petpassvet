@@ -5,9 +5,9 @@ import { v } from "convex/values";
 export const createPayroll = mutation({
   args: {
     employeeId: v.id("employees"),
-    periodo: v.number(),
-    importeNeto: v.number(),
-    fechaEmision: v.string(),
+    period: v.number(),
+    netAmount: v.number(),
+    issueDate: v.string(),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -49,9 +49,9 @@ export const getPayroll = query({
 export const updatePayroll = mutation({
   args: {
     id: v.id("payrolls"),
-    periodo: v.optional(v.number()),
-    importeNeto: v.optional(v.number()),
-    fechaEmision: v.optional(v.string()),
+    period: v.optional(v.number()),
+    netAmount: v.optional(v.number()),
+    issueDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...updateData } = args;
@@ -70,26 +70,26 @@ export const deletePayroll = mutation({
 });
 
 export const getPayrollsByPeriod = query({
-  args: { periodo: v.number() },
+  args: { period: v.number() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("payrolls")
-      .withIndex("by_periodo", (q) => q.eq("periodo", args.periodo))
+      .withIndex("by_period", (q) => q.eq("period", args.period))
       .collect();
   },
 });
 
 // Utility function to get period name
-export const getPeriodName = (periodo: number): string => {
-  if (periodo >= 1 && periodo <= 12) {
+export const getPeriodName = (period: number): string => {
+  if (period >= 1 && period <= 12) {
     const months = [
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
-    return months[periodo - 1];
-  } else if (periodo === 13) {
+    return months[period - 1];
+  } else if (period === 13) {
     return 'Paga Extra Verano';
-  } else if (periodo === 14) {
+  } else if (period === 14) {
     return 'Paga Extra Navidad';
   }
   return 'Periodo desconocido';

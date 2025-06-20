@@ -980,49 +980,58 @@ export default defineSchema({
 
   // Employees table
   employees: defineTable({
-    nombre: v.string(),
-    apellidos: v.string(),
-    fechaNacimiento: v.string(),
-    genero: v.union(v.literal("masculino"), v.literal("femenino"), v.literal("otro")),
+    firstName: v.string(),
+    lastName: v.string(),
+    birthDate: v.string(),
+    gender: v.union(v.literal("male"), v.literal("female"), v.literal("other")),
     email: v.string(),
-    dni: v.string(),
-    numeroSeguridadSocial: v.string(),
-    telefono: v.string(),
-    formacionAcademica: v.array(v.string()),
-    titulos: v.array(v.string()),
-    tipoContrato: v.string(),
-    jornadaLaboral: v.string(),
-    scheduleIds: v.array(v.id("schedules")), // Array de horarios
-    trabajoFinesSemana: v.boolean(),
-    turnoNoche: v.boolean(),
-    puesto: v.string(),
-    departamento: v.union(v.literal("veterinaria"), v.literal("peluqueria"), v.literal("administracion")),
-    salarioBase: v.number(),
-    pagas: v.number(), // 12, 14, etc.
-    diasVacaciones: v.number(),
-    convenioColectivo: v.string(),
-    periodoPrueba: v.string(),
-    centroTrabajo: v.string(),
-    modalidad: v.union(v.literal("presencial"), v.literal("teletrabajo"), v.literal("hibrida")),
-    fechaInicio: v.string(),
-    notas: v.optional(v.string()),
+    documentId: v.string(),
+    socialSecurityNumber: v.string(),
+    phone: v.string(),
+    academicEducation: v.array(v.string()),
+    degrees: v.array(v.string()),
+    contractType: v.string(),
+    workSchedule: v.string(),
+    scheduleIds: v.array(v.id("schedules")),
+    weekendWork: v.boolean(),
+    nightShift: v.boolean(),
+    position: v.string(),
+    department: v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("administration")),
+    baseSalary: v.number(),
+    paymentPeriods: v.number(),
+    vacationDays: v.number(),
+    collectiveAgreement: v.string(),
+    probationPeriod: v.string(),
+    workCenter: v.string(),
+    workMode: v.union(v.literal("onsite"), v.literal("remote"), v.literal("hybrid")),
+    startDate: v.string(),
+    notes: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_email", ["email"])
-    .index("by_departamento", ["departamento"])
-    .index("by_dni", ["dni"]),
+    .index("by_department", ["department"])
+    .index("by_document", ["documentId"]),
+
+  // Schedules table
+  schedules: defineTable({
+    startTime: v.string(),
+    endTime: v.string(),
+    weekdayMask: v.number(), // Bitmask for days: Mon=1, Tue=2, Wed=4, Thu=8, Fri=16, Sat=32, Sun=64
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
 
   // Payrolls table
   payrolls: defineTable({
     employeeId: v.id("employees"),
-    periodo: v.number(), // 1-12 para meses, 13 y 14 para pagas extras
-    importeNeto: v.number(),
-    fechaEmision: v.string(),
+    period: v.number(), // 1-12 for months, 13 and 14 for extra payments
+    netAmount: v.number(),
+    issueDate: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_employee", ["employeeId"])
-    .index("by_periodo", ["periodo"])
-    .index("by_fecha", ["fechaEmision"]),
+    .index("by_period", ["period"])
+    .index("by_date", ["issueDate"]),
 });

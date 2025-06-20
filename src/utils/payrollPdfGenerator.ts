@@ -21,7 +21,7 @@ interface StaffMember {
   status: 'active' | 'inactive';
 }
 
-export const generatePayrollPDF = (data: StaffMember): jsPDF => {
+export const generatePayrollPDF = (employee: any, payroll: any): jsPDF => {
   const doc = new jsPDF();
   
   // Helper function to add text with proper encoding
@@ -54,10 +54,10 @@ export const generatePayrollPDF = (data: StaffMember): jsPDF => {
   addText('Datos del Empleado', 25, 70);
   
   doc.setFontSize(10);
-  addText(`Nombre: ${data.name}`, 25, 80);
-  addText(`Puesto: ${data.role}`, 25, 85);
-  addText(`Departamento: ${data.department}`, 25, 90);
-  addText(`Fecha de Alta: ${new Date(data.startDate).toLocaleDateString('es-ES')}`, 25, 95);
+  addText(`Nombre: ${employee.firstName} ${employee.lastName}`, 25, 80);
+  addText(`Puesto: ${employee.position}`, 25, 85);
+  addText(`Departamento: ${employee.department}`, 25, 90);
+  addText(`Fecha de Alta: ${new Date(employee.startDate).toLocaleDateString('es-ES')}`, 25, 95);
 
   // Schedule Info
   doc.setFontSize(12);

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Search, 
@@ -64,32 +65,32 @@ const Staff = () => {
 
   // Form states
   const [employeeForm, setEmployeeForm] = useState({
-    nombre: '',
-    apellidos: '',
-    fechaNacimiento: '',
-    genero: 'masculino' as 'masculino' | 'femenino' | 'otro',
+    firstName: '',
+    lastName: '',
+    birthDate: '',
+    gender: 'male' as 'male' | 'female' | 'other',
     email: '',
-    dni: '',
-    numeroSeguridadSocial: '',
-    telefono: '',
-    formacionAcademica: [''],
-    titulos: [''],
-    tipoContrato: '',
-    jornadaLaboral: '',
+    documentId: '',
+    socialSecurityNumber: '',
+    phone: '',
+    academicEducation: [''],
+    degrees: [''],
+    contractType: '',
+    workSchedule: '',
     scheduleIds: [] as string[],
-    trabajoFinesSemana: false,
-    turnoNoche: false,
-    puesto: '',
-    departamento: 'veterinaria' as 'veterinaria' | 'peluqueria' | 'administracion',
-    salarioBase: 0,
-    pagas: 12,
-    diasVacaciones: 22,
-    convenioColectivo: '',
-    periodoPrueba: '',
-    centroTrabajo: '',
-    modalidad: 'presencial' as 'presencial' | 'teletrabajo' | 'hibrida',
-    fechaInicio: '',
-    notas: ''
+    weekendWork: false,
+    nightShift: false,
+    position: '',
+    department: 'veterinary' as 'veterinary' | 'grooming' | 'administration',
+    baseSalary: 0,
+    paymentPeriods: 12,
+    vacationDays: 22,
+    collectiveAgreement: '',
+    probationPeriod: '',
+    workCenter: '',
+    workMode: 'onsite' as 'onsite' | 'remote' | 'hybrid',
+    startDate: '',
+    notes: ''
   });
 
   const [scheduleForm, setScheduleForm] = useState({
@@ -107,9 +108,9 @@ const Staff = () => {
   });
 
   const [payrollForm, setPayrollForm] = useState({
-    periodo: 1,
-    importeNeto: 0,
-    fechaEmision: new Date().toISOString().split('T')[0]
+    period: 1,
+    netAmount: 0,
+    issueDate: new Date().toISOString().split('T')[0]
   });
 
   // Helper functions
@@ -138,19 +139,46 @@ const Staff = () => {
     return activeDays;
   };
 
-  const getPeriodName = (periodo: number) => {
-    if (periodo >= 1 && periodo <= 12) {
+  const getPeriodName = (period: number) => {
+    if (period >= 1 && period <= 12) {
       const months = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
       ];
-      return months[periodo - 1];
-    } else if (periodo === 13) {
+      return months[period - 1];
+    } else if (period === 13) {
       return 'Paga Extra Verano';
-    } else if (periodo === 14) {
+    } else if (period === 14) {
       return 'Paga Extra Navidad';
     }
     return 'Periodo desconocido';
+  };
+
+  const getDepartmentLabel = (department: string) => {
+    switch (department) {
+      case 'veterinary': return 'Veterinaria';
+      case 'grooming': return 'Peluquería';
+      case 'administration': return 'Administración';
+      default: return department;
+    }
+  };
+
+  const getGenderLabel = (gender: string) => {
+    switch (gender) {
+      case 'male': return 'Masculino';
+      case 'female': return 'Femenino';
+      case 'other': return 'Otro';
+      default: return gender;
+    }
+  };
+
+  const getWorkModeLabel = (workMode: string) => {
+    switch (workMode) {
+      case 'onsite': return 'Presencial';
+      case 'remote': return 'Teletrabajo';
+      case 'hybrid': return 'Híbrida';
+      default: return workMode;
+    }
   };
 
   // Event handlers
@@ -159,8 +187,8 @@ const Staff = () => {
     try {
       await createEmployee({
         ...employeeForm,
-        formacionAcademica: employeeForm.formacionAcademica.filter(f => f.trim() !== ''),
-        titulos: employeeForm.titulos.filter(t => t.trim() !== ''),
+        academicEducation: employeeForm.academicEducation.filter(f => f.trim() !== ''),
+        degrees: employeeForm.degrees.filter(t => t.trim() !== ''),
         scheduleIds: employeeForm.scheduleIds as any
       });
       setShowNewEmployeeForm(false);
@@ -203,7 +231,7 @@ const Staff = () => {
             friday: 16,
             saturday: 32,
             sunday: 64
-          }[day] || 0; // Provide a default value in case of an unexpected day
+          }[day] || 0;
         }
 
         const scheduleId = await createSchedule({
@@ -258,9 +286,9 @@ const Staff = () => {
       });
       setShowPayrollModal(false);
       setPayrollForm({
-        periodo: 1,
-        importeNeto: 0,
-        fechaEmision: new Date().toISOString().split('T')[0]
+        period: 1,
+        netAmount: 0,
+        issueDate: new Date().toISOString().split('T')[0]
       });
     } catch (error) {
       console.error('Error creating payroll:', error);
@@ -269,40 +297,40 @@ const Staff = () => {
 
   const resetEmployeeForm = () => {
     setEmployeeForm({
-      nombre: '',
-      apellidos: '',
-      fechaNacimiento: '',
-      genero: 'masculino',
+      firstName: '',
+      lastName: '',
+      birthDate: '',
+      gender: 'male',
       email: '',
-      dni: '',
-      numeroSeguridadSocial: '',
-      telefono: '',
-      formacionAcademica: [''],
-      titulos: [''],
-      tipoContrato: '',
-      jornadaLaboral: '',
+      documentId: '',
+      socialSecurityNumber: '',
+      phone: '',
+      academicEducation: [''],
+      degrees: [''],
+      contractType: '',
+      workSchedule: '',
       scheduleIds: [],
-      trabajoFinesSemana: false,
-      turnoNoche: false,
-      puesto: '',
-      departamento: 'veterinaria',
-      salarioBase: 0,
-      pagas: 12,
-      diasVacaciones: 22,
-      convenioColectivo: '',
-      periodoPrueba: '',
-      centroTrabajo: '',
-      modalidad: 'presencial',
-      fechaInicio: '',
-      notas: ''
+      weekendWork: false,
+      nightShift: false,
+      position: '',
+      department: 'veterinary',
+      baseSalary: 0,
+      paymentPeriods: 12,
+      vacationDays: 22,
+      collectiveAgreement: '',
+      probationPeriod: '',
+      workCenter: '',
+      workMode: 'onsite',
+      startDate: '',
+      notes: ''
     });
   };
 
   const filteredEmployees = employees.filter(employee => {
-    const matchesSearch = `${employee.nombre} ${employee.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.puesto.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = selectedDepartment === 'all' || employee.departamento === selectedDepartment;
+      employee.position.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment = selectedDepartment === 'all' || employee.department === selectedDepartment;
     return matchesSearch && matchesDepartment;
   });
 
@@ -356,9 +384,9 @@ const Staff = () => {
             className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           >
             <option value="all">Todos los departamentos</option>
-            <option value="veterinaria">Veterinaria</option>
-            <option value="peluqueria">Peluquería</option>
-            <option value="administracion">Administración</option>
+            <option value="veterinary">Veterinaria</option>
+            <option value="grooming">Peluquería</option>
+            <option value="administration">Administración</option>
           </select>
         </div>
       </div>
@@ -396,21 +424,21 @@ const Staff = () => {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {employee.nombre} {employee.apellidos}
+                          {employee.firstName} {employee.lastName}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {employee.dni}
+                          {employee.documentId}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                      {employee.departamento}
+                      {getDepartmentLabel(employee.department)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.puesto}
+                    {employee.position}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="space-y-1">
@@ -420,7 +448,7 @@ const Staff = () => {
                       </div>
                       <div className="flex items-center">
                         <Phone size={14} className="mr-1" />
-                        {employee.telefono}
+                        {employee.phone}
                       </div>
                     </div>
                   </td>
@@ -453,7 +481,7 @@ const Staff = () => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                {selectedEmployee.nombre} {selectedEmployee.apellidos}
+                {selectedEmployee.firstName} {selectedEmployee.lastName}
               </h3>
               <button
                 onClick={() => setSelectedEmployee(null)}
@@ -493,25 +521,25 @@ const Staff = () => {
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Datos Personales</h4>
                     <div className="space-y-2 text-sm">
-                      <div><span className="font-medium">DNI:</span> {selectedEmployee.dni}</div>
-                      <div><span className="font-medium">Fecha Nacimiento:</span> {selectedEmployee.fechaNacimiento}</div>
-                      <div><span className="font-medium">Género:</span> {selectedEmployee.genero}</div>
-                      <div><span className="font-medium">Teléfono:</span> {selectedEmployee.telefono}</div>
+                      <div><span className="font-medium">DNI:</span> {selectedEmployee.documentId}</div>
+                      <div><span className="font-medium">Fecha Nacimiento:</span> {selectedEmployee.birthDate}</div>
+                      <div><span className="font-medium">Género:</span> {getGenderLabel(selectedEmployee.gender)}</div>
+                      <div><span className="font-medium">Teléfono:</span> {selectedEmployee.phone}</div>
                       <div><span className="font-medium">Email:</span> {selectedEmployee.email}</div>
-                      <div><span className="font-medium">SS:</span> {selectedEmployee.numeroSeguridadSocial}</div>
+                      <div><span className="font-medium">SS:</span> {selectedEmployee.socialSecurityNumber}</div>
                     </div>
                   </div>
 
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Información Laboral</h4>
                     <div className="space-y-2 text-sm">
-                      <div><span className="font-medium">Puesto:</span> {selectedEmployee.puesto}</div>
-                      <div><span className="font-medium">Departamento:</span> {selectedEmployee.departamento}</div>
-                      <div><span className="font-medium">Tipo Contrato:</span> {selectedEmployee.tipoContrato}</div>
-                      <div><span className="font-medium">Jornada:</span> {selectedEmployee.jornadaLaboral}</div>
-                      <div><span className="font-medium">Modalidad:</span> {selectedEmployee.modalidad}</div>
-                      <div><span className="font-medium">Fecha Inicio:</span> {selectedEmployee.fechaInicio}</div>
-                      <div><span className="font-medium">Salario Base:</span> {selectedEmployee.salarioBase.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</div>
+                      <div><span className="font-medium">Puesto:</span> {selectedEmployee.position}</div>
+                      <div><span className="font-medium">Departamento:</span> {getDepartmentLabel(selectedEmployee.department)}</div>
+                      <div><span className="font-medium">Tipo Contrato:</span> {selectedEmployee.contractType}</div>
+                      <div><span className="font-medium">Jornada:</span> {selectedEmployee.workSchedule}</div>
+                      <div><span className="font-medium">Modalidad:</span> {getWorkModeLabel(selectedEmployee.workMode)}</div>
+                      <div><span className="font-medium">Fecha Inicio:</span> {selectedEmployee.startDate}</div>
+                      <div><span className="font-medium">Salario Base:</span> {selectedEmployee.baseSalary.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</div>
                     </div>
                   </div>
 
@@ -530,11 +558,11 @@ const Staff = () => {
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Otros Datos</h4>
                     <div className="space-y-2 text-sm">
-                      <div><span className="font-medium">Pagas:</span> {selectedEmployee.pagas}</div>
-                      <div><span className="font-medium">Días Vacaciones:</span> {selectedEmployee.diasVacaciones}</div>
-                      <div><span className="font-medium">Convenio:</span> {selectedEmployee.convenioColectivo}</div>
-                      <div><span className="font-medium">Período Prueba:</span> {selectedEmployee.periodoPrueba}</div>
-                      <div><span className="font-medium">Centro Trabajo:</span> {selectedEmployee.centroTrabajo}</div>
+                      <div><span className="font-medium">Pagas:</span> {selectedEmployee.paymentPeriods}</div>
+                      <div><span className="font-medium">Días Vacaciones:</span> {selectedEmployee.vacationDays}</div>
+                      <div><span className="font-medium">Convenio:</span> {selectedEmployee.collectiveAgreement}</div>
+                      <div><span className="font-medium">Período Prueba:</span> {selectedEmployee.probationPeriod}</div>
+                      <div><span className="font-medium">Centro Trabajo:</span> {selectedEmployee.workCenter}</div>
                     </div>
                   </div>
                 </div>
@@ -575,13 +603,13 @@ const Staff = () => {
                         {employeePayrolls.map((payroll) => (
                           <tr key={payroll._id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {getPeriodName(payroll.periodo)}
+                              {getPeriodName(payroll.period)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {new Date(payroll.fechaEmision).toLocaleDateString('es-ES')}
+                              {new Date(payroll.issueDate).toLocaleDateString('es-ES')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {payroll.importeNeto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                              {payroll.netAmount.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <button
@@ -626,37 +654,37 @@ const Staff = () => {
 
                 <Input
                   label="Nombre"
-                  value={employeeForm.nombre}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, nombre: e.target.value }))}
+                  value={employeeForm.firstName}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, firstName: e.target.value }))}
                   required
                 />
 
                 <Input
                   label="Apellidos"
-                  value={employeeForm.apellidos}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, apellidos: e.target.value }))}
+                  value={employeeForm.lastName}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, lastName: e.target.value }))}
                   required
                 />
 
                 <Input
                   label="Fecha de Nacimiento"
                   type="date"
-                  value={employeeForm.fechaNacimiento}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
+                  value={employeeForm.birthDate}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, birthDate: e.target.value }))}
                   required
                 />
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Género</label>
                   <select
-                    value={employeeForm.genero}
-                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, genero: e.target.value as any }))}
+                    value={employeeForm.gender}
+                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, gender: e.target.value as any }))}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     required
                   >
-                    <option value="masculino">Masculino</option>
-                    <option value="femenino">Femenino</option>
-                    <option value="otro">Otro</option>
+                    <option value="male">Masculino</option>
+                    <option value="female">Femenino</option>
+                    <option value="other">Otro</option>
                   </select>
                 </div>
 
@@ -670,22 +698,22 @@ const Staff = () => {
 
                 <Input
                   label="DNI/NIE"
-                  value={employeeForm.dni}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, dni: e.target.value }))}
+                  value={employeeForm.documentId}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, documentId: e.target.value }))}
                   required
                 />
 
                 <Input
                   label="Número Seguridad Social"
-                  value={employeeForm.numeroSeguridadSocial}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, numeroSeguridadSocial: e.target.value }))}
+                  value={employeeForm.socialSecurityNumber}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, socialSecurityNumber: e.target.value }))}
                   required
                 />
 
                 <Input
                   label="Teléfono"
-                  value={employeeForm.telefono}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, telefono: e.target.value }))}
+                  value={employeeForm.phone}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, phone: e.target.value }))}
                   required
                 />
 
@@ -696,74 +724,74 @@ const Staff = () => {
 
                 <Input
                   label="Puesto"
-                  value={employeeForm.puesto}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, puesto: e.target.value }))}
+                  value={employeeForm.position}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, position: e.target.value }))}
                   required
                 />
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
                   <select
-                    value={employeeForm.departamento}
-                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, departamento: e.target.value as any }))}
+                    value={employeeForm.department}
+                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, department: e.target.value as any }))}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     required
                   >
-                    <option value="veterinaria">Veterinaria</option>
-                    <option value="peluqueria">Peluquería</option>
-                    <option value="administracion">Administración</option>
+                    <option value="veterinary">Veterinaria</option>
+                    <option value="grooming">Peluquería</option>
+                    <option value="administration">Administración</option>
                   </select>
                 </div>
 
                 <Input
                   label="Tipo de Contrato"
-                  value={employeeForm.tipoContrato}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, tipoContrato: e.target.value }))}
+                  value={employeeForm.contractType}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, contractType: e.target.value }))}
                   required
                 />
 
                 <Input
                   label="Jornada Laboral"
-                  value={employeeForm.jornadaLaboral}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, jornadaLaboral: e.target.value }))}
+                  value={employeeForm.workSchedule}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, workSchedule: e.target.value }))}
                   required
                 />
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Modalidad</label>
                   <select
-                    value={employeeForm.modalidad}
-                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, modalidad: e.target.value as any }))}
+                    value={employeeForm.workMode}
+                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, workMode: e.target.value as any }))}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     required
                   >
-                    <option value="presencial">Presencial</option>
-                    <option value="teletrabajo">Teletrabajo</option>
-                    <option value="hibrida">Híbrida</option>
+                    <option value="onsite">Presencial</option>
+                    <option value="remote">Teletrabajo</option>
+                    <option value="hybrid">Híbrida</option>
                   </select>
                 </div>
 
                 <Input
                   label="Fecha de Inicio"
                   type="date"
-                  value={employeeForm.fechaInicio}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, fechaInicio: e.target.value }))}
+                  value={employeeForm.startDate}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, startDate: e.target.value }))}
                   required
                 />
 
                 <Input
                   label="Salario Base"
                   type="number"
-                  value={employeeForm.salarioBase}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, salarioBase: Number(e.target.value) }))}
+                  value={employeeForm.baseSalary}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, baseSalary: Number(e.target.value) }))}
                   required
                 />
 
                 <Input
                   label="Número de Pagas"
                   type="number"
-                  value={employeeForm.pagas}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, pagas: Number(e.target.value) }))}
+                  value={employeeForm.paymentPeriods}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, paymentPeriods: Number(e.target.value) }))}
                   required
                 />
 
@@ -819,34 +847,34 @@ const Staff = () => {
                 {/* Additional fields */}
                 <Input
                   label="Convenio Colectivo"
-                  value={employeeForm.convenioColectivo}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, convenioColectivo: e.target.value }))}
+                  value={employeeForm.collectiveAgreement}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, collectiveAgreement: e.target.value }))}
                 />
 
                 <Input
                   label="Período de Prueba"
-                  value={employeeForm.periodoPrueba}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, periodoPrueba: e.target.value }))}
+                  value={employeeForm.probationPeriod}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, probationPeriod: e.target.value }))}
                 />
 
                 <Input
                   label="Centro de Trabajo"
-                  value={employeeForm.centroTrabajo}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, centroTrabajo: e.target.value }))}
+                  value={employeeForm.workCenter}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, workCenter: e.target.value }))}
                 />
 
                 <Input
                   label="Días de Vacaciones"
                   type="number"
-                  value={employeeForm.diasVacaciones}
-                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, diasVacaciones: Number(e.target.value) }))}
+                  value={employeeForm.vacationDays}
+                  onChange={(e) => setEmployeeForm(prev => ({ ...prev, vacationDays: Number(e.target.value) }))}
                 />
 
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
                   <textarea
-                    value={employeeForm.notas}
-                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, notas: e.target.value }))}
+                    value={employeeForm.notes}
+                    onChange={(e) => setEmployeeForm(prev => ({ ...prev, notes: e.target.value }))}
                     rows={3}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   />
@@ -969,8 +997,8 @@ const Staff = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Período</label>
                 <select
-                  value={payrollForm.periodo}
-                  onChange={(e) => setPayrollForm(prev => ({ ...prev, periodo: Number(e.target.value) }))}
+                  value={payrollForm.period}
+                  onChange={(e) => setPayrollForm(prev => ({ ...prev, period: Number(e.target.value) }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   required
                 >
@@ -988,16 +1016,16 @@ const Staff = () => {
                 label="Importe Neto"
                 type="number"
                 step="0.01"
-                value={payrollForm.importeNeto}
-                onChange={(e) => setPayrollForm(prev => ({ ...prev, importeNeto: Number(e.target.value) }))}
+                value={payrollForm.netAmount}
+                onChange={(e) => setPayrollForm(prev => ({ ...prev, netAmount: Number(e.target.value) }))}
                 required
               />
 
               <Input
                 label="Fecha de Emisión"
                 type="date"
-                value={payrollForm.fechaEmision}
-                onChange={(e) => setPayrollForm(prev => ({ ...prev, fechaEmision: e.target.value }))}
+                value={payrollForm.issueDate}
+                onChange={(e) => setPayrollForm(prev => ({ ...prev, issueDate: e.target.value }))}
                 required
               />
 
