@@ -37,6 +37,7 @@ import { generatePayrollPDF } from '../../utils/payrollPdfGenerator';
 
 const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'informacion' | 'nominas'>('informacion');
   const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
@@ -297,11 +298,13 @@ const Staff = () => {
     });
   };
 
-  const filteredEmployees = employees.filter(employee =>
-    `${employee.nombre} ${employee.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.puesto.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(employee => {
+    const matchesSearch = `${employee.nombre} ${employee.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.puesto.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment = selectedDepartment === 'all' || employee.departamento === selectedDepartment;
+    return matchesSearch && matchesDepartment;
+  });
 
   const handlePrintPayroll = (employee: any, payroll: any) => {
     generatePayrollPDF(employee, payroll);
@@ -346,51 +349,103 @@ const Staff = () => {
             icon={<Search size={18} />}
           />
         </div>
+        <div className="sm:w-48">
+          <select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          >
+            <option value="all">Todos los departamentos</option>
+            <option value="veterinaria">Veterinaria</option>
+            <option value="peluqueria">Peluquería</option>
+            <option value="administracion">Administración</option>
+          </select>
+        </div>
       </div>
 
-      {/* Employees Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredEmployees.map((employee) => (
-          <Card key={employee._id}>
-            <div className="p-6">
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <User size={24} className="text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">
-                    {employee.nombre} {employee.apellidos}
-                  </h3>
-                  <p className="text-sm text-gray-500">{employee.puesto}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Building2 size={16} className="mr-2" />
-                  {employee.departamento}
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Mail size={16} className="mr-2" />
-                  {employee.email}
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Phone size={16} className="mr-2" />
-                  {employee.telefono}
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={() => setSelectedEmployee(employee)}
-              >
-                Ver detalles
-              </Button>
+      {/* Employees Table */}
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Empleado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Departamento
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Puesto
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contacto
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredEmployees.map((employee) => (
+                <tr key={employee._id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <User size={20} className="text-blue-600" />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {employee.nombre} {employee.apellidos}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {employee.dni}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                      {employee.departamento}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {employee.puesto}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Mail size={14} className="mr-1" />
+                        {employee.email}
+                      </div>
+                      <div className="flex items-center">
+                        <Phone size={14} className="mr-1" />
+                        {employee.telefono}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedEmployee(employee)}
+                    >
+                      Ver detalles
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filteredEmployees.length === 0 && (
+            <div className="text-center py-8">
+              <Users size={48} className="mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron empleados</h3>
+              <p className="text-gray-500">No hay empleados que coincidan con los filtros seleccionados.</p>
             </div>
-          </Card>
-        ))}
-      </div>
+          )}
+        </div>
+      </Card>
 
       {/* Employee Details Modal */}
       {selectedEmployee && (
