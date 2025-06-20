@@ -633,23 +633,23 @@ const Staff = () => {
 
       {/* New Employee Form Modal */}
       {showNewEmployeeForm && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Nuevo Empleado</h3>
               <button
                 onClick={() => setShowNewEmployeeForm(false)}
-                className="text-gray-400 hover:text-gray-500"
+                className="text-gray-400 hover:text-gray-500 p-1"
               >
-                <X size={24} />
+                <X size={20} className="sm:w-6 sm:h-6" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateEmployee} className="p-6 max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleCreateEmployee} className="p-4 sm:p-6 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Datos Personales */}
-                <div className="col-span-2">
-                  <h4 className="font-medium text-gray-900 mb-4">Datos Personales</h4>
+                <div className="col-span-1 lg:col-span-2">
+                  <h4 className="font-medium text-gray-900 mb-3 sm:mb-4 text-base sm:text-lg">Datos Personales</h4>
                 </div>
 
                 <Input
@@ -679,7 +679,7 @@ const Staff = () => {
                   <select
                     value={employeeForm.gender}
                     onChange={(e) => setEmployeeForm(prev => ({ ...prev, gender: e.target.value as any }))}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     required
                   >
                     <option value="male">Masculino</option>
@@ -718,8 +718,8 @@ const Staff = () => {
                 />
 
                 {/* Información Laboral */}
-                <div className="col-span-2 pt-6 border-t border-gray-200">
-                  <h4 className="font-medium text-gray-900 mb-4">Información Laboral</h4>
+                <div className="col-span-1 lg:col-span-2 pt-4 sm:pt-6 border-t border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-3 sm:mb-4 text-base sm:text-lg">Información Laboral</h4>
                 </div>
 
                 <Input
@@ -734,7 +734,7 @@ const Staff = () => {
                   <select
                     value={employeeForm.department}
                     onChange={(e) => setEmployeeForm(prev => ({ ...prev, department: e.target.value as any }))}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     required
                   >
                     <option value="veterinary">Veterinaria</option>
@@ -762,7 +762,7 @@ const Staff = () => {
                   <select
                     value={employeeForm.workMode}
                     onChange={(e) => setEmployeeForm(prev => ({ ...prev, workMode: e.target.value as any }))}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                     required
                   >
                     <option value="onsite">Presencial</option>
@@ -796,18 +796,20 @@ const Staff = () => {
                 />
 
                 {/* Horario */}
-                <div className="col-span-2">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="col-span-1 lg:col-span-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2 sm:gap-0">
                     <label className="block text-sm font-medium text-gray-700">Horario</label>
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       {schedules.length > 0 && (
                         <Button
                           type="button"
                           variant="outline"
                           icon={<Clock size={16} />}
                           onClick={() => setShowExistingSchedulesModal(true)}
+                          size="sm"
                         >
-                          Elegir Existente
+                          <span className="hidden sm:inline">Elegir Existente</span>
+                          <span className="sm:hidden">Existente</span>
                         </Button>
                       )}
                       <Button
@@ -815,8 +817,10 @@ const Staff = () => {
                         variant="outline"
                         icon={<Plus size={16} />}
                         onClick={() => setShowScheduleModal(true)}
+                        size="sm"
                       >
-                        Nuevo Horario
+                        <span className="hidden sm:inline">Nuevo Horario</span>
+                        <span className="sm:hidden">Nuevo</span>
                       </Button>
                     </div>
                   </div>
@@ -870,26 +874,32 @@ const Staff = () => {
                   onChange={(e) => setEmployeeForm(prev => ({ ...prev, vacationDays: Number(e.target.value) }))}
                 />
 
-                <div className="col-span-2">
+                <div className="col-span-1 lg:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
                   <textarea
                     value={employeeForm.notes}
                     onChange={(e) => setEmployeeForm(prev => ({ ...prev, notes: e.target.value }))}
                     rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm resize-y"
+                    placeholder="Información adicional sobre el empleado..."
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 sm:space-x-3 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setShowNewEmployeeForm(false)}
+                  className="w-full sm:w-auto order-2 sm:order-1"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" variant="primary">
+                <Button 
+                  type="submit" 
+                  variant="primary"
+                  className="w-full sm:w-auto order-1 sm:order-2"
+                >
                   Crear Empleado
                 </Button>
               </div>
