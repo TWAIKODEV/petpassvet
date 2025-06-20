@@ -36,6 +36,7 @@ import type * as providers from "../providers.js";
 import type * as schedules from "../schedules.js";
 import type * as services from "../services.js";
 import type * as threads from "../threads.js";
+import type * as timeRecording from "../timeRecording.js";
 import type * as treatments from "../treatments.js";
 import type * as userRoles from "../userRoles.js";
 import type * as users from "../users.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   schedules: typeof schedules;
   services: typeof services;
   threads: typeof threads;
+  timeRecording: typeof timeRecording;
   treatments: typeof treatments;
   userRoles: typeof userRoles;
   users: typeof users;
