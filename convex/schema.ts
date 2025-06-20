@@ -971,9 +971,9 @@ export default defineSchema({
 
   // Schedules table
   schedules: defineTable({
-    startTime: v.string(), // Formato HH:MM
-    endTime: v.string(), // Formato HH:MM
-    weekdayMask: v.number(), // Máscara de bits para días de la semana (1=Lunes, 2=Martes, 4=Miércoles, etc.)
+    startTime: v.string(),
+    endTime: v.string(),
+    weekdayMask: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
   }),
@@ -1012,15 +1012,6 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_department", ["department"])
     .index("by_document", ["documentId"]),
-
-  // Schedules table
-  schedules: defineTable({
-    startTime: v.string(),
-    endTime: v.string(),
-    weekdayMask: v.number(), // Bitmask for days: Mon=1, Tue=2, Wed=4, Thu=8, Fri=16, Sat=32, Sun=64
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }),
 
   // Payrolls table
   payrolls: defineTable({
