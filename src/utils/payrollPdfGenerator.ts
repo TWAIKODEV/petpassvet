@@ -1,27 +1,7 @@
+
 import { jsPDF } from 'jspdf';
 
-interface StaffMember {
-  id: string;
-  name: string;
-  role: string;
-  department: string;
-  email: string;
-  phone: string;
-  startDate: string;
-  salary: {
-    gross: number;
-    socialSecurity: number;
-    net: number;
-    totalCost: number;
-  };
-  schedule: {
-    hours: number;
-    shifts: string[];
-  };
-  status: 'active' | 'inactive';
-}
-
-export const generatePayrollPDF = (employee: any, payroll: any): jsPDF => {
+export const generatePayrollPDF = (employee: any, payroll: any): void => {
   const doc = new jsPDF();
   
   // Helper function to add text with proper encoding
@@ -59,39 +39,70 @@ export const generatePayrollPDF = (employee: any, payroll: any): jsPDF => {
   addText(`Departamento: ${employee.department}`, 25, 90);
   addText(`Fecha de Alta: ${new Date(employee.startDate).toLocaleDateString('es-ES')}`, 25, 95);
 
-  // Schedule Info
+  // Schedule Info (if available)
   doc.setFontSize(12);
-  addText('Horario Laboral', 25, 115);
+  addText('Información Laboral', 25, 115);
   
   doc.setFontSize(10);
-  addText(`Horas Semanales: ${data.schedule.hours}`, 25, 125);
-  addText(`Días: ${data.schedule.shifts[0]}`, 25, 130);
-  addText(`Horario: ${data.schedule.shifts[1]}`, 25, 135);
+  addText(`Salario Base: ${employee.baseSalary.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`, 25, 125);
+  addText(`Tipo de Contrato: ${employee.contractType || 'No especificado'}`, 25, 130);
+  addText(`Modalidad: ${employee.workMode === 'onsite' ? 'Presencial' : 
+                        employee.workMode === 'remote' ? 'Remoto' : 'Híbrido'}`, 25, 135);
 
-  // Salary Details
+  // Helper function to get period name
+  const getPeriodName = (period: number): string => {
+    if (period >= 1 && period <= 12) {
+      const months = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      ];
+      return months[period - 1];
+    } else if (period === 13) {
+      return 'Paga Extra Verano';
+    } else if (period === 14) {
+      return 'Paga Extra Navidad';
+    }
+    return 'Periodo desconocido';
+  };
+
+  // Payroll Details
   let yPos = 155;
   doc.setFontSize(12);
   addText('Desglose de Nómina', 25, yPos);
   yPos += 10;
 
-  // Gross Salary
   doc.setFontSize(10);
+  addText(`Período: ${getPeriodName(payroll.period)}`, 25, yPos);
+  yPos += 8;
+  addText(`Fecha de Emisión: ${new Date(payroll.issueDate).toLocaleDateString('es-ES')}`, 25, yPos);
+  yPos += 15;
+
+  // Calculate salary breakdown based on base salary
+  const grossSalary = employee.baseSalary;
+  const irpf = grossSalary * 0.19; // 19% IRPF
+  const socialSecurityEmployee = grossSalary * 0.0635; // 6.35% Seguridad Social empleado
+  const totalDeductions = irpf + socialSecurityEmployee;
+  const netSalary = payroll.netAmount; // Use actual net amount from payroll
+  const socialSecurityCompany = grossSalary * 0.30; // 30% Seguridad Social empresa
+  const totalCost = grossSalary + socialSecurityCompany;
+
+  // Gross Salary
   addText('Salario Bruto:', 25, yPos);
-  addText(data.salary.gross.toLocaleString('es-ES', {
+  addText(grossSalary.toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   }), 120, yPos);
   
   yPos += 8;
   addText('Salario Base:', 35, yPos);
-  addText((data.salary.gross * 0.8).toLocaleString('es-ES', {
+  addText((grossSalary * 0.8).toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   }), 120, yPos);
   
   yPos += 8;
   addText('Complementos:', 35, yPos);
-  addText((data.salary.gross * 0.2).toLocaleString('es-ES', {
+  addText((grossSalary * 0.2).toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   }), 120, yPos);
@@ -99,21 +110,21 @@ export const generatePayrollPDF = (employee: any, payroll: any): jsPDF => {
   // Deductions
   yPos += 15;
   addText('Deducciones:', 25, yPos);
-  addText(`-${(data.salary.gross - data.salary.net).toLocaleString('es-ES', {
+  addText(`-${totalDeductions.toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   })}`, 120, yPos);
   
   yPos += 8;
   addText('IRPF (19%):', 35, yPos);
-  addText(`-${(data.salary.gross * 0.19).toLocaleString('es-ES', {
+  addText(`-${irpf.toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   })}`, 120, yPos);
   
   yPos += 8;
   addText('Seguridad Social (6.35%):', 35, yPos);
-  addText(`-${(data.salary.gross * 0.0635).toLocaleString('es-ES', {
+  addText(`-${socialSecurityEmployee.toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   })}`, 120, yPos);
@@ -122,7 +133,7 @@ export const generatePayrollPDF = (employee: any, payroll: any): jsPDF => {
   yPos += 15;
   doc.setFontSize(12);
   addText('Salario Neto:', 25, yPos);
-  addText(data.salary.net.toLocaleString('es-ES', {
+  addText(netSalary.toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   }), 120, yPos);
@@ -131,14 +142,14 @@ export const generatePayrollPDF = (employee: any, payroll: any): jsPDF => {
   yPos += 20;
   doc.setFontSize(10);
   addText('Coste Empresa:', 25, yPos);
-  addText(data.salary.totalCost.toLocaleString('es-ES', {
+  addText(totalCost.toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   }), 120, yPos);
   
   yPos += 8;
   addText('Seguridad Social Empresa (30%):', 35, yPos);
-  addText(data.salary.socialSecurity.toLocaleString('es-ES', {
+  addText(socialSecurityCompany.toLocaleString('es-ES', {
     style: 'currency',
     currency: 'EUR'
   }), 120, yPos);
@@ -148,5 +159,6 @@ export const generatePayrollPDF = (employee: any, payroll: any): jsPDF => {
   addText('Este documento es meramente informativo y no constituye una nómina oficial.', 20, 270);
   addText('Para cualquier aclaración, contacte con el departamento de Recursos Humanos.', 20, 275);
 
-  return doc;
+  // Download/Print the PDF
+  doc.save(`nomina_${employee.firstName}_${employee.lastName}_${getPeriodName(payroll.period)}.pdf`);
 };
