@@ -8,23 +8,34 @@ import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 interface AppointmentListProps {
-  patients: Patient[];
-  doctors: Doctor[];
+  appointments?: any[];
+  patients?: any[];
+  employees?: any[];
   title?: string;
   limit?: number;
 }
 
 const AppointmentList: React.FC<AppointmentListProps> = ({ 
-  patients, 
-  doctors, 
+  appointments: propAppointments,
+  patients: propPatients, 
+  employees: propEmployees, 
   title = "Próximas Citas", 
   limit = 5 
 }) => {
   const [selectedPet, setSelectedPet] = useState<any>(null);
 
-  // Get patient and doctor info for each appointment
-  const getPatientById = (id: string) => patients.find(patient => patient.id === id);
-  const getDoctorById = (id: string) => doctors.find(doctor => doctor.id === id);
+  // Use prop data or fallback to Convex queries
+  const convexAppointments = useQuery(api.appointments.getAppointments);
+  const convexPatients = useQuery(api.patients.getPatients);
+  const convexEmployees = useQuery(api.employees.getEmployees);
+  
+  const appointments = propAppointments || convexAppointments || [];
+  const patients = propPatients || convexPatients || [];
+  const employees = propEmployees || convexEmployees || [];
+
+  // Get patient and employee info for each appointment
+  const getPatientById = (id: string) => patients.find(patient => patient._id === id);
+  const getEmployeeById = (id: string) => employees.find(employee => employee._id === id);
 
   // Status indicator styles with background opacity for better readability
   const statusStyles = {
@@ -160,32 +171,30 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
     setSelectedPet(mockPet);
   };
 
-  const appointments = useQuery(api.appointments.getAppointments) || [];
-
   return (
     <Card title={title} icon={<Calendar size={20} />}>
       <div className="divide-y divide-gray-200">
         {appointments.slice(0, limit).map((appointment) => {
           const patient = getPatientById(appointment.patientId);
-          const doctor = getDoctorById(appointment.doctorId);
+          const employee = getEmployeeById(appointment.employeeId);
 
-          if (!patient || !doctor) return null;
+          if (!patient || !employee) return null;
 
           return (
-            <div key={appointment.id} className="py-4 first:pt-0 last:pb-0">
+            <div key={appointment._id} className="py-4 first:pt-0 last:pb-0">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center">
                     <h4 className="text-sm font-medium text-gray-900">
-                      {appointment.petName}
+                      {appointment.pet?.name || 'Mascota no especificada'}
                     </h4>
                     <span className="mx-2 text-gray-300">•</span>
                     <span className="text-sm text-gray-500">
-                      {appointment.breed}, {appointment.age} años, {appointment.sex === 'male' ? 'Macho' : 'Hembra'}
+                      {appointment.pet?.breed || 'Raza no especificada'}, {appointment.pet?.sex === 'male' ? 'Macho' : 'Hembra'}
                     </span>
                   </div>
                   <div className="mt-1 flex items-center">
-                    <span className="text-sm text-gray-600">Propietario: {patient.name}</span>
+                    <span className="text-sm text-gray-600">Propietario: {patient.firstName} {patient.lastName}</span>
                     <div className="ml-3 flex items-center space-x-2">
                       {patient.preferredContact && (
                         <button
@@ -201,17 +210,17 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
                   </div>
                   <div className="mt-1">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-                      {consultationKindLabels[appointment.consultationKind]}
+                      {consultationKindLabels[appointment.consultationType] || appointment.consultationType}
                     </span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      {serviceTypeLabels[appointment.serviceType]}
+                      {serviceTypeLabels[appointment.serviceType] || appointment.serviceType}
                     </span>
                   </div>
                 </div>
                 <div className="relative">
                   <select
                     value={appointment.status}
-                    onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
+                    onChange={(e) => handleStatusChange(appointment._id, e.target.value)}
                     className={`appearance-none text-xs px-3 py-1.5 rounded-full font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${statusStyles[appointment.status]}`}
                     style={{
                       paddingRight: '2rem' // Space for the custom arrow
@@ -237,7 +246,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
 
               <div className="mt-2 flex items-center text-xs text-gray-500">
                 <User size={14} className="mr-1" />
-                <span>Dr. {doctor.name.split(' ')[doctor.name.split(' ').length - 1]}</span>
+                <span>{employee.firstName} {employee.lastName}</span>
                 <span className="mx-2">•</span>
                 <Calendar size={14} className="mr-1" />
                 <span>
@@ -261,7 +270,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    handleViewHistory(appointment.id);
+                    handleViewHistory(appointment._id);
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                 >
@@ -271,7 +280,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleConsultation(appointment.id)}
+                    onClick={() => handleConsultation(appointment._id)}
                     icon={<ArrowRight size={16} />}
                     iconPosition="right"
                   >

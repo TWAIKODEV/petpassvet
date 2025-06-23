@@ -21,11 +21,18 @@ import NewBudgetForm from '../components/dashboard/NewBudgetForm';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
-import { mockAppointments, mockPatients, mockDoctors, mockDashboardSummary } from '../data/mockData';
+import { mockDashboardSummary } from '../data/mockData';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
+  
+  // Load real data from Convex
+  const appointments = useQuery(api.appointments.getAppointments) || [];
+  const patients = useQuery(api.patients.getPatients) || [];
+  const employees = useQuery(api.employees.getEmployees) || [];
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [showNewSaleForm, setShowNewSaleForm] = useState(false);
@@ -184,9 +191,9 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <AppointmentList 
-            appointments={mockAppointments}
-            patients={mockPatients}
-            doctors={mockDoctors}
+            appointments={appointments}
+            patients={patients}
+            employees={employees}
             title="Próximas Citas"
           />
         </div>
@@ -196,7 +203,7 @@ const Dashboard: React.FC = () => {
             <div className="text-center py-8">
               <div className="text-5xl font-bold text-blue-600 flex items-center justify-center">
                 <Calendar size={36} className="mr-2 text-blue-500" />
-                {mockAppointments.length}
+                {appointments.length}
               </div>
               <p className="mt-2 text-sm text-gray-600">citas programadas para hoy</p>
               
@@ -205,7 +212,7 @@ const Dashboard: React.FC = () => {
                   <div key={config.status} className="border rounded-lg p-3">
                     <p className="text-gray-500 text-xs">{config.label}</p>
                     <p className={`text-xl font-semibold ${config.color}`}>
-                      {mockAppointments.filter(a => a.status === config.status).length}
+                      {appointments.filter(a => a.status === config.status).length}
                     </p>
                   </div>
                 ))}
