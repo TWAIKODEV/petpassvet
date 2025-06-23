@@ -60,6 +60,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
   const [prescriptionDate, setPrescriptionDate] = useState(new Date().toISOString().split('T')[0]);
   const [veterinarian, setVeterinarian] = useState('Dr. Juan Pérez');
   const [notes, setNotes] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -120,7 +121,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
     });
   };
 
-  
+
 
   const removeMedication = (id: string) => {
     setMedications(medications.filter(med => med.id !== id));
@@ -129,7 +130,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedPatient || !veterinarian || medications.length === 0) {
+    if (!selectedPatient || !selectedEmployee || medications.length === 0) {
       alert('Por favor completa todos los campos obligatorios');
       return;
     }
@@ -341,7 +342,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                   variant="outline"
                   icon={<FileText size={18} />}
                   onClick={handlePreview}
-                  disabled={!selectedPatient || medications.length === 0}
+                  disabled={!selectedPatient || !selectedEmployee || medications.length === 0}
                 >
                   Vista Previa
                 </Button>
@@ -357,7 +358,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!selectedPatient || medications.length === 0}
+                  disabled={!selectedPatient || !selectedEmployee || medications.length === 0}
                 >
                   Crear Receta
                 </Button>

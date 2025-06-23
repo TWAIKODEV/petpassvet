@@ -7,7 +7,7 @@ export const createPrescription = mutation({
   args: {
     patientId: v.id("patients"),
     petId: v.optional(v.id("pets")),
-    doctorId: v.string(),
+    employeeId: v.id("employees"),
     medicines: v.array(v.id("medicines")),
     notes: v.optional(v.string()),
   },
@@ -39,6 +39,9 @@ export const getPrescriptions = query({
           pet = await ctx.db.get(prescription.petId);
         }
         
+        // Get employee data
+        const employee = await ctx.db.get(prescription.employeeId);
+        
         // Get medicines data
         const medicines = await Promise.all(
           prescription.medicines.map(async (medicineId) => {
@@ -50,6 +53,7 @@ export const getPrescriptions = query({
           ...prescription,
           patient,
           pet,
+          employee,
           medicines: medicines.filter(Boolean), // Remove any null medicines
         };
       })
@@ -80,6 +84,9 @@ export const getPrescriptionsByPatient = query({
           pet = await ctx.db.get(prescription.petId);
         }
         
+        // Get employee data
+        const employee = await ctx.db.get(prescription.employeeId);
+        
         // Get medicines data
         const medicines = await Promise.all(
           prescription.medicines.map(async (medicineId) => {
@@ -91,6 +98,7 @@ export const getPrescriptionsByPatient = query({
           ...prescription,
           patient,
           pet,
+          employee,
           medicines: medicines.filter(Boolean),
         };
       })
@@ -116,6 +124,9 @@ export const getPrescription = query({
       pet = await ctx.db.get(prescription.petId);
     }
     
+    // Get employee data
+    const employee = await ctx.db.get(prescription.employeeId);
+    
     // Get medicines data
     const medicines = await Promise.all(
       prescription.medicines.map(async (medicineId) => {
@@ -127,6 +138,7 @@ export const getPrescription = query({
       ...prescription,
       patient,
       pet,
+      employee,
       medicines: medicines.filter(Boolean),
     };
   },
@@ -138,7 +150,7 @@ export const updatePrescription = mutation({
     id: v.id("prescriptions"),
     patientId: v.optional(v.id("patients")),
     petId: v.optional(v.id("pets")),
-    doctorId: v.optional(v.string()),
+    employeeId: v.optional(v.id("employees")),
     medicines: v.optional(v.array(v.id("medicines"))),
     notes: v.optional(v.string()),
   },

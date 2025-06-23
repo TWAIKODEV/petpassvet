@@ -18,7 +18,7 @@ const NewPrescriptionPage: React.FC = () => {
 
   // Convex queries and mutations
   const patients = useQuery(api.patients.getPatients) || [];
-  const doctors = useQuery(api.doctors.getDoctors) || [];
+  const employees = useQuery(api.employees.getEmployees) || [];
   const medicines = useQuery(api.medicines.getMedicines) || [];
   const createPrescription = useMutation(api.prescriptions.createPrescription);
 
@@ -50,7 +50,7 @@ const NewPrescriptionPage: React.FC = () => {
       const prescriptionId = await createPrescription({
         patientId: prescription.patientId,
         petId: prescription.petId,
-        doctorId: prescription.doctorId,
+        employeeId: prescription.employeeId,
         medicines: prescription.medicines,
         notes: prescription.notes
       });
@@ -111,12 +111,14 @@ const NewPrescriptionPage: React.FC = () => {
     petId: patient.pets?.[0]?._id || null
   }));
 
-  // Transform doctors data for the form
-  const transformedDoctors = doctors.map(doctor => ({
-    id: doctor._id,
-    name: doctor.name,
-    specialization: doctor.specialization
-  }));
+  // Transform employees data for the form (only veterinary department)
+  const transformedEmployees = employees
+    .filter(employee => employee.department === 'veterinary')
+    .map(employee => ({
+      id: employee._id,
+      name: `${employee.firstName} ${employee.lastName}`,
+      specialization: employee.position
+    }));
 
   // Transform medicines data for the form
   const transformedMedicines = medicines.map(medicine => ({
@@ -160,7 +162,7 @@ const NewPrescriptionPage: React.FC = () => {
             onSubmit={handlePrescriptionSubmit}
             onCancel={() => navigate('/dashboard')}
             patients={transformedPatients}
-            doctors={transformedDoctors}
+            employees={transformedEmployees}
             medicines={transformedMedicines}
           />
         ) : (

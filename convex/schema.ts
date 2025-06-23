@@ -262,12 +262,14 @@ export default defineSchema({
   prescriptions: defineTable({
     patientId: v.id("patients"),
     petId: v.optional(v.id("pets")),
-    doctorId: v.string(),
+    employeeId: v.id("employees"),
     medicines: v.array(v.id("medicines")),
     notes: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_patient", ["patientId"]),
+  })
+    .index("by_patient", ["patientId"])
+    .index("by_employee", ["employeeId"]),
 
   // Campaigns with proper enums
   campaigns: defineTable({
@@ -976,8 +978,7 @@ export default defineSchema({
       v.literal("personal"),
       v.literal("half_day"),
       v.literal("training"),
-      v.literal("maternity"),
-      v.literal("paternity"),
+      v.literal("maternity"),      v.literal("paternity"),
       v.literal("other")
     ),
     description: v.string(),
