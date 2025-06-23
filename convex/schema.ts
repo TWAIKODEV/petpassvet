@@ -1087,4 +1087,17 @@ export default defineSchema({
   })
     .index("by_name", ["name"])
     .index("by_editable", ["isEditable"]),
+
+  // Users table
+  users: defineTable({
+    employeeId: v.id("employees"),
+    roleId: v.id("roles"),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    password: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_employee", ["employeeId"])
+    .index("by_role", ["roleId"])
+    .index("by_status", ["status"]),
 });

@@ -5,16 +5,10 @@ import { v } from "convex/values";
 // Crear un nuevo usuario
 export const createUser = mutation({
   args: {
-    name: v.string(),
-    email: v.string(),
-    phone: v.string(),
-    roleId: v.string(),
-    department: v.string(),
-    position: v.string(),
+    employeeId: v.id("employees"),
+    roleId: v.id("roles"),
     status: v.union(v.literal("active"), v.literal("inactive")),
-    lastLogin: v.optional(v.string()),
-    avatar: v.optional(v.string()),
-    customPermissionIds: v.optional(v.array(v.string())),
+    password: v.string(),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -27,32 +21,73 @@ export const createUser = mutation({
   },
 });
 
-// Obtener todos los usuarios
+// Obtener todos los usuarios con información de empleado y rol
 export const getUsers = query({
   handler: async (ctx) => {
-    return await ctx.db.query("users").order("desc").collect();
+    const users = await ctx.db.query("users").order("desc").collect();
+    
+    const usersWithDetails = await Promise.all(
+      users.map(async (user) => {
+        const employee = await ctx.db.get(user.employeeId);
+        const role = await ctx.db.get(user.roleId);
+        
+        return {
+          ...user,
+          employee,
+          role,
+        };
+      })
+    );
+
+    return usersWithDetails;
   },
 });
 
-// Obtener usuario por email
-export const getUserByEmail = query({
-  args: { email: v.string() },
+// Obtener usuario por empleado ID
+export const getUserByEmployeeId = query({
+  args: { employeeId: v.id("employees") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_employee", (q) => q.eq("employeeId", args.employeeId))
       .first();
+    
+    if (!user) return null;
+    
+    const employee = await ctx.db.get(user.employeeId);
+    const role = await ctx.db.get(user.roleId);
+    
+    return {
+      ...user,
+      employee,
+      role,
+    };
   },
 });
 
 // Obtener usuarios por rol
 export const getUsersByRole = query({
-  args: { roleId: v.string() },
+  args: { roleId: v.id("roles") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const users = await ctx.db
       .query("users")
       .withIndex("by_role", (q) => q.eq("roleId", args.roleId))
       .collect();
+    
+    const usersWithDetails = await Promise.all(
+      users.map(async (user) => {
+        const employee = await ctx.db.get(user.employeeId);
+        const role = await ctx.db.get(user.roleId);
+        
+        return {
+          ...user,
+          employee,
+          role,
+        };
+      })
+    );
+
+    return usersWithDetails;
   },
 });
 
@@ -60,10 +95,25 @@ export const getUsersByRole = query({
 export const getUsersByStatus = query({
   args: { status: v.union(v.literal("active"), v.literal("inactive")) },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const users = await ctx.db
       .query("users")
       .withIndex("by_status", (q) => q.eq("status", args.status))
       .collect();
+    
+    const usersWithDetails = await Promise.all(
+      users.map(async (user) => {
+        const employee = await ctx.db.get(user.employeeId);
+        const role = await ctx.db.get(user.roleId);
+        
+        return {
+          ...user,
+          employee,
+          role,
+        };
+      })
+    );
+
+    return usersWithDetails;
   },
 });
 
@@ -71,7 +121,17 @@ export const getUsersByStatus = query({
 export const getUser = query({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const user = await ctx.db.get(args.id);
+    if (!user) return null;
+    
+    const employee = await ctx.db.get(user.employeeId);
+    const role = await ctx.db.get(user.roleId);
+    
+    return {
+      ...user,
+      employee,
+      role,
+    };
   },
 });
 
@@ -79,35 +139,15 @@ export const getUser = query({
 export const updateUser = mutation({
   args: {
     id: v.id("users"),
-    name: v.optional(v.string()),
-    email: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    roleId: v.optional(v.string()),
-    department: v.optional(v.string()),
-    position: v.optional(v.string()),
+    employeeId: v.optional(v.id("employees")),
+    roleId: v.optional(v.id("roles")),
     status: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
-    lastLogin: v.optional(v.string()),
-    avatar: v.optional(v.string()),
-    customPermissionIds: v.optional(v.array(v.string())),
+    password: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...updateData } = args;
     await ctx.db.patch(id, {
       ...updateData,
-      updatedAt: Date.now(),
-    });
-  },
-});
-
-// Actualizar último login
-export const updateLastLogin = mutation({
-  args: {
-    id: v.id("users"),
-    lastLogin: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
-      lastLogin: args.lastLogin,
       updatedAt: Date.now(),
     });
   },

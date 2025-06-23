@@ -44,6 +44,81 @@ export const createEmployee = mutation({
   },
 });
 
+// Obtener todos los empleados
+export const getEmployees = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("employees").order("desc").collect();
+  },
+});
+
+// Obtener empleados sin usuario asignado
+export const getEmployeesWithoutUser = query({
+  handler: async (ctx) => {
+    const employees = await ctx.db.query("employees").collect();
+    const users = await ctx.db.query("users").collect();
+    
+    const employeeIdsWithUser = new Set(users.map(user => user.employeeId));
+    
+    return employees.filter(employee => !employeeIdsWithUser.has(employee._id));
+  },
+});
+
+// Obtener un empleado por ID
+export const getEmployee = query({
+  args: { id: v.id("employees") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+// Actualizar un empleado
+export const updateEmployee = mutation({
+  args: {
+    id: v.id("employees"),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    birthDate: v.optional(v.string()),
+    gender: v.optional(v.union(v.literal("male"), v.literal("female"), v.literal("other"))),
+    email: v.optional(v.string()),
+    documentId: v.optional(v.string()),
+    socialSecurityNumber: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    academicEducation: v.optional(v.array(v.string())),
+    degrees: v.optional(v.array(v.string())),
+    contractType: v.optional(v.string()),
+    workSchedule: v.optional(v.string()),
+    scheduleIds: v.optional(v.array(v.id("schedules"))),
+    weekendWork: v.optional(v.boolean()),
+    nightShift: v.optional(v.boolean()),
+    position: v.optional(v.string()),
+    department: v.optional(v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("administration"))),
+    baseSalary: v.optional(v.number()),
+    paymentPeriods: v.optional(v.number()),
+    vacationDays: v.optional(v.number()),
+    collectiveAgreement: v.optional(v.string()),
+    probationPeriod: v.optional(v.string()),
+    workCenter: v.optional(v.string()),
+    workMode: v.optional(v.union(v.literal("onsite"), v.literal("remote"), v.literal("hybrid"))),
+    startDate: v.optional(v.string()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...updateData } = args;
+    await ctx.db.patch(id, {
+      ...updateData,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+// Eliminar un empleado
+export const deleteEmployee = mutation({
+  args: { id: v.id("employees") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});
+
 export const getEmployees = query({
   handler: async (ctx) => {
     const employees = await ctx.db.query("employees").order("desc").collect();
