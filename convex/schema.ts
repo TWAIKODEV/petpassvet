@@ -2,61 +2,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Permission system tables
-  permissions: defineTable({
-    id: v.string(),
-    name: v.string(),
-    description: v.string(),
-    module: v.string(),
-    action: v.union(
-      v.literal("view"),
-      v.literal("create"),
-      v.literal("edit"),
-      v.literal("delete"),
-      v.literal("manage"),
-    ),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_module", ["module"])
-    .index("by_action", ["action"]),
-
-  userRoles: defineTable({
-    id: v.string(),
-    name: v.union(
-      v.literal("admin"),
-      v.literal("manager"),
-      v.literal("veterinarian"),
-      v.literal("vet_assistant"),
-      v.literal("receptionist"),
-      v.literal("groomer"),
-    ),
-    displayName: v.string(),
-    permissionIds: v.array(v.string()), // References to permission IDs
-    isEditable: v.boolean(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_name", ["name"]),
-
-  // Updated users table to match the User interface
-  users: defineTable({
-    name: v.string(),
-    email: v.string(),
-    phone: v.string(),
-    roleId: v.string(), // Reference to userRoles
-    department: v.string(),
-    position: v.string(),
-    status: v.union(v.literal("active"), v.literal("inactive")),
-    lastLogin: v.optional(v.string()),
-    avatar: v.optional(v.string()),
-    customPermissionIds: v.optional(v.array(v.string())), // Custom permissions override
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_email", ["email"])
-    .index("by_role", ["roleId"])
-    .index("by_status", ["status"]),
-
   patients: defineTable({
     firstName: v.string(),
     lastName: v.string(),
