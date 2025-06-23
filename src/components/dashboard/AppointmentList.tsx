@@ -37,6 +37,19 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   const getPatientById = (id: string) => patients.find(patient => patient._id === id);
   const getEmployeeById = (id: string) => employees.find(employee => employee._id === id);
 
+  // Filter appointments to show only future appointments
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const upcomingAppointments = appointments.filter(appointment => {
+    const appointmentDate = new Date(appointment.date);
+    return appointmentDate >= today && appointment.status !== 'completed' && appointment.status !== 'no_show';
+  }).sort((a, b) => {
+    const dateA = new Date(`${a.date} ${a.time}`);
+    const dateB = new Date(`${b.date} ${b.time}`);
+    return dateA.getTime() - dateB.getTime();
+  });
+
   // Status indicator styles with background opacity for better readability
   const statusStyles = {
     'pending': 'bg-orange-100 text-orange-800 hover:bg-orange-200',
@@ -174,9 +187,10 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   return (
     <Card title={title} icon={<Calendar size={20} />}>
       <div className="divide-y divide-gray-200">
-        {appointments.slice(0, limit).map((appointment) => {
-          const patient = getPatientById(appointment.patientId);
-          const employee = getEmployeeById(appointment.employeeId);
+        {upcomingAppointments.slice(0, limit).map((appointment) => {
+          // Check if appointment already has patient and employee data
+          const patient = appointment.patient || getPatientById(appointment.patientId);
+          const employee = appointment.employee || getEmployeeById(appointment.employeeId);
 
           if (!patient || !employee) return null;
 
@@ -194,7 +208,9 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
                     </span>
                   </div>
                   <div className="mt-1 flex items-center">
-                    <span className="text-sm text-gray-600">Propietario: {patient.firstName} {patient.lastName}</span>
+                    <span className="text-sm text-gray-600">
+                      Propietario: {patient.name || `${patient.firstName} ${patient.lastName}`}
+                    </span>
                     <div className="ml-3 flex items-center space-x-2">
                       {patient.preferredContact && (
                         <button
@@ -246,7 +262,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
 
               <div className="mt-2 flex items-center text-xs text-gray-500">
                 <User size={14} className="mr-1" />
-                <span>{employee.firstName} {employee.lastName}</span>
+                <span>{employee.name || `${employee.firstName} ${employee.lastName}`}</span>
                 <span className="mx-2">•</span>
                 <Calendar size={14} className="mr-1" />
                 <span>
@@ -292,12 +308,12 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
           );
         })}
 
-        {appointments.length === 0 && (
-          <p className="py-4 text-sm text-gray-500 text-center">No hay citas programadas.</p>
+        {upcomingAppointments.length === 0 && (
+          <p className="py-4 text-sm text-gray-500 text-center">No hay citas próximas programadas.</p>
         )}
       </div>
 
-      {appointments.length > limit && (
+      {upcomingAppointments.length > limit && (
         <div className="mt-4 text-center">
           <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
             Ver todas las citas

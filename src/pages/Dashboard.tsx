@@ -201,21 +201,33 @@ const Dashboard: React.FC = () => {
         <div className="space-y-6">
           <Card title="Citas de Hoy" icon={<Clock size={20} />}>
             <div className="text-center py-8">
-              <div className="text-5xl font-bold text-blue-600 flex items-center justify-center">
-                <Calendar size={36} className="mr-2 text-blue-500" />
-                {appointments.length}
-              </div>
-              <p className="mt-2 text-sm text-gray-600">citas programadas para hoy</p>
+              {(() => {
+                const today = new Date().toISOString().split('T')[0];
+                const todayAppointments = appointments.filter(app => app.date === today);
+                return (
+                  <>
+                    <div className="text-5xl font-bold text-blue-600 flex items-center justify-center">
+                      <Calendar size={36} className="mr-2 text-blue-500" />
+                      {todayAppointments.length}
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600">citas programadas para hoy</p>
+                  </>
+                );
+              })()}
               
               <div className="mt-6 grid grid-cols-2 gap-4 text-center">
-                {appointmentStatusConfig.map((config) => (
-                  <div key={config.status} className="border rounded-lg p-3">
-                    <p className="text-gray-500 text-xs">{config.label}</p>
-                    <p className={`text-xl font-semibold ${config.color}`}>
-                      {appointments.filter(a => a.status === config.status).length}
-                    </p>
-                  </div>
-                ))}
+                {appointmentStatusConfig.map((config) => {
+                  const today = new Date().toISOString().split('T')[0];
+                  const todayAppointments = appointments.filter(app => app.date === today);
+                  return (
+                    <div key={config.status} className="border rounded-lg p-3">
+                      <p className="text-gray-500 text-xs">{config.label}</p>
+                      <p className={`text-xl font-semibold ${config.color}`}>
+                        {todayAppointments.filter(a => a.status === config.status).length}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
               
               <button className="mt-6 text-sm font-medium text-blue-600 hover:text-blue-500">
