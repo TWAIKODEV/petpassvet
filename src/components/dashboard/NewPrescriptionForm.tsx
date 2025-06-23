@@ -60,7 +60,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
   const [prescriptionDate, setPrescriptionDate] = useState(new Date().toISOString().split('T')[0]);
   const [veterinarian, setVeterinarian] = useState('Dr. Juan Pérez');
   const [notes, setNotes] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -254,11 +254,13 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                   required
                 >
                   <option value="">Seleccionar especialista</option>
-                  {employees.map(employee => (
+                  {employees && employees.length > 0 ? employees.map(employee => (
                     <option key={employee._id} value={employee._id}>
                       {employee.firstName} {employee.lastName} - {employee.position}
                     </option>
-                  ))}
+                  )) : (
+                    <option value="" disabled>No hay especialistas disponibles</option>
+                  )}
                 </select>
             </div>
 

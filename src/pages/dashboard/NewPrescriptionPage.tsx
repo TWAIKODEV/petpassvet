@@ -111,12 +111,7 @@ const NewPrescriptionPage: React.FC = () => {
 
   // Transform employees data for the form (only veterinary department)
   const transformedEmployees = employees
-    .filter(employee => employee.department === 'veterinary')
-    .map(employee => ({
-      id: employee._id,
-      name: `${employee.firstName} ${employee.lastName}`,
-      specialization: employee.position
-    }));
+    .filter(employee => employee.department === 'veterinary');
 
   // Transform medicines data for the form
   const transformedMedicines = medicines.map(medicine => ({
