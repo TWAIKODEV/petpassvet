@@ -41,7 +41,7 @@ const ControlHorario: React.FC = () => {
 
   // Fetch data from database
   const employees = useQuery(api.employees.getEmployees) || [];
-  const timeRecordings = useQuery(api.timeRecording.getTimeRecordings) || [];
+  const timeRecordings = useQuery(api.timeRecording.getTimeRecords) || [];
   const absences = useQuery(api.absences.getAbsences) || [];
 
   // Mutations
