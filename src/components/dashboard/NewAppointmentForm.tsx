@@ -75,10 +75,16 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
   };
 
   const serviceTypes = [
-    { value: 'veterinary', label: 'Veterinaria' },
+    { value: 'checkUp', label: 'Chequeo' },
+    { value: 'vaccination', label: 'Vacunación' },
+    { value: 'surgery', label: 'Cirugía' },
+    { value: 'dental', label: 'Dental' },
     { value: 'grooming', label: 'Peluquería' },
-    { value: 'rehabilitation', label: 'Rehabilitación' },
-    { value: 'hospitalization', label: 'Hospitalización' }
+    { value: 'emergency', label: 'Emergencia' },
+    { value: 'followUp', label: 'Seguimiento' },
+    { value: 'annualReview', label: 'Revisión Anual' },
+    { value: 'firstVisit', label: 'Primera Visita' },
+    { value: 'procedure', label: 'Procedimiento' }
   ];
 
   const consultationTypes = [
@@ -189,7 +195,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
             {/* Service Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Servicio
+                Tipo de Cita
               </label>
               <select
                 required
@@ -197,7 +203,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
                 onChange={(e) => setFormData(prev => ({ ...prev, serviceType: e.target.value }))}
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option value="">Seleccionar tipo de servicio</option>
+                <option value="">Seleccionar tipo de cita</option>
                 {serviceTypes.map(type => (
                   <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
@@ -234,7 +240,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
                 <option value="">Seleccionar especialista</option>
                 {employees.map(employee => (
                   <option key={employee._id} value={employee._id}>
-                    {employee.firstName} - {employee.position}
+                    {employee.firstName} {employee.lastName} - {employee.position} ({employee.department})
                   </option>
                 ))}
               </select>

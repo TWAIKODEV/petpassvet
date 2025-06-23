@@ -1,4 +1,3 @@
-
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -7,7 +6,14 @@ export const createAppointment = mutation({
   args: {
     petId: v.id("pets"),
     consultationType: v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency")),
-    serviceType: v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("rehabilitation"), v.literal("hospitalization")),
+    serviceType: v.union(
+        v.literal("checkUp"),
+        v.literal("vaccination"),
+        v.literal("surgery"),
+        v.literal("grooming"),
+        v.literal("rehabilitation"),
+        v.literal("hospitalization")
+    ),
     employeeId: v.id("employees"),
     date: v.string(),
     time: v.string(),
@@ -30,33 +36,33 @@ export const createAppointment = mutation({
 export const getAppointments = query({
   handler: async (ctx) => {
     const appointments = await ctx.db.query("appointments").order("desc").collect();
-    
+
     const appointmentsWithDetails = await Promise.all(
       appointments.map(async (appointment) => {
         // Obtener información de la mascota
         const pet = await ctx.db.get(appointment.petId);
         if (!pet) return null;
-        
+
         // Obtener información del paciente (propietario)
         const patient = await ctx.db.get(pet.patientId);
         if (!patient) return null;
-        
+
         // Obtener información del empleado
         const employee = await ctx.db.get(appointment.employeeId);
         if (!employee) return null;
-        
+
         // Calcular edad de la mascota
         const age = pet.birthDate 
           ? new Date().getFullYear() - new Date(pet.birthDate).getFullYear()
           : 0;
-        
+
         // Determinar el tipo de consulta basado en el departamento del empleado
         const consultationKind = employee.department === 'veterinary' 
           ? 'checkUp' 
           : employee.department === 'grooming' 
           ? 'grooming' 
           : 'procedure';
-        
+
         return {
           ...appointment,
           consultationKind, // Agregamos esto para compatibilidad
@@ -83,7 +89,7 @@ export const getAppointments = query({
         };
       })
     );
-    
+
     return appointmentsWithDetails.filter(appointment => appointment !== null);
   },
 });
@@ -107,28 +113,28 @@ export const getAppointmentsByDate = query({
       .query("appointments")
       .withIndex("by_date", (q) => q.eq("date", args.date))
       .collect();
-    
+
     const appointmentsWithDetails = await Promise.all(
       appointments.map(async (appointment) => {
         const pet = await ctx.db.get(appointment.petId);
         if (!pet) return null;
-        
+
         const patient = await ctx.db.get(pet.patientId);
         if (!patient) return null;
-        
+
         const employee = await ctx.db.get(appointment.employeeId);
         if (!employee) return null;
-        
+
         const age = pet.birthDate 
           ? new Date().getFullYear() - new Date(pet.birthDate).getFullYear()
           : 0;
-        
+
         const consultationKind = employee.department === 'veterinary' 
           ? 'checkUp' 
           : employee.department === 'grooming' 
           ? 'grooming' 
           : 'procedure';
-        
+
         return {
           ...appointment,
           consultationKind,
@@ -155,7 +161,7 @@ export const getAppointmentsByDate = query({
         };
       })
     );
-    
+
     return appointmentsWithDetails.filter(appointment => appointment !== null);
   },
 });
@@ -185,7 +191,14 @@ export const updateAppointment = mutation({
     id: v.id("appointments"),
     petId: v.optional(v.id("pets")),
     consultationType: v.optional(v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency"))),
-    serviceType: v.optional(v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("rehabilitation"), v.literal("hospitalization"))),
+    serviceType: v.optional(v.union(
+        v.literal("checkUp"),
+        v.literal("vaccination"),
+        v.literal("surgery"),
+        v.literal("grooming"),
+        v.literal("rehabilitation"),
+        v.literal("hospitalization")
+    )),
     employeeId: v.optional(v.id("employees")),
     date: v.optional(v.string()),
     time: v.optional(v.string()),
@@ -230,9 +243,9 @@ export const searchPatientsAndPets = query({
   handler: async (ctx, args) => {
     const patients = await ctx.db.query("patients").collect();
     const pets = await ctx.db.query("pets").collect();
-    
+
     const results = [];
-    
+
     // Buscar en pacientes
     for (const patient of patients) {
       const fullName = `${patient.firstName} ${patient.lastName}`.toLowerCase();
@@ -243,7 +256,7 @@ export const searchPatientsAndPets = query({
       ) {
         // Obtener mascotas del paciente
         const patientPets = pets.filter(pet => pet.patientId === patient._id);
-        
+
         for (const pet of patientPets) {
           results.push({
             id: `${patient._id}-${pet._id}`,
@@ -260,7 +273,7 @@ export const searchPatientsAndPets = query({
         }
       }
     }
-    
+
     // Buscar en mascotas
     for (const pet of pets) {
       if (pet.name.toLowerCase().includes(args.searchTerm.toLowerCase())) {
@@ -268,7 +281,7 @@ export const searchPatientsAndPets = query({
         if (patient) {
           const fullName = `${patient.firstName} ${patient.lastName}`;
           const existingResult = results.find(r => r.petId === pet._id);
-          
+
           if (!existingResult) {
             results.push({
               id: `${patient._id}-${pet._id}`,
@@ -286,7 +299,7 @@ export const searchPatientsAndPets = query({
         }
       }
     }
-    
+
     return results.slice(0, 10); // Limitar a 10 resultados
   },
 });
