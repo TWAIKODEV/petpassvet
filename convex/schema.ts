@@ -101,18 +101,6 @@ export default defineSchema({
 
   appointments: defineTable({
     petId: v.id("pets"),
-    consultationKind: v.union(
-      v.literal("annualReview"),
-      v.literal("followUp"),
-      v.literal("checkUp"),
-      v.literal("emergency"),
-      v.literal("vaccination"),
-      v.literal("surgery"),
-      v.literal("dental"),
-      v.literal("grooming"),
-      v.literal("firstVisit"),
-      v.literal("procedure"),
-    ),
     consultationType: v.union(
       v.literal("normal"),
       v.literal("insurance"),
@@ -124,7 +112,7 @@ export default defineSchema({
       v.literal("rehabilitation"),
       v.literal("hospitalization"),
     ),
-    doctorId: v.id("doctors"),
+    employeeId: v.id("employees"),
     date: v.string(),
     time: v.string(),
     duration: v.number(),
@@ -143,7 +131,7 @@ export default defineSchema({
   })
     .index("by_pet", ["petId"])
     .index("by_date", ["date"])
-    .index("by_doctor", ["doctorId"]),
+    .index("by_employee", ["employeeId"]),
 
   doctors: defineTable({
     name: v.string(),

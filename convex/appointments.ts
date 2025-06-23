@@ -6,21 +6,9 @@ import { v } from "convex/values";
 export const createAppointment = mutation({
   args: {
     petId: v.id("pets"),
-    consultationKind: v.union(
-      v.literal("annualReview"),
-      v.literal("followUp"),
-      v.literal("checkUp"),
-      v.literal("emergency"),
-      v.literal("vaccination"),
-      v.literal("surgery"),
-      v.literal("dental"),
-      v.literal("grooming"),
-      v.literal("firstVisit"),
-      v.literal("procedure")
-    ),
     consultationType: v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency")),
     serviceType: v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("rehabilitation"), v.literal("hospitalization")),
-    doctorId: v.id("doctors"),
+    employeeId: v.id("employees"),
     date: v.string(),
     time: v.string(),
     duration: v.number(),
@@ -53,17 +41,25 @@ export const getAppointments = query({
         const patient = await ctx.db.get(pet.patientId);
         if (!patient) return null;
         
-        // Obtener información del doctor
-        const doctor = await ctx.db.get(appointment.doctorId);
-        if (!doctor) return null;
+        // Obtener información del empleado
+        const employee = await ctx.db.get(appointment.employeeId);
+        if (!employee) return null;
         
         // Calcular edad de la mascota
         const age = pet.birthDate 
           ? new Date().getFullYear() - new Date(pet.birthDate).getFullYear()
           : 0;
         
+        // Determinar el tipo de consulta basado en el departamento del empleado
+        const consultationKind = employee.department === 'veterinary' 
+          ? 'checkUp' 
+          : employee.department === 'grooming' 
+          ? 'grooming' 
+          : 'procedure';
+        
         return {
           ...appointment,
+          consultationKind, // Agregamos esto para compatibilidad
           pet: {
             id: pet._id,
             name: pet.name,
@@ -78,10 +74,11 @@ export const getAppointments = query({
             email: patient.email,
             phone: patient.phone,
           },
-          doctor: {
-            id: doctor._id,
-            name: doctor.name,
-            specialization: doctor.specialization,
+          employee: {
+            id: employee._id,
+            name: `${employee.firstName} ${employee.lastName}`,
+            department: employee.department,
+            position: employee.position,
           }
         };
       })
@@ -119,15 +116,22 @@ export const getAppointmentsByDate = query({
         const patient = await ctx.db.get(pet.patientId);
         if (!patient) return null;
         
-        const doctor = await ctx.db.get(appointment.doctorId);
-        if (!doctor) return null;
+        const employee = await ctx.db.get(appointment.employeeId);
+        if (!employee) return null;
         
         const age = pet.birthDate 
           ? new Date().getFullYear() - new Date(pet.birthDate).getFullYear()
           : 0;
         
+        const consultationKind = employee.department === 'veterinary' 
+          ? 'checkUp' 
+          : employee.department === 'grooming' 
+          ? 'grooming' 
+          : 'procedure';
+        
         return {
           ...appointment,
+          consultationKind,
           pet: {
             id: pet._id,
             name: pet.name,
@@ -142,16 +146,28 @@ export const getAppointmentsByDate = query({
             email: patient.email,
             phone: patient.phone,
           },
-          doctor: {
-            id: doctor._id,
-            name: doctor.name,
-            specialization: doctor.specialization,
+          employee: {
+            id: employee._id,
+            name: `${employee.firstName} ${employee.lastName}`,
+            department: employee.department,
+            position: employee.position,
           }
         };
       })
     );
     
     return appointmentsWithDetails.filter(appointment => appointment !== null);
+  },
+});
+
+// Obtener citas por empleado
+export const getAppointmentsByEmployee = query({
+  args: { employeeId: v.id("employees") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("appointments")
+      .withIndex("by_employee", (q) => q.eq("employeeId", args.employeeId))
+      .collect();
   },
 });
 
@@ -168,21 +184,9 @@ export const updateAppointment = mutation({
   args: {
     id: v.id("appointments"),
     petId: v.optional(v.id("pets")),
-    consultationKind: v.optional(v.union(
-      v.literal("annualReview"),
-      v.literal("followUp"),
-      v.literal("checkUp"),
-      v.literal("emergency"),
-      v.literal("vaccination"),
-      v.literal("surgery"),
-      v.literal("dental"),
-      v.literal("grooming"),
-      v.literal("firstVisit"),
-      v.literal("procedure")
-    )),
     consultationType: v.optional(v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency"))),
     serviceType: v.optional(v.union(v.literal("veterinary"), v.literal("grooming"), v.literal("rehabilitation"), v.literal("hospitalization"))),
-    doctorId: v.optional(v.id("doctors")),
+    employeeId: v.optional(v.id("employees")),
     date: v.optional(v.string()),
     time: v.optional(v.string()),
     duration: v.optional(v.number()),

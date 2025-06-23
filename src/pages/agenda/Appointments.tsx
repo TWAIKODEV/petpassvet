@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, Download, Calendar, RefreshCw, FileText, Eye, Printer, X, Euro, Camera as VideoCamera } from 'lucide-react';
 import Card from '../../components/common/Card';
@@ -32,6 +31,7 @@ const Appointments = () => {
   // Convex queries and mutations
   const appointments = useQuery(api.appointments.getAppointments) || [];
   const doctors = useQuery(api.doctors.getDoctors) || [];
+    const employees = useQuery(api.employees.getEmployees) || [];
   const updateAppointmentStatus = useMutation(api.appointments.updateAppointmentStatus);
   const updateAppointment = useMutation(api.appointments.updateAppointment);
 
@@ -45,7 +45,7 @@ const Appointments = () => {
     'no_show': 'bg-red-100 text-red-800',
     'scheduled': 'bg-blue-100 text-blue-800'
   };
-  
+
   // Status labels in Spanish
   const statusLabels = {
     'pending': 'Pte Confirmación',
@@ -62,18 +62,17 @@ const Appointments = () => {
     { id: 'all', name: 'Todas las áreas' },
     { id: 'veterinary', name: 'Veterinaria' },
     { id: 'grooming', name: 'Peluquería' },
-    { id: 'rehabilitation', name: 'Rehabilitación' },
-    { id: 'hospitalization', name: 'Hospitalización' }
+    { id: 'administration', name: 'Administración' }
   ];
 
   // Filter appointments
   const filteredAppointments = appointments.filter(appointment => {
-    const searchString = `${appointment.pet?.name} ${appointment.patient?.name} ${appointment.doctor?.name}`.toLowerCase();
-    
+    const searchString = `${appointment.pet?.name} ${appointment.patient?.name} ${appointment.employee?.firstName} ${appointment.employee?.lastName}`.toLowerCase();
+
     return (
       searchString.includes(searchTerm.toLowerCase()) &&
-      (selectedArea === 'all' || appointment.serviceType === selectedArea) &&
-      (selectedSpecialist === 'all' || appointment.doctorId === selectedSpecialist)
+      (selectedArea === 'all' || appointment.employee?.department === selectedArea) &&
+      (selectedSpecialist === 'all' || appointment.employeeId === selectedSpecialist)
     );
   });
 
@@ -104,7 +103,7 @@ const Appointments = () => {
 
   const handleManageAppointment = (appointment: any) => {
     setSelectedAppointment(appointment);
-    
+
     // Initialize modal form with appointment data
     const consultationKindLabels = {
       'annualReview': 'Revisión Anual',
@@ -118,22 +117,22 @@ const Appointments = () => {
       'firstVisit': 'Primera Visita',
       'procedure': 'Procedimiento'
     };
-    
+
     setAppointmentTitle(`${consultationKindLabels[appointment.consultationKind] || appointment.consultationKind} - ${appointment.pet?.name}`);
-    
+
     setAppointmentDate(appointment.date);
     setAppointmentStartTime(appointment.time);
-    
+
     // Calculate end time based on duration
     const [hours, minutes] = appointment.time.split(':').map(Number);
     const endDate = new Date();
     endDate.setHours(hours, minutes + appointment.duration);
     const endTimeString = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
     setAppointmentEndTime(endTimeString);
-    
+
     setAppointmentType(appointment.serviceType === 'veterinary' ? 'reunion' : 
                       appointment.serviceType === 'grooming' ? 'comida' : 'llamada');
-    
+
     setAppointmentNotes(appointment.notes || '');
     setIsAllDay(false);
     setAppointmentCompleted(appointment.status === 'completed');
@@ -150,7 +149,7 @@ const Appointments = () => {
         time: appointmentStartTime,
         status: appointmentCompleted ? 'completed' : selectedAppointment.status
       });
-      
+
       setSelectedAppointment(null);
     } catch (error) {
       console.error('Error saving appointment:', error);
@@ -201,26 +200,29 @@ const Appointments = () => {
               onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
             />
             <select
-              className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              value={selectedArea}
-              onChange={(e) => setSelectedArea(e.target.value)}
-            >
-              {areas.map(area => (
-                <option key={area.id} value={area.id}>{area.name}</option>
-              ))}
-            </select>
+                value={selectedArea}
+                onChange={(e) => setSelectedArea(e.target.value)}
+                className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="all">Todas las áreas</option>
+                <option value="veterinary">Veterinaria</option>
+                <option value="grooming">Peluquería</option>
+                <option value="administration">Administración</option>
+              </select>
             <select
-              className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              value={selectedSpecialist}
-              onChange={(e) => setSelectedSpecialist(e.target.value)}
-            >
-              <option value="all">Todos los especialistas</option>
-              {doctors.map(doctor => (
-                <option key={doctor._id} value={doctor._id}>{doctor.name}</option>
-              ))}
-            </select>
+                value={selectedSpecialist}
+                onChange={(e) => setSelectedSpecialist(e.target.value)}
+                className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="all">Todos los especialistas</option>
+                {employees.map((employee) => (
+                  <option key={employee._id} value={employee._id}>
+                    {employee.firstName} {employee.lastName} - {employee.position} ({employee.department})
+                  </option>
+                ))}
+              </select>
           </div>
-          
+
           <div className="flex gap-4">
             <Input
               placeholder="Buscar por mascota, propietario o doctor..."
@@ -295,12 +297,12 @@ const Appointments = () => {
                     <div className="text-sm text-gray-900">{appointment.patient?.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{appointment.doctor?.name}</div>
-                    <div className="text-sm text-gray-500">{appointment.doctor?.specialization}</div>
+                    <div className="text-sm text-gray-900">{appointment.employee?.firstName} {appointment.employee?.lastName}</div>
+                    <div className="text-sm text-gray-500">{appointment.employee?.position}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {appointment.serviceType}
+                      {appointment.employee?.department}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -339,7 +341,7 @@ const Appointments = () => {
         <div className="md:hidden divide-y divide-gray-200">
           {filteredAppointments.map((appointment) => {
             const isExpanded = expandedRow === appointment._id;
-            
+
             return (
               <div key={appointment._id} className="p-4">
                 <div 
@@ -364,7 +366,7 @@ const Appointments = () => {
                         {statusLabels[appointment.status]}
                       </span>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {appointment.serviceType}
+                        {appointment.employee?.department}
                       </span>
                     </div>
                   </div>
@@ -379,8 +381,8 @@ const Appointments = () => {
 
                     <div className="border-t pt-4">
                       <div className="text-sm font-medium text-gray-700">Especialista</div>
-                      <div className="mt-1 text-sm text-gray-900">{appointment.doctor?.name}</div>
-                      <div className="text-sm text-gray-500">{appointment.doctor?.specialization}</div>
+                      <div className="mt-1 text-sm text-gray-900">{appointment.employee?.firstName} {appointment.employee?.lastName}</div>
+                      <div className="text-sm text-gray-500">{appointment.employee?.position}</div>
                     </div>
 
                     <div className="border-t pt-4">

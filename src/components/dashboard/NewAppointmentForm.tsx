@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, Search, Calendar, Clock, User, Stethoscope, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -25,8 +24,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     duration: 30,
     serviceType: '',
     consultationType: 'normal',
-    consultationKind: '',
-    doctorId: '',
+    employeeId: '',
     notes: ''
   });
 
@@ -57,10 +55,9 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     try {
       const appointmentData = {
         petId: selectedPatientPet.petId as Id<"pets">,
-        consultationKind: formData.consultationKind as any,
         consultationType: formData.consultationType as any,
         serviceType: formData.serviceType as any,
-        doctorId: formData.doctorId as Id<"doctors">,
+        employeeId: formData.employeeId as Id<"employees">,
         date: formData.date,
         time: formData.time,
         duration: formData.duration,
@@ -77,19 +74,6 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     }
   };
 
-  const consultationKinds = [
-    { value: 'annualReview', label: 'Revisión Anual' },
-    { value: 'followUp', label: 'Seguimiento' },
-    { value: 'checkUp', label: 'Chequeo' },
-    { value: 'emergency', label: 'Emergencia' },
-    { value: 'vaccination', label: 'Vacunación' },
-    { value: 'surgery', label: 'Cirugía' },
-    { value: 'dental', label: 'Dental' },
-    { value: 'grooming', label: 'Peluquería' },
-    { value: 'firstVisit', label: 'Primera Visita' },
-    { value: 'procedure', label: 'Procedimiento' }
-  ];
-
   const serviceTypes = [
     { value: 'veterinary', label: 'Veterinaria' },
     { value: 'grooming', label: 'Peluquería' },
@@ -102,6 +86,9 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     { value: 'insurance', label: 'Seguro' },
     { value: 'emergency', label: 'Emergencia' }
   ];
+
+    const employees = useQuery(api.employees.getEmployees) || [];
+
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
@@ -132,7 +119,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
                   onChange={(e) => setSearchTerm(e.target.value)}
                   icon={<Search size={18} />}
                 />
-                
+
                 {showSearchResults && searchResults.length > 0 && (
                   <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-auto">
                     {searchResults.map((result) => (
@@ -163,7 +150,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
                     ))}
                   </div>
                 )}
-                
+
                 {showSearchResults && searchResults.length === 0 && searchTerm.length >= 2 && (
                   <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300">
                     <div className="px-4 py-3 text-sm text-gray-500">
@@ -172,7 +159,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
                   </div>
                 )}
               </div>
-              
+
               {selectedPatientPet && (
                 <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center justify-between">
@@ -217,24 +204,6 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
               </select>
             </div>
 
-            {/* Consultation Kind */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Consulta
-              </label>
-              <select
-                required
-                value={formData.consultationKind}
-                onChange={(e) => setFormData(prev => ({ ...prev, consultationKind: e.target.value }))}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar tipo de consulta</option>
-                {consultationKinds.map(kind => (
-                  <option key={kind.value} value={kind.value}>{kind.label}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Consultation Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -251,21 +220,21 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
               </select>
             </div>
 
-            {/* Doctor */}
+            {/* Employee */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Especialista
               </label>
               <select
                 required
-                value={formData.doctorId}
-                onChange={(e) => setFormData(prev => ({ ...prev, doctorId: e.target.value }))}
+                value={formData.employeeId}
+                onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
                 <option value="">Seleccionar especialista</option>
-                {doctors.map(doctor => (
-                  <option key={doctor._id} value={doctor._id}>
-                    {doctor.name} - {doctor.specialization}
+                {employees.map(employee => (
+                  <option key={employee._id} value={employee._id}>
+                    {employee.firstName} - {employee.position}
                   </option>
                 ))}
               </select>
