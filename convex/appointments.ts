@@ -6,14 +6,7 @@ export const createAppointment = mutation({
   args: {
     petId: v.id("pets"),
     consultationType: v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency")),
-    serviceType: v.union(
-        v.literal("checkUp"),
-        v.literal("vaccination"),
-        v.literal("surgery"),
-        v.literal("grooming"),
-        v.literal("rehabilitation"),
-        v.literal("hospitalization")
-    ),
+    serviceType: v.string(),
     employeeId: v.id("employees"),
     date: v.string(),
     time: v.string(),
@@ -191,14 +184,7 @@ export const updateAppointment = mutation({
     id: v.id("appointments"),
     petId: v.optional(v.id("pets")),
     consultationType: v.optional(v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency"))),
-    serviceType: v.optional(v.union(
-        v.literal("checkUp"),
-        v.literal("vaccination"),
-        v.literal("surgery"),
-        v.literal("grooming"),
-        v.literal("rehabilitation"),
-        v.literal("hospitalization")
-    )),
+    serviceType: v.string(),
     employeeId: v.optional(v.id("employees")),
     date: v.optional(v.string()),
     time: v.optional(v.string()),

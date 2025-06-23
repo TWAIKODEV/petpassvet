@@ -106,12 +106,7 @@ export default defineSchema({
       v.literal("insurance"),
       v.literal("emergency"),
     ),
-    serviceType: v.union(
-      v.literal("veterinary"),
-      v.literal("grooming"),
-      v.literal("rehabilitation"),
-      v.literal("hospitalization"),
-    ),
+    serviceType: v.string(),
     employeeId: v.id("employees"),
     date: v.string(),
     time: v.string(),
