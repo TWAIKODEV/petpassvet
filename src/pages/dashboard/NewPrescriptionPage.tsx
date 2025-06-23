@@ -98,8 +98,6 @@ const NewPrescriptionPage: React.FC = () => {
   // Transform patients data for the form
   const transformedPatients = patients.map(patient => ({
     id: patient._id,
-    patientId: patient._id,
-    petId: patient.pets?.[0]?._id,
     name: patient.pets?.[0]?.name || 'Sin mascota',
     species: patient.pets?.[0]?.species || 'N/A',
     breed: patient.pets?.[0]?.breed || 'N/A',

@@ -33,7 +33,7 @@ interface NewPrescriptionFormProps {
   onSubmit: (prescription: any) => void;
   onCancel: () => void;
   patients: Patient[];
-  doctors: any[];
+  employees: any[];
   medicines: any[];
 }
 
@@ -41,7 +41,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
   onSubmit, 
   onCancel, 
   patients, 
-  doctors = [], 
+  employees = [], 
   medicines = [] 
 }) => {
   const createPrescription = useMutation(api.prescriptions.createPrescription);
@@ -135,16 +135,13 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
       return;
     }
 
-    // Find the selected doctor
-    const selectedDoctor = doctors.find(doc => doc.name === veterinarian);
-
     const prescriptionData = {
       number: prescriptionNumber,
       date: prescriptionDate,
       patient: selectedPatient,
       patientId: selectedPatient.patientId || selectedPatient.id, // Use correct patient ID
       petId: selectedPatient.petId, // Use the actual pet ID
-      doctorId: selectedDoctor?.id || veterinarian,
+      employeeId: selectedEmployee?._id,
       veterinarian,
       medications,
       medicines: medications.map(med => {
@@ -241,21 +238,25 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                 )}</select>
             </div>
 
-            {/* Veterinario */}
+            {/* Especialista */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Veterinario
+                Especialista
               </label>
               <select
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={veterinarian}
-                  onChange={(e) => setVeterinarian(e.target.value)}
+                  value={selectedEmployee?._id || ''}
+                  onChange={(e) => {
+                    const employee = employees.find(emp => emp._id === e.target.value);
+                    setSelectedEmployee(employee || null);
+                    setVeterinarian(employee ? `${employee.firstName} ${employee.lastName}` : '');
+                  }}
                   required
                 >
-                  <option value="">Seleccionar veterinario</option>
-                  {doctors.map(doctor => (
-                    <option key={doctor.id} value={doctor.name}>
-                      {doctor.name} - {doctor.specialization}
+                  <option value="">Seleccionar especialista</option>
+                  {employees.map(employee => (
+                    <option key={employee._id} value={employee._id}>
+                      {employee.firstName} {employee.lastName} - {employee.position}
                     </option>
                   ))}
                 </select>
