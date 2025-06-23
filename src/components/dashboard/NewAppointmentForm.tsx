@@ -41,7 +41,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
 
   const handlePatientPetSelect = (patientPet: any) => {
     setSelectedPatientPet(patientPet);
-    setSearchTerm(patientPet.displayText);
+    setSearchTerm('');
     setShowSearchResults(false);
   };
 
