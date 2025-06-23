@@ -1062,4 +1062,84 @@ export default defineSchema({
     .index("by_employee", ["employeeId"])
     .index("by_start_date", ["startDate"])
     .index("by_approved", ["approved"]),
+
+  // Roles table
+  roles: defineTable({
+    name: v.string(),
+    displayName: v.string(),
+    description: v.string(),
+    isEditable: v.boolean(),
+    permissions: v.object({
+      dashboard: v.object({
+        view: v.boolean(),
+      }),
+      inbox: v.object({
+        view: v.boolean(),
+        reply: v.boolean(),
+      }),
+      agenda: v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        delete: v.boolean(),
+      }),
+      clientes: v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        delete: v.boolean(),
+      }),
+      oportunidades: v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+      }),
+      consultorio: v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+      }),
+      peluqueria: v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+      }),
+      tienda: v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+      }),
+      ventas: v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+      }),
+      compras: v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+      }),
+      marketing: v.object({
+        view: v.boolean(),
+        edit: v.boolean(),
+      }),
+      rrhh: v.object({
+        view: v.boolean(),
+        edit: v.boolean(),
+      }),
+      erp: v.object({
+        view: v.boolean(),
+        edit: v.boolean(),
+      }),
+      informes: v.object({
+        view: v.boolean(),
+      }),
+      administracion: v.object({
+        view: v.boolean(),
+        edit: v.boolean(),
+      }),
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_name", ["name"])
+    .index("by_editable", ["isEditable"]),
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Save, 
@@ -24,6 +24,9 @@ import {
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 
 const Configuracion: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'empresa' | 'usuarios' | 'permisos'>('empresa');
@@ -46,427 +49,98 @@ const Configuracion: React.FC = () => {
     legalRepresentative: 'Carmen Jiménez Rodríguez'
   });
 
-  // Roles predefinidos
-  const [roles, setRoles] = useState([
-    {
-      id: 'admin',
-      name: 'Administrador',
-      description: 'Acceso completo a todas las funcionalidades del sistema',
-      isEditable: false
-    },
-    {
-      id: 'manager',
-      name: 'Manager',
-      description: 'Gestión de la clínica sin acceso a configuración avanzada',
-      isEditable: true
-    },
-    {
-      id: 'veterinarian',
-      name: 'Veterinario',
-      description: 'Acceso a historiales médicos y gestión de citas',
-      isEditable: true
-    },
-    {
-      id: 'vet_assistant',
-      name: 'Asistente Veterinario',
-      description: 'Apoyo a veterinarios con acceso limitado',
-      isEditable: true
-    },
-    {
-      id: 'receptionist',
-      name: 'Auxiliar Oficina',
-      description: 'Gestión de citas y atención al cliente',
-      isEditable: true
-    },
-    {
-      id: 'groomer',
-      name: 'Peluquero',
-      description: 'Gestión de servicios de peluquería',
-      isEditable: true
-    }
-  ]);
+  // Convex queries and mutations
+  const roles = useQuery(api.roles.getRoles) || [];
+  const createRole = useMutation(api.roles.createRole);
+  const updateRole = useMutation(api.roles.updateRole);
+  const deleteRole = useMutation(api.roles.deleteRole);
+  const initializeDefaultRoles = useMutation(api.roles.initializeDefaultRoles);
 
-  // Permisos por módulo
-  const [permissions, setPermissions] = useState({
+  // Initialize default roles if none exist
+  useEffect(() => {
+    if (roles.length === 0) {
+      initializeDefaultRoles();
+    }
+  }, [roles.length, initializeDefaultRoles]);
+
+  // Structure for permissions display
+  const permissionsStructure = {
     dashboard: {
       title: 'Dashboard',
       icon: <BarChart2 size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: true
-        }
-      }
+      permissions: ['view']
     },
     inbox: {
       title: 'Inbox',
       icon: <MessageSquare size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: false
-        },
-        reply: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'reply']
     },
     agenda: {
       title: 'Agenda',
       icon: <Calendar size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: true
-        },
-        create: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: true
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: false
-        },
-        delete: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'create', 'edit', 'delete']
     },
     clientes: {
       title: 'Clientes',
       icon: <Users size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: true
-        },
-        create: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: false
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        },
-        delete: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'create', 'edit', 'delete']
     },
     oportunidades: {
       title: 'Oportunidades',
       icon: <UserPlus size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        },
-        create: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'create', 'edit']
     },
     consultorio: {
       title: 'Consultorio',
       icon: <Pill size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: false,
-          groomer: false
-        },
-        create: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'create', 'edit']
     },
     peluqueria: {
       title: 'Peluquería',
       icon: <Scissors size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: true
-        },
-        create: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: true
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: true
-        }
-      }
+      permissions: ['view', 'create', 'edit']
     },
     tienda: {
       title: 'Tienda',
       icon: <ShoppingBag size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: false
-        },
-        create: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'create', 'edit']
     },
     ventas: {
       title: 'Ventas',
       icon: <DollarSign size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        },
-        create: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: true,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'create']
     },
     compras: {
       title: 'Compras',
       icon: <ShoppingBag size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        },
-        create: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'create']
     },
     marketing: {
       title: 'Marketing',
       icon: <Globe size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'edit']
     },
     rrhh: {
       title: 'RRHH',
       icon: <Users size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: true,
-          receptionist: true,
-          groomer: true
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'edit']
     },
     erp: {
       title: 'ERP',
       icon: <FileText size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        },
-        edit: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'edit']
     },
     informes: {
       title: 'Informes',
       icon: <BarChart2 size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: true,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view']
     },
     administracion: {
       title: 'Administración',
       icon: <Settings size={20} />,
-      permissions: {
-        view: {
-          admin: true,
-          manager: true,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        },
-        edit: {
-          admin: true,
-          manager: false,
-          veterinarian: false,
-          vet_assistant: false,
-          receptionist: false,
-          groomer: false
-        }
-      }
+      permissions: ['view', 'edit']
     }
-  });
+  };
 
   const handleCompanyDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -476,52 +150,89 @@ const Configuracion: React.FC = () => {
     }));
   };
 
-  const handlePermissionChange = (module: string, permission: string, role: string, value: boolean) => {
-    setPermissions(prev => ({
-      ...prev,
+  const handlePermissionChange = async (module: string, permission: string, roleId: Id<"roles">, value: boolean) => {
+    const role = roles.find(r => r._id === roleId);
+    if (!role) return;
+
+    const updatedPermissions = {
+      ...role.permissions,
       [module]: {
-        ...prev[module],
-        permissions: {
-          ...prev[module].permissions,
-          [permission]: {
-            ...prev[module].permissions[permission],
-            [role]: value
-          }
-        }
+        ...role.permissions[module],
+        [permission]: value
       }
-    }));
+    };
+
+    try {
+      await updateRole({
+        id: roleId,
+        permissions: updatedPermissions
+      });
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      alert('Error al actualizar permisos');
+    }
   };
 
   const handleSaveConfiguration = () => {
     // Aquí se guardarían los cambios en la base de datos
     console.log('Guardando configuración de la empresa:', companyData);
-    console.log('Guardando configuración de permisos:', permissions);
     
     // Mostrar mensaje de éxito
     alert('Configuración guardada correctamente');
   };
 
-  const handleAddRole = () => {
-    const newRoleId = `role_${Date.now()}`;
-    setRoles(prev => [
-      ...prev,
-      {
-        id: newRoleId,
-        name: 'Nuevo Rol',
-        description: 'Descripción del nuevo rol',
-        isEditable: true
-      }
-    ]);
+  const handleAddRole = async () => {
+    try {
+      const defaultPermissions = {
+        dashboard: { view: false },
+        inbox: { view: false, reply: false },
+        agenda: { view: false, create: false, edit: false, delete: false },
+        clientes: { view: false, create: false, edit: false, delete: false },
+        oportunidades: { view: false, create: false, edit: false },
+        consultorio: { view: false, create: false, edit: false },
+        peluqueria: { view: false, create: false, edit: false },
+        tienda: { view: false, create: false, edit: false },
+        ventas: { view: false, create: false },
+        compras: { view: false, create: false },
+        marketing: { view: false, edit: false },
+        rrhh: { view: false, edit: false },
+        erp: { view: false, edit: false },
+        informes: { view: false },
+        administracion: { view: false, edit: false },
+      };
 
-    // Añadir el nuevo rol a todos los permisos
-    const updatedPermissions = { ...permissions };
-    Object.keys(updatedPermissions).forEach(module => {
-      Object.keys(updatedPermissions[module].permissions).forEach(permission => {
-        updatedPermissions[module].permissions[permission][newRoleId] = false;
+      await createRole({
+        name: `nuevo_rol_${Date.now()}`,
+        displayName: 'Nuevo Rol',
+        description: 'Descripción del nuevo rol',
+        isEditable: true,
+        permissions: defaultPermissions
       });
-    });
-    
-    setPermissions(updatedPermissions);
+    } catch (error) {
+      console.error('Error creating role:', error);
+      alert('Error al crear el rol');
+    }
+  };
+
+  const handleUpdateRole = async (roleId: Id<"roles">, field: 'displayName' | 'description', value: string) => {
+    try {
+      await updateRole({
+        id: roleId,
+        [field]: value
+      });
+    } catch (error) {
+      console.error('Error updating role:', error);
+      alert('Error al actualizar el rol');
+    }
+  };
+
+  const handleDeleteRole = async (roleId: Id<"roles">) => {
+    try {
+      await deleteRole({ id: roleId });
+    } catch (error) {
+      console.error('Error deleting role:', error);
+      alert('Error al eliminar el rol');
+    }
   };
 
   return (
@@ -778,7 +489,7 @@ const Configuracion: React.FC = () => {
               
               <div className="space-y-4">
                 {roles.map(role => (
-                  <div key={role.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                  <div key={role._id} className="border rounded-lg p-4 bg-white shadow-sm">
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="flex items-center">
@@ -786,17 +497,12 @@ const Configuracion: React.FC = () => {
                           <h4 className="text-lg font-medium text-gray-900">
                             {role.isEditable ? (
                               <Input
-                                value={role.name}
-                                onChange={(e) => {
-                                  const updatedRoles = roles.map(r => 
-                                    r.id === role.id ? { ...r, name: e.target.value } : r
-                                  );
-                                  setRoles(updatedRoles);
-                                }}
+                                value={role.displayName}
+                                onChange={(e) => handleUpdateRole(role._id, 'displayName', e.target.value)}
                                 className="border-none p-0 font-medium text-lg"
                               />
                             ) : (
-                              role.name
+                              role.displayName
                             )}
                           </h4>
                         </div>
@@ -804,12 +510,7 @@ const Configuracion: React.FC = () => {
                           {role.isEditable ? (
                             <Input
                               value={role.description}
-                              onChange={(e) => {
-                                const updatedRoles = roles.map(r => 
-                                  r.id === role.id ? { ...r, description: e.target.value } : r
-                                );
-                                setRoles(updatedRoles);
-                              }}
+                              onChange={(e) => handleUpdateRole(role._id, 'description', e.target.value)}
                               className="border-none p-0 text-sm text-gray-500"
                             />
                           ) : (
@@ -821,10 +522,7 @@ const Configuracion: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            const updatedRoles = roles.filter(r => r.id !== role.id);
-                            setRoles(updatedRoles);
-                          }}
+                          onClick={() => handleDeleteRole(role._id)}
                         >
                           Eliminar
                         </Button>
@@ -853,19 +551,18 @@ const Configuracion: React.FC = () => {
                         Permiso
                       </th>
                       {roles.map(role => (
-                        <th key={role.id} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          {role.name}
+                        <th key={role._id} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {role.displayName}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {Object.entries(permissions).map(([moduleKey, moduleData]) => {
-                      const permissionEntries = Object.entries(moduleData.permissions);
-                      return permissionEntries.map(([permissionKey, permissionData], permIndex) => (
+                    {Object.entries(permissionsStructure).map(([moduleKey, moduleData]) => {
+                      return moduleData.permissions.map((permissionKey, permIndex) => (
                         <tr key={`${moduleKey}-${permissionKey}`} className={permIndex === 0 ? 'bg-gray-50' : ''}>
                           {permIndex === 0 ? (
-                            <td className="px-6 py-4 whitespace-nowrap" rowSpan={permissionEntries.length}>
+                            <td className="px-6 py-4 whitespace-nowrap" rowSpan={moduleData.permissions.length}>
                               <div className="flex items-center">
                                 <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                                   {moduleData.icon}
@@ -886,14 +583,14 @@ const Configuracion: React.FC = () => {
                             </div>
                           </td>
                           {roles.map(role => (
-                            <td key={`${moduleKey}-${permissionKey}-${role.id}`} className="px-6 py-4 whitespace-nowrap text-center">
+                            <td key={`${moduleKey}-${permissionKey}-${role._id}`} className="px-6 py-4 whitespace-nowrap text-center">
                               <label className="inline-flex items-center">
                                 <input
                                   type="checkbox"
                                   className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                  checked={permissionData[role.id] || false}
-                                  onChange={(e) => handlePermissionChange(moduleKey, permissionKey, role.id, e.target.checked)}
-                                  disabled={role.id === 'admin'} // El administrador siempre tiene todos los permisos
+                                  checked={role.permissions[moduleKey]?.[permissionKey] || false}
+                                  onChange={(e) => handlePermissionChange(moduleKey, permissionKey, role._id, e.target.checked)}
+                                  disabled={role.name === 'admin'} // El administrador siempre tiene todos los permisos
                                 />
                               </label>
                             </td>
