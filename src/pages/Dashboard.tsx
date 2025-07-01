@@ -55,8 +55,10 @@ const Dashboard: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    // Here you would typically fetch new data with the selected date range
-    console.log('Fetching data for range:', dateRange);
+    // Force re-render by updating mounted state
+    setMounted(false);
+    setTimeout(() => setMounted(true), 100);
+    console.log('Refreshing data for range:', dateRange);
   };
 
   const handleNewAppointment = (appointmentData: any) => {
@@ -195,6 +197,7 @@ const Dashboard: React.FC = () => {
             patients={patients}
             employees={employees}
             title="Próximas Citas"
+            dateRange={dateRange}
           />
         </div>
         

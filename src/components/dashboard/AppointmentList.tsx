@@ -13,6 +13,10 @@ interface AppointmentListProps {
   employees?: any[];
   title?: string;
   limit?: number;
+  dateRange?: {
+    from: string;
+    to: string;
+  };
 }
 
 const AppointmentList: React.FC<AppointmentListProps> = ({ 
@@ -20,7 +24,8 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   patients: propPatients, 
   employees: propEmployees, 
   title = "Próximas Citas", 
-  limit = 5 
+  limit = 5,
+  dateRange
 }) => {
   const [selectedPet, setSelectedPet] = useState<any>(null);
 
@@ -37,18 +42,36 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   const getPatientById = (id: string) => patients.find(patient => patient._id === id);
   const getEmployeeById = (id: string) => employees.find(employee => employee._id === id);
 
-  // Filter appointments to show only future appointments
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const upcomingAppointments = appointments.filter(appointment => {
+  // Filter appointments based on date range or show future appointments
+  const filteredAppointments = appointments.filter(appointment => {
     const appointmentDate = new Date(appointment.date);
-    return appointmentDate >= today && appointment.status !== 'completed' && appointment.status !== 'no_show';
+    
+    // If dateRange is provided, filter by the range
+    if (dateRange && dateRange.from && dateRange.to) {
+      const fromDate = new Date(dateRange.from);
+      const toDate = new Date(dateRange.to);
+      toDate.setHours(23, 59, 59, 999); // Include the entire end date
+      
+      return appointmentDate >= fromDate && 
+             appointmentDate <= toDate && 
+             appointment.status !== 'completed' && 
+             appointment.status !== 'no_show';
+    }
+    
+    // Default behavior: show future appointments
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return appointmentDate >= today && 
+           appointment.status !== 'completed' && 
+           appointment.status !== 'no_show';
   }).sort((a, b) => {
     const dateA = new Date(`${a.date} ${a.time}`);
     const dateB = new Date(`${b.date} ${b.time}`);
     return dateA.getTime() - dateB.getTime();
   });
+
+  const upcomingAppointments = filteredAppointments;
 
   // Status indicator styles with background opacity for better readability
   const statusStyles = {
