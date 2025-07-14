@@ -23,7 +23,10 @@ import {
   Plus,
   Edit,
   Trash,
-  X
+  X,
+  ExternalLink,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import Card from '../../../components/common/Card';
 import Button from '../../../components/common/Button';
@@ -48,22 +51,17 @@ interface SocialAccount {
   url: string;
   connected: boolean;
   metrics: SocialMetrics;
+  userId?: string;
+  accessToken?: string;
+  connectedAt?: string;
 }
 
-interface Post {
-  id: string;
-  platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube';
-  content: string;
-  image?: string;
-  publishDate: string;
-  status: 'published' | 'scheduled' | 'draft';
-  metrics: {
-    likes: number;
-    comments: number;
-    shares: number;
-    views: number;
-  };
-}
+// Instagram App Configuration (these would be environment variables in production)
+const INSTAGRAM_CONFIG = {
+  clientId: process.env.REACT_APP_INSTAGRAM_CLIENT_ID || 'your_instagram_client_id',
+  redirectUri: process.env.REACT_APP_INSTAGRAM_REDIRECT_URI || 'https://your-domain.com/auth/instagram/callback',
+  scope: 'user_profile,user_media'
+};
 
 // Mock data for social accounts
 const mockSocialAccounts: SocialAccount[] = [
@@ -73,6 +71,7 @@ const mockSocialAccounts: SocialAccount[] = [
     handle: '@clinicpro_vet',
     url: 'https://instagram.com/clinicpro_vet',
     connected: true,
+    connectedAt: '2024-01-15T10:30:00Z',
     metrics: {
       followers: 5240,
       followersChange: 120,
@@ -89,60 +88,9 @@ const mockSocialAccounts: SocialAccount[] = [
     platform: 'facebook',
     handle: 'ClinicPro Veterinaria',
     url: 'https://facebook.com/clinicpro',
-    connected: true,
-    metrics: {
-      followers: 8750,
-      followersChange: 85,
-      engagement: 2.5,
-      engagementChange: -0.2,
-      reach: 22400,
-      reachChange: 1800,
-      clicks: 540,
-      clicksChange: 30
-    }
-  },
-  {
-    id: '3',
-    platform: 'twitter',
-    handle: '@ClinicPro',
-    url: 'https://twitter.com/clinicpro',
-    connected: true,
-    metrics: {
-      followers: 3120,
-      followersChange: 45,
-      engagement: 1.9,
-      engagementChange: 0.3,
-      reach: 9800,
-      reachChange: 750,
-      clicks: 210,
-      clicksChange: 15
-    }
-  },
-  {
-    id: '4',
-    platform: 'linkedin',
-    handle: 'ClinicPro',
-    url: 'https://linkedin.com/company/clinicpro',
-    connected: true,
-    metrics: {
-      followers: 1850,
-      followersChange: 35,
-      engagement: 4.2,
-      engagementChange: 0.8,
-      reach: 5200,
-      reachChange: 420,
-      clicks: 180,
-      clicksChange: 25
-    }
-  },
-  {
-    id: '5',
-    platform: 'youtube',
-    handle: 'ClinicPro Vet',
-    url: 'https://youtube.com/c/clinicprovet',
     connected: false,
     metrics: {
-      followers: 980,
+      followers: 0,
       followersChange: 0,
       engagement: 0,
       engagementChange: 0,
@@ -153,6 +101,21 @@ const mockSocialAccounts: SocialAccount[] = [
     }
   }
 ];
+
+interface Post {
+  id: string;
+  platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube';
+  content: string;
+  image?: string;
+  publishDate: string;
+  status: 'published' | 'scheduled' | 'draft';
+  metrics: {
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+  };
+}
 
 // Mock data for posts
 const mockPosts: Post[] = [
@@ -244,29 +207,35 @@ const SocialMediaDashboard: React.FC = () => {
     from: new Date().toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
   });
+  const [showNewAccountModal, setShowNewAccountModal] = useState(false);
+  const [accounts, setAccounts] = useState<SocialAccount[]>(mockSocialAccounts);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{
+    type: 'success' | 'error' | null;
+    message: string;
+  }>({ type: null, message: '' });
   const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewPostModal, setShowNewPostModal] = useState(false);
-  const [showAccountModal, setShowAccountModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  // Filter posts based on search term, platform, and status
-  const filteredPosts = mockPosts.filter(post => {
-    const matchesSearch = post.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlatform = selectedPlatform === 'all' || post.platform === selectedPlatform;
-    const matchesStatus = selectedStatus === 'all' || post.status === selectedStatus;
-    
-    return matchesSearch && matchesPlatform && matchesStatus;
-  });
+    // Filter posts based on search term, platform, and status
+    const filteredPosts = mockPosts.filter(post => {
+      const matchesSearch = post.content.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesPlatform = selectedPlatform === 'all' || post.platform === selectedPlatform;
+      const matchesStatus = selectedStatus === 'all' || post.status === selectedStatus;
+      
+      return matchesSearch && matchesPlatform && matchesStatus;
+    });
 
-  // Calculate total metrics across all platforms
-  const totalMetrics = mockSocialAccounts.reduce(
+  // Calculate total metrics across all connected platforms
+  const totalMetrics = accounts.reduce(
     (acc, account) => {
       if (account.connected) {
         acc.followers += account.metrics.followers;
         acc.followersChange += account.metrics.followersChange;
-        acc.engagement += account.metrics.engagement * account.metrics.followers; // Weighted average
+        acc.engagement += account.metrics.engagement * account.metrics.followers;
         acc.reach += account.metrics.reach;
         acc.reachChange += account.metrics.reachChange;
         acc.clicks += account.metrics.clicks;
@@ -294,14 +263,38 @@ const SocialMediaDashboard: React.FC = () => {
 
   // Platform icons and colors
   const platformConfig = {
-    instagram: { icon: <Instagram size={20} />, color: 'text-pink-600', bgColor: 'bg-pink-100' },
-    facebook: { icon: <Facebook size={20} />, color: 'text-blue-600', bgColor: 'bg-blue-100' },
-    twitter: { icon: <Twitter size={20} />, color: 'text-blue-400', bgColor: 'bg-blue-50' },
-    linkedin: { icon: <Linkedin size={20} />, color: 'text-blue-800', bgColor: 'bg-blue-50' },
-    youtube: { icon: <Youtube size={20} />, color: 'text-red-600', bgColor: 'bg-red-100' }
+    instagram: { 
+      icon: <Instagram size={20} />, 
+      color: 'text-pink-600', 
+      bgColor: 'bg-pink-100',
+      name: 'Instagram'
+    },
+    facebook: { 
+      icon: <Facebook size={20} />, 
+      color: 'text-blue-600', 
+      bgColor: 'bg-blue-100',
+      name: 'Facebook'
+    },
+    twitter: { 
+      icon: <Twitter size={20} />, 
+      color: 'text-blue-400', 
+      bgColor: 'bg-blue-50',
+      name: 'Twitter'
+    },
+    linkedin: { 
+      icon: <Linkedin size={20} />, 
+      color: 'text-blue-800', 
+      bgColor: 'bg-blue-50',
+      name: 'LinkedIn'
+    },
+    youtube: { 
+      icon: <Youtube size={20} />, 
+      color: 'text-red-600', 
+      bgColor: 'bg-red-100',
+      name: 'YouTube'
+    }
   };
 
-  // Status styles
   const statusStyles = {
     published: 'bg-green-100 text-green-800',
     scheduled: 'bg-blue-100 text-blue-800',
@@ -322,8 +315,101 @@ const SocialMediaDashboard: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    // Here you would typically fetch new data with the selected date range
     console.log('Fetching data for range:', dateRange);
+    // Here you would refresh data from connected accounts
+  };
+
+  // Instagram OAuth flow
+  const handleInstagramConnect = () => {
+    setIsConnecting(true);
+
+    // Build Instagram OAuth URL
+    const authUrl = new URL('https://api.instagram.com/oauth/authorize');
+    authUrl.searchParams.append('client_id', INSTAGRAM_CONFIG.clientId);
+    authUrl.searchParams.append('redirect_uri', INSTAGRAM_CONFIG.redirectUri);
+    authUrl.searchParams.append('scope', INSTAGRAM_CONFIG.scope);
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('state', Date.now().toString()); // Add state for security
+
+    // Open popup window for Instagram auth
+    const popup = window.open(
+      authUrl.toString(),
+      'instagram-auth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+
+    // Listen for the auth callback
+    const checkClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkClosed);
+        setIsConnecting(false);
+        // In a real implementation, you would check for the auth code
+        // and complete the OAuth flow
+        simulateInstagramConnection();
+      }
+    }, 1000);
+
+    // Timeout after 5 minutes
+    setTimeout(() => {
+      if (popup && !popup.closed) {
+        popup.close();
+        setIsConnecting(false);
+        setConnectionStatus({
+          type: 'error',
+          message: 'Conexión cancelada por tiempo de espera'
+        });
+      }
+    }, 300000);
+  };
+
+  // Simulate Instagram connection (in production, this would handle the OAuth callback)
+  const simulateInstagramConnection = () => {
+    setTimeout(() => {
+      const newAccount: SocialAccount = {
+        id: Date.now().toString(),
+        platform: 'instagram',
+        handle: '@nuevacuenta_instagram',
+        url: 'https://instagram.com/nuevacuenta_instagram',
+        connected: true,
+        connectedAt: new Date().toISOString(),
+        userId: 'ig_user_' + Date.now(),
+        accessToken: 'fake_access_token_' + Date.now(),
+        metrics: {
+          followers: 1250,
+          followersChange: 45,
+          engagement: 4.2,
+          engagementChange: 0.8,
+          reach: 3200,
+          reachChange: 250,
+          clicks: 85,
+          clicksChange: 12
+        }
+      };
+
+      setAccounts(prev => [...prev, newAccount]);
+      setConnectionStatus({
+        type: 'success',
+        message: 'Cuenta de Instagram conectada exitosamente'
+      });
+      setShowNewAccountModal(false);
+
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setConnectionStatus({ type: null, message: '' });
+      }, 5000);
+    }, 1500);
+  };
+
+  const handleDisconnectAccount = (accountId: string) => {
+    setAccounts(prev => prev.filter(account => account.id !== accountId));
+    setConnectionStatus({
+      type: 'success',
+      message: 'Cuenta desconectada exitosamente'
+    });
+
+    setTimeout(() => {
+      setConnectionStatus({ type: null, message: '' });
+    }, 3000);
   };
 
   return (
@@ -333,7 +419,7 @@ const SocialMediaDashboard: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Redes Sociales</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Gestión y análisis de redes sociales
+            Gestión y conexión de cuentas de redes sociales
           </p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
@@ -348,12 +434,28 @@ const SocialMediaDashboard: React.FC = () => {
             variant="primary"
             icon={<Plus size={18} />}
             className="flex-1 sm:flex-none"
-            onClick={() => setShowNewPostModal(true)}
+            onClick={() => setShowNewAccountModal(true)}
           >
-            Nueva Publicación
+            Nueva Cuenta
           </Button>
         </div>
       </div>
+
+      {/* Connection Status Alert */}
+      {connectionStatus.type && (
+        <div className={`p-4 rounded-md flex items-center gap-3 ${
+          connectionStatus.type === 'success' 
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          {connectionStatus.type === 'success' ? (
+            <CheckCircle size={20} className="text-green-600" />
+          ) : (
+            <AlertCircle size={20} className="text-red-600" />
+          )}
+          <span className="text-sm font-medium">{connectionStatus.message}</span>
+        </div>
+      )}
 
       {/* Date Range Filter */}
       <Card>
@@ -443,74 +545,107 @@ const SocialMediaDashboard: React.FC = () => {
       {/* Connected Accounts */}
       <Card title="Cuentas Conectadas" icon={<Globe size={20} />}>
         <div className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockSocialAccounts.map(account => (
-              <div 
-                key={account.id} 
-                className={`border rounded-lg p-4 ${account.connected ? '' : 'opacity-60'}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className={`p-2 rounded-full ${platformConfig[account.platform].bgColor}`}>
-                      {platformConfig[account.platform].icon}
+          {accounts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {accounts.map(account => (
+                <div 
+                  key={account.id} 
+                  className={`border rounded-lg p-4 ${account.connected ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`p-2 rounded-full ${platformConfig[account.platform].bgColor}`}>
+                        {platformConfig[account.platform].icon}
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-gray-900">{account.handle}</h3>
+                        <a 
+                          href={account.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-xs text-blue-600 hover:underline flex items-center"
+                        >
+                          Ver perfil <ExternalLink size={12} className="ml-1" />
+                        </a>
+                        {account.connectedAt && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Conectada el {new Date(account.connectedAt).toLocaleDateString('es-ES')}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-gray-900">{account.handle}</h3>
-                      <a 
-                        href={account.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-xs text-blue-600 hover:underline"
-                      >
-                        Ver perfil
-                      </a>
+                    <div className="flex items-center gap-2">
+                      {account.connected ? (
+                        <>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <CheckCircle size={12} className="mr-1" />
+                            Conectada
+                          </span>
+                          <button
+                            onClick={() => handleDisconnectAccount(account.id)}
+                            className="text-red-600 hover:text-red-800 p-1"
+                            title="Desconectar cuenta"
+                          >
+                            <X size={16} />
+                          </button>
+                        </>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setShowNewAccountModal(true)}
+                        >
+                          Conectar
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    {account.connected ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Conectada
-                      </span>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setShowAccountModal(true)}
-                      >
-                        Conectar
-                      </Button>
-                    )}
-                  </div>
+
+                  {account.connected && (
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-xs text-gray-500">Seguidores</p>
+                        <div className="flex items-center">
+                          <p className="text-sm font-medium text-gray-900">{account.metrics.followers.toLocaleString()}</p>
+                          <span className="ml-1 text-xs text-green-600">+{account.metrics.followersChange}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Engagement</p>
+                        <div className="flex items-center">
+                          <p className="text-sm font-medium text-gray-900">{account.metrics.engagement.toFixed(1)}%</p>
+                          <span className={`ml-1 text-xs ${account.metrics.engagementChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {account.metrics.engagementChange >= 0 ? '+' : ''}{account.metrics.engagementChange.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                
-                {account.connected && (
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-xs text-gray-500">Seguidores</p>
-                      <div className="flex items-center">
-                        <p className="text-sm font-medium text-gray-900">{account.metrics.followers.toLocaleString()}</p>
-                        <span className="ml-1 text-xs text-green-600">+{account.metrics.followersChange}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Engagement</p>
-                      <div className="flex items-center">
-                        <p className="text-sm font-medium text-gray-900">{account.metrics.engagement.toFixed(1)}%</p>
-                        <span className={`ml-1 text-xs ${account.metrics.engagementChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {account.metrics.engagementChange >= 0 ? '+' : ''}{account.metrics.engagementChange.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Globe size={48} className="mx-auto text-gray-300" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No hay cuentas conectadas</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Conecta tus redes sociales para comenzar a gestionar tu presencia digital.
+              </p>
+              <div className="mt-6">
+                <Button
+                  variant="primary"
+                  icon={<Plus size={18} />}
+                  onClick={() => setShowNewAccountModal(true)}
+                >
+                  Conectar Primera Cuenta
+                </Button>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </Card>
-
-      {/* Posts Management */}
-      <Card title="Publicaciones" icon={<MessageSquare size={20} />}>
+       {/* Posts Management */}
+       <Card title="Publicaciones" icon={<MessageSquare size={20} />}>
         <div className="p-4 space-y-4">
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
@@ -882,17 +1017,18 @@ const SocialMediaDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Connect Account Modal */}
-      {showAccountModal && (
+      {/* New Account Modal */}
+      {showNewAccountModal && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
-                Conectar Cuenta
+                Conectar Nueva Cuenta
               </h3>
               <button
-                onClick={() => setShowAccountModal(false)}
+                onClick={() => setShowNewAccountModal(false)}
                 className="text-gray-400 hover:text-gray-500"
+                disabled={isConnecting}
               >
                 <X size={24} />
               </button>
@@ -900,30 +1036,68 @@ const SocialMediaDashboard: React.FC = () => {
             <div className="p-6">
               <div className="space-y-4">
                 <p className="text-sm text-gray-500">
-                  Selecciona la plataforma que deseas conectar y sigue las instrucciones para autorizar el acceso.
+                  Selecciona la plataforma que deseas conectar. Serás redirigido para autorizar el acceso.
                 </p>
-                
-                <div className="space-y-2">
-                  {Object.entries(platformConfig).map(([platform, config]) => (
-                    <button
-                      key={platform}
-                      className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50"
-                    >
-                      <div className={`p-2 rounded-full ${platform === 'instagram' ? 'bg-pink-100' : platform === 'facebook' ? 'bg-blue-100' : platform === 'twitter' ? 'bg-blue-50' : platform === 'linkedin' ? 'bg-blue-50' : 'bg-red-100'}`}>
-                        {config.icon}
+
+                <div className="space-y-3">
+                  {/* Instagram Connection */}
+                  <button
+                    onClick={handleInstagramConnect}
+                    disabled={isConnecting}
+                    className="w-full flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <div className="p-2 rounded-full bg-pink-100">
+                        <Instagram size={20} className="text-pink-600" />
                       </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900 capitalize">
-                        Conectar con {platform}
-                      </span>
-                    </button>
-                  ))}
+                      <div className="ml-3 text-left">
+                        <span className="block text-sm font-medium text-gray-900">Instagram</span>
+                        <span className="block text-xs text-gray-500">Conectar cuenta de Instagram</span>
+                      </div>
+                    </div>
+                    {isConnecting ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
+                    ) : (
+                      <ExternalLink size={16} className="text-gray-400" />
+                    )}
+                  </button>
+
+                  {/* Coming Soon Platforms */}
+                  <div className="space-y-2 opacity-50">
+                    <p className="text-xs text-gray-400 font-medium">Próximamente:</p>
+
+                    {['facebook', 'twitter', 'linkedin', 'youtube'].map((platform) => (
+                      <div
+                        key={platform}
+                        className="w-full flex items-center p-3 border rounded-lg bg-gray-50 cursor-not-allowed"
+                      >
+                        <div className={`p-2 rounded-full ${platformConfig[platform as keyof typeof platformConfig].bgColor}`}>
+                          {platformConfig[platform as keyof typeof platformConfig].icon}
+                        </div>
+                        <span className="ml-3 text-sm text-gray-500 capitalize">
+                          {platformConfig[platform as keyof typeof platformConfig].name}
+                        </span>
+                        <span className="ml-auto text-xs text-gray-400">Próximamente</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué necesitas para conectar Instagram?</h4>
+                  <ul className="text-xs text-blue-800 space-y-1">
+                    <li>• Una cuenta de Instagram Business o Creator</li>
+                    <li>• Permisos de administrador de la cuenta</li>
+                    <li>• Acceso a la aplicación de Facebook asociada</li>
+                  </ul>
                 </div>
               </div>
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
               <Button
                 variant="outline"
-                onClick={() => setShowAccountModal(false)}
+                onClick={() => setShowNewAccountModal(false)}
+                disabled={isConnecting}
               >
                 Cerrar
               </Button>
