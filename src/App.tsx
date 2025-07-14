@@ -54,6 +54,7 @@ import Usuarios from './pages/administracion/usuarios';
 import GroomingAppointment from './pages/peluqueria/GroomingAppointment';
 import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
 import Integrations from './pages/tools/Integrations';
+import Logs from './pages/tools/Logs';
 import { ConvexClientProvider } from './context/ConvexProvider';
 
 // Protected route component
@@ -184,6 +185,11 @@ function App() {
                   <Route path="integrations" element={
                     <ProtectedRoute>
                       <Integrations />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="logs" element={
+                    <ProtectedRoute>
+                      <Logs />
                     </ProtectedRoute>
                   } />
                 </Route>

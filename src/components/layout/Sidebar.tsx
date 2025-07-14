@@ -216,7 +216,8 @@ const navItems: NavItem[] = [
     href: '/tools',
     icon: 'Wrench',
     children: [
-      { title: 'Integraciones', href: '/tools/integrations' }
+      { title: 'Integraciones', href: '/tools/integrations' },
+      { title: 'Logs', href: '/tools/logs' }
     ]
   },
   {
