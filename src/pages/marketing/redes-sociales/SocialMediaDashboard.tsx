@@ -63,6 +63,13 @@ const INSTAGRAM_CONFIG = {
   scope: 'user_profile,user_media'
 };
 
+// Facebook App Configuration (these would be environment variables in production)
+const FACEBOOK_CONFIG = {
+  appId: import.meta.env.VITE_FACEBOOK_APP_ID || 'your_facebook_app_id',
+  redirectUri: import.meta.env.VITE_FACEBOOK_REDIRECT_URI || 'https://your-domain.com/auth/facebook/callback',
+  scope: 'pages_show_list,pages_read_engagement,pages_manage_posts,pages_read_user_content,pages_messaging'
+};
+
 // Mock data for social accounts
 const mockSocialAccounts: SocialAccount[] = [
   {
@@ -362,6 +369,49 @@ const SocialMediaDashboard: React.FC = () => {
     }, 300000);
   };
 
+  // Facebook OAuth flow
+  const handleFacebookConnect = () => {
+    setIsConnecting(true);
+
+    // Build Facebook OAuth URL
+    const authUrl = new URL('https://www.facebook.com/v18.0/dialog/oauth');
+    authUrl.searchParams.append('client_id', FACEBOOK_CONFIG.appId);
+    authUrl.searchParams.append('redirect_uri', FACEBOOK_CONFIG.redirectUri);
+    authUrl.searchParams.append('scope', FACEBOOK_CONFIG.scope);
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('state', Date.now().toString()); // Add state for security
+
+    // Open popup window for Facebook auth
+    const popup = window.open(
+      authUrl.toString(),
+      'facebook-auth',
+      'width=600,height=700,scrollbars=yes,resizable=yes'
+    );
+
+    // Listen for the auth callback
+    const checkClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkClosed);
+        setIsConnecting(false);
+        // In a real implementation, you would check for the auth code
+        // and complete the OAuth flow
+        simulateFacebookConnection();
+      }
+    }, 1000);
+
+    // Timeout after 5 minutes
+    setTimeout(() => {
+      if (popup && !popup.closed) {
+        popup.close();
+        setIsConnecting(false);
+        setConnectionStatus({
+          type: 'error',
+          message: 'Conexión cancelada por tiempo de espera'
+        });
+      }
+    }, 300000);
+  };
+
   // Simulate Instagram connection (in production, this would handle the OAuth callback)
   const simulateInstagramConnection = () => {
     setTimeout(() => {
@@ -390,6 +440,44 @@ const SocialMediaDashboard: React.FC = () => {
       setConnectionStatus({
         type: 'success',
         message: 'Cuenta de Instagram conectada exitosamente'
+      });
+      setShowNewAccountModal(false);
+
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setConnectionStatus({ type: null, message: '' });
+      }, 5000);
+    }, 1500);
+  };
+
+  // Simulate Facebook connection (in production, this would handle the OAuth callback)
+  const simulateFacebookConnection = () => {
+    setTimeout(() => {
+      const newAccount: SocialAccount = {
+        id: Date.now().toString(),
+        platform: 'facebook',
+        handle: 'ClinicPro Veterinaria',
+        url: 'https://facebook.com/clinicpro_veterinaria',
+        connected: true,
+        connectedAt: new Date().toISOString(),
+        userId: 'fb_user_' + Date.now(),
+        accessToken: 'fake_fb_access_token_' + Date.now(),
+        metrics: {
+          followers: 2850,
+          followersChange: 75,
+          engagement: 2.9,
+          engagementChange: 0.3,
+          reach: 8500,
+          reachChange: 650,
+          clicks: 180,
+          clicksChange: 28
+        }
+      };
+
+      setAccounts(prev => [...prev, newAccount]);
+      setConnectionStatus({
+        type: 'success',
+        message: 'Cuenta de Facebook conectada exitosamente'
       });
       setShowNewAccountModal(false);
 
@@ -1062,11 +1150,33 @@ const SocialMediaDashboard: React.FC = () => {
                     )}
                   </button>
 
+                  {/* Facebook Connection */}
+                  <button
+                    onClick={handleFacebookConnect}
+                    disabled={isConnecting}
+                    className="w-full flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <div className="p-2 rounded-full bg-blue-100">
+                        <Facebook size={20} className="text-blue-600" />
+                      </div>
+                      <div className="ml-3 text-left">
+                        <span className="block text-sm font-medium text-gray-900">Facebook</span>
+                        <span className="block text-xs text-gray-500">Conectar página de Facebook</span>
+                      </div>
+                    </div>
+                    {isConnecting ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    ) : (
+                      <ExternalLink size={16} className="text-gray-400" />
+                    )}
+                  </button>
+
                   {/* Coming Soon Platforms */}
                   <div className="space-y-2 opacity-50">
                     <p className="text-xs text-gray-400 font-medium">Próximamente:</p>
 
-                    {['facebook', 'twitter', 'linkedin', 'youtube'].map((platform) => (
+                    {['twitter', 'linkedin', 'youtube'].map((platform) => (
                       <div
                         key={platform}
                         className="w-full flex items-center p-3 border rounded-lg bg-gray-50 cursor-not-allowed"
@@ -1083,13 +1193,25 @@ const SocialMediaDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué necesitas para conectar Instagram?</h4>
-                  <ul className="text-xs text-blue-800 space-y-1">
-                    <li>• Una cuenta de Instagram Business o Creator</li>
-                    <li>• Permisos de administrador de la cuenta</li>
-                    <li>• Acceso a la aplicación de Facebook asociada</li>
-                  </ul>
+                <div className="mt-6 space-y-4">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué necesitas para conectar Instagram?</h4>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                      <li>• Una cuenta de Instagram Business o Creator</li>
+                      <li>• Permisos de administrador de la cuenta</li>
+                      <li>• Acceso a la aplicación de Facebook asociada</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué necesitas para conectar Facebook?</h4>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                      <li>• Una página de Facebook Business</li>
+                      <li>• Rol de administrador en la página</li>
+                      <li>• Aplicación de Facebook configurada</li>
+                      <li>• Permisos para gestionar publicaciones y mensajes</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
