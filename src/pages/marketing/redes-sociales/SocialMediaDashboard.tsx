@@ -1225,9 +1225,9 @@ const SocialMediaDashboard: React.FC = () => {
 
       {/* New Account Modal */}
       {showNewAccountModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-lg font-medium text-gray-900">
                 Conectar Nueva Cuenta
               </h3>
@@ -1239,7 +1239,7 @@ const SocialMediaDashboard: React.FC = () => {
                 <X size={24} />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1">
               <div className="space-y-4">
                 <p className="text-sm text-gray-500">
                   Selecciona la plataforma que deseas conectar. Serás redirigido para autorizar el acceso.
@@ -1365,7 +1365,7 @@ const SocialMediaDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end flex-shrink-0">
               <Button
                 variant="outline"
                 onClick={() => setShowNewAccountModal(false)}
