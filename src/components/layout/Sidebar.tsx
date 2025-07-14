@@ -35,7 +35,8 @@ import {
   Landmark,
   PieChart,
   TruckIcon,
-  UserCircle
+  UserCircle,
+  Wrench
 } from 'lucide-react';
 import Logo from './Logo';
 
@@ -68,7 +69,8 @@ const getIcon = (iconName: string) => {
     'Landmark': <Landmark size={20} />,
     'PieChart': <PieChart size={20} />,
     'TruckIcon': <TruckIcon size={20} />,
-    'UserCircle': <UserCircle size={20} />
+    'UserCircle': <UserCircle size={20} />,
+    'Wrench': <Wrench size={20} />
   };
 
   return icons[iconName] || <div className="w-5 h-5" />;
@@ -207,6 +209,14 @@ const navItems: NavItem[] = [
     children: [
       { title: 'General', href: '/informes/general' },
       { title: 'Financieros', href: '/informes/financieros' }
+    ]
+  },
+  {
+    title: 'Tools',
+    href: '/tools',
+    icon: 'Wrench',
+    children: [
+      { title: 'Integraciones', href: '/tools/integrations' }
     ]
   },
   {

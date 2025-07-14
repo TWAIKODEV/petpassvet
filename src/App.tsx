@@ -53,6 +53,7 @@ import Configuracion from './pages/administracion/configuracion';
 import Usuarios from './pages/administracion/usuarios';
 import GroomingAppointment from './pages/peluqueria/GroomingAppointment';
 import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
+import Integrations from './pages/tools/Integrations';
 import { ConvexClientProvider } from './context/ConvexProvider';
 
 // Protected route component
@@ -177,6 +178,15 @@ function App() {
 
                 {/* Inbox route */}
                 <Route path="inbox" element={<Inbox />} />
+
+                {/* Tools routes */}
+                <Route path="tools">
+                  <Route path="integrations" element={
+                    <ProtectedRoute>
+                      <Integrations />
+                    </ProtectedRoute>
+                  } />
+                </Route>
 
                 {/* Administration routes */}
                 <Route path="administracion" element={<Placeholder pageName="Administración" />} />
