@@ -58,8 +58,8 @@ interface SocialAccount {
 
 // Instagram App Configuration (these would be environment variables in production)
 const INSTAGRAM_CONFIG = {
-  clientId: process.env.REACT_APP_INSTAGRAM_CLIENT_ID || 'your_instagram_client_id',
-  redirectUri: process.env.REACT_APP_INSTAGRAM_REDIRECT_URI || 'https://your-domain.com/auth/instagram/callback',
+  clientId: import.meta.env.VITE_INSTAGRAM_CLIENT_ID || 'your_instagram_client_id',
+  redirectUri: import.meta.env.VITE_INSTAGRAM_REDIRECT_URI || 'https://your-domain.com/auth/instagram/callback',
   scope: 'user_profile,user_media'
 };
 
