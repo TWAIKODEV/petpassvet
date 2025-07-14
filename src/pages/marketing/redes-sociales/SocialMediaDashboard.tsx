@@ -70,6 +70,13 @@ const FACEBOOK_CONFIG = {
   scope: 'pages_show_list,pages_read_engagement,pages_manage_posts,pages_read_user_content,pages_messaging'
 };
 
+// Twitter/X App Configuration (these would be environment variables in production)
+const TWITTER_CONFIG = {
+  clientId: import.meta.env.VITE_TWITTER_CLIENT_ID || 'your_twitter_client_id',
+  redirectUri: import.meta.env.VITE_TWITTER_REDIRECT_URI || 'https://your-domain.com/auth/twitter/callback',
+  scope: 'tweet.read tweet.write users.read dm.read dm.write offline.access'
+};
+
 // Mock data for social accounts
 const mockSocialAccounts: SocialAccount[] = [
   {
@@ -486,6 +493,117 @@ const SocialMediaDashboard: React.FC = () => {
         setConnectionStatus({ type: null, message: '' });
       }, 5000);
     }, 1500);
+  };
+
+  // Twitter/X OAuth flow with PKCE
+  const handleTwitterConnect = () => {
+    setIsConnecting(true);
+
+    // Generate PKCE code verifier and challenge
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallenge(codeVerifier);
+    
+    // Store code verifier for later use
+    sessionStorage.setItem('twitter_code_verifier', codeVerifier);
+
+    // Build Twitter OAuth URL
+    const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('client_id', TWITTER_CONFIG.clientId);
+    authUrl.searchParams.append('redirect_uri', TWITTER_CONFIG.redirectUri);
+    authUrl.searchParams.append('scope', TWITTER_CONFIG.scope);
+    authUrl.searchParams.append('state', Date.now().toString());
+    authUrl.searchParams.append('code_challenge', codeChallenge);
+    authUrl.searchParams.append('code_challenge_method', 'S256');
+
+    // Open popup window for Twitter auth
+    const popup = window.open(
+      authUrl.toString(),
+      'twitter-auth',
+      'width=600,height=700,scrollbars=yes,resizable=yes'
+    );
+
+    // Listen for the auth callback
+    const checkClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkClosed);
+        setIsConnecting(false);
+        // In a real implementation, you would check for the auth code
+        // and complete the OAuth flow
+        simulateTwitterConnection();
+      }
+    }, 1000);
+
+    // Timeout after 5 minutes
+    setTimeout(() => {
+      if (popup && !popup.closed) {
+        popup.close();
+        setIsConnecting(false);
+        setConnectionStatus({
+          type: 'error',
+          message: 'Conexión cancelada por tiempo de espera'
+        });
+      }
+    }, 300000);
+  };
+
+  // Simulate Twitter connection (in production, this would handle the OAuth callback)
+  const simulateTwitterConnection = () => {
+    setTimeout(() => {
+      const newAccount: SocialAccount = {
+        id: Date.now().toString(),
+        platform: 'twitter',
+        handle: '@clinicpro_vet',
+        url: 'https://twitter.com/clinicpro_vet',
+        connected: true,
+        connectedAt: new Date().toISOString(),
+        userId: 'tw_user_' + Date.now(),
+        accessToken: 'fake_tw_access_token_' + Date.now(),
+        metrics: {
+          followers: 1650,
+          followersChange: 35,
+          engagement: 3.5,
+          engagementChange: 0.4,
+          reach: 4200,
+          reachChange: 180,
+          clicks: 95,
+          clicksChange: 15
+        }
+      };
+
+      setAccounts(prev => [...prev, newAccount]);
+      setConnectionStatus({
+        type: 'success',
+        message: 'Cuenta de Twitter/X conectada exitosamente'
+      });
+      setShowNewAccountModal(false);
+
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setConnectionStatus({ type: null, message: '' });
+      }, 5000);
+    }, 1500);
+  };
+
+  // PKCE helper functions
+  const generateCodeVerifier = () => {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return btoa(String.fromCharCode.apply(null, Array.from(array)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+  };
+
+  const generateCodeChallenge = (verifier: string) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(verifier);
+    return crypto.subtle.digest('SHA-256', data).then(digest => {
+      return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+    });
   };
 
   const handleDisconnectAccount = (accountId: string) => {
@@ -1172,11 +1290,33 @@ const SocialMediaDashboard: React.FC = () => {
                     )}
                   </button>
 
+                  {/* Twitter/X Connection */}
+                  <button
+                    onClick={handleTwitterConnect}
+                    disabled={isConnecting}
+                    className="w-full flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <div className="p-2 rounded-full bg-blue-50">
+                        <Twitter size={20} className="text-blue-400" />
+                      </div>
+                      <div className="ml-3 text-left">
+                        <span className="block text-sm font-medium text-gray-900">Twitter / X</span>
+                        <span className="block text-xs text-gray-500">Conectar cuenta de Twitter/X</span>
+                      </div>
+                    </div>
+                    {isConnecting ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                    ) : (
+                      <ExternalLink size={16} className="text-gray-400" />
+                    )}
+                  </button>
+
                   {/* Coming Soon Platforms */}
                   <div className="space-y-2 opacity-50">
                     <p className="text-xs text-gray-400 font-medium">Próximamente:</p>
 
-                    {['twitter', 'linkedin', 'youtube'].map((platform) => (
+                    {['linkedin', 'youtube'].map((platform) => (
                       <div
                         key={platform}
                         className="w-full flex items-center p-3 border rounded-lg bg-gray-50 cursor-not-allowed"
@@ -1210,6 +1350,16 @@ const SocialMediaDashboard: React.FC = () => {
                       <li>• Rol de administrador en la página</li>
                       <li>• Aplicación de Facebook configurada</li>
                       <li>• Permisos para gestionar publicaciones y mensajes</li>
+                    </ul>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué necesitas para conectar Twitter/X?</h4>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                      <li>• Una cuenta de Twitter/X Business o Creator</li>
+                      <li>• Aplicación registrada en Twitter Developer Portal</li>
+                      <li>• API v2 con permisos de lectura y escritura</li>
+                      <li>• Acceso a Direct Messages API</li>
                     </ul>
                   </div>
                 </div>
