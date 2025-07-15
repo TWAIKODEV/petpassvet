@@ -56,6 +56,7 @@ import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
 import Integrations from './pages/tools/Integrations';
 import Logs from './pages/tools/Logs';
 import { ConvexClientProvider } from './context/ConvexProvider';
+import TwitterCallback from './pages/tools/TwitterCallback';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -192,6 +193,7 @@ function App() {
                       <Logs />
                     </ProtectedRoute>
                   } />
+                  <Route path="/auth/twitter/callback" element={<TwitterCallback />} />
                 </Route>
 
                 {/* Administration routes */}
