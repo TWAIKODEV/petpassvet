@@ -209,20 +209,6 @@ export default function Integrations() {
         activeZaps: 12,
       },
     },
-    {
-      id: "twitter",
-      name: "Twitter / X",
-      description: "Gestión de redes sociales y marketing",
-      category: "social",
-      icon: MessageSquare,
-      color: "bg-blue-400",
-      status: "disconnected",
-      config: {
-        consumerKey: "48AWFyLYrCKnIdRJN01wwQDAv",
-        callbackUrl: "https://115dd90c-31c9-486b-9d35-4af9c54208d3-00-2a6t7zw0swmnu.worf.replit.dev/auth/twitter/callback",
-        connectedAccounts: 0,
-      },
-    },
   ]);
 
   const getStatusBadge = (status: string) => {
@@ -282,11 +268,6 @@ export default function Integrations() {
       id: "automation",
       name: "Automatización",
       count: integrations.filter((i) => i.category === "automation").length,
-    },
-    {
-      id: "social",
-      name: "Redes Sociales",
-      count: integrations.filter((i) => i.category === "social").length,
     },
   ];
 
