@@ -1,87 +1,258 @@
 
 const express = require('express');
-const fetch = require('node-fetch');
+const https = require('https');
+const crypto = require('crypto');
+const querystring = require('querystring');
 const router = express.Router();
 
-// Twitter OAuth 2.0 token exchange endpoint
-router.post('/twitter/token', async (req, res) => {
-  try {
-    const { code, codeVerifier, redirectUri } = req.body;
+// Twitter OAuth 1.0a configuration
+const TWITTER_CONFIG = {
+  consumerKey: '48AWFyLYrCKnIdRJN01wwQDAv',
+  consumerSecret: 'mRo8IIcHB4OsPsKvzn2zHnC3eowu4UQAGoderzXSeGwb1bFtKD',
+  callbackUrl: 'https://115dd90c-31c9-486b-9d35-4af9c54208d3-00-2a6t7zw0swmnu.worf.replit.dev/auth/twitter/callback'
+};
 
-    if (!code || !codeVerifier || !redirectUri) {
-      return res.status(400).json({ 
-        error: 'Missing required parameters: code, codeVerifier, or redirectUri' 
-      });
-    }
+// Helper function to generate OAuth signature
+function generateOAuthSignature(method, url, params, consumerSecret, tokenSecret = '') {
+  // Sort parameters
+  const sortedParams = Object.keys(params)
+    .sort()
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+    .join('&');
 
-    // Prepare token exchange request
-    const tokenUrl = 'https://api.twitter.com/2/oauth2/token';
-    const clientId = process.env.VITE_TWITTER_CLIENT_ID;
-    const clientSecret = process.env.VITE_TWITTER_CLIENT_SECRET;
+  // Create signature base string
+  const signatureBaseString = [
+    method.toUpperCase(),
+    encodeURIComponent(url),
+    encodeURIComponent(sortedParams)
+  ].join('&');
 
-    // Create Basic Auth header
-    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  // Create signing key
+  const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
 
-    const tokenParams = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code: code,
-      redirect_uri: redirectUri,
-      code_verifier: codeVerifier,
-      client_id: clientId
-    });
+  // Generate signature
+  const signature = crypto
+    .createHmac('sha1', signingKey)
+    .update(signatureBaseString)
+    .digest('base64');
 
-    // Exchange authorization code for access token
-    const tokenResponse = await fetch(tokenUrl, {
-      method: 'POST',
+  return signature;
+}
+
+// Helper function to generate nonce
+function generateNonce() {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+// Helper function to generate timestamp
+function generateTimestamp() {
+  return Math.floor(Date.now() / 1000).toString();
+}
+
+// Helper function to make Twitter API request
+function makeTwitterRequest(method, url, params, consumerSecret, tokenSecret = '') {
+  return new Promise((resolve, reject) => {
+    const oauthParams = {
+      oauth_consumer_key: TWITTER_CONFIG.consumerKey,
+      oauth_nonce: generateNonce(),
+      oauth_signature_method: 'HMAC-SHA1',
+      oauth_timestamp: generateTimestamp(),
+      oauth_version: '1.0'
+    };
+
+    // Add additional params
+    const allParams = { ...oauthParams, ...params };
+
+    // Generate signature
+    const signature = generateOAuthSignature(method, url, allParams, consumerSecret, tokenSecret);
+    oauthParams.oauth_signature = signature;
+
+    // Create Authorization header
+    const authHeader = 'OAuth ' + Object.keys(oauthParams)
+      .map(key => `${encodeURIComponent(key)}="${encodeURIComponent(oauthParams[key])}"`)
+      .join(', ');
+
+    // Prepare request data
+    const postData = Object.keys(params)
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .join('&');
+
+    const urlObj = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || 443,
+      path: urlObj.pathname,
+      method: method,
       headers: {
-        'Authorization': `Basic ${basicAuth}`,
+        'Authorization': authHeader,
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      },
-      body: tokenParams.toString()
-    });
-
-    const tokenData = await tokenResponse.json();
-
-    if (!tokenResponse.ok) {
-      console.error('Twitter token exchange error:', tokenData);
-      return res.status(400).json({ 
-        error: 'Failed to exchange code for token',
-        details: tokenData
-      });
-    }
-
-    // Get user information with the access token
-    const userResponse = await fetch('https://api.twitter.com/2/users/me?user.fields=id,name,username,profile_image_url,public_metrics', {
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`
+        'Content-Length': Buffer.byteLength(postData)
       }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(data);
+        } else {
+          reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+        }
+      });
     });
 
-    const userData = await userResponse.json();
+    req.on('error', (error) => {
+      reject(error);
+    });
 
-    if (!userResponse.ok) {
-      console.error('Twitter user data error:', userData);
-      return res.status(400).json({ 
-        error: 'Failed to get user data',
-        details: userData
-      });
+    if (method === 'POST') {
+      req.write(postData);
+    }
+    req.end();
+  });
+}
+
+// Step 1: Get request token
+router.post('/twitter/request-token', async (req, res) => {
+  try {
+    const params = {
+      oauth_callback: TWITTER_CONFIG.callbackUrl
+    };
+
+    const response = await makeTwitterRequest(
+      'POST',
+      'https://api.twitter.com/oauth/request_token',
+      params,
+      TWITTER_CONFIG.consumerSecret
+    );
+
+    const responseParams = querystring.parse(response);
+    
+    if (responseParams.oauth_callback_confirmed !== 'true') {
+      throw new Error('OAuth callback not confirmed');
     }
 
-    // Return both token and user data
     res.json({
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      expires_in: tokenData.expires_in,
-      token_type: tokenData.token_type,
-      scope: tokenData.scope,
-      user: userData.data
+      oauth_token: responseParams.oauth_token,
+      oauth_token_secret: responseParams.oauth_token_secret,
+      auth_url: `https://api.twitter.com/oauth/authorize?oauth_token=${responseParams.oauth_token}`
     });
 
   } catch (error) {
-    console.error('Twitter OAuth error:', error);
+    console.error('Error getting request token:', error);
     res.status(500).json({ 
-      error: 'Internal server error during Twitter authentication',
+      error: 'Failed to get request token',
+      message: error.message
+    });
+  }
+});
+
+// Step 2: Exchange request token for access token
+router.post('/twitter/access-token', async (req, res) => {
+  try {
+    const { oauth_token, oauth_token_secret, oauth_verifier } = req.body;
+
+    if (!oauth_token || !oauth_token_secret || !oauth_verifier) {
+      return res.status(400).json({ 
+        error: 'Missing required parameters' 
+      });
+    }
+
+    const params = {
+      oauth_verifier: oauth_verifier
+    };
+
+    const response = await makeTwitterRequest(
+      'POST',
+      'https://api.twitter.com/oauth/access_token',
+      params,
+      TWITTER_CONFIG.consumerSecret,
+      oauth_token_secret
+    );
+
+    const responseParams = querystring.parse(response);
+
+    // Get user information
+    const userParams = {};
+    const userResponse = await makeTwitterRequest(
+      'GET',
+      'https://api.twitter.com/1.1/account/verify_credentials.json?include_email=true&skip_status=true',
+      userParams,
+      TWITTER_CONFIG.consumerSecret,
+      responseParams.oauth_token_secret
+    );
+
+    const userData = JSON.parse(userResponse);
+
+    res.json({
+      access_token: responseParams.oauth_token,
+      access_token_secret: responseParams.oauth_token_secret,
+      user_id: responseParams.user_id,
+      screen_name: responseParams.screen_name,
+      user: {
+        id: userData.id_str,
+        username: userData.screen_name,
+        name: userData.name,
+        profile_image_url: userData.profile_image_url_https,
+        public_metrics: {
+          followers_count: userData.followers_count,
+          following_count: userData.friends_count,
+          tweet_count: userData.statuses_count
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error exchanging access token:', error);
+    res.status(500).json({ 
+      error: 'Failed to exchange access token',
+      message: error.message
+    });
+  }
+});
+
+// Get user profile with access token
+router.post('/twitter/user-profile', async (req, res) => {
+  try {
+    const { access_token, access_token_secret } = req.body;
+
+    if (!access_token || !access_token_secret) {
+      return res.status(400).json({ 
+        error: 'Missing access tokens' 
+      });
+    }
+
+    const userResponse = await makeTwitterRequest(
+      'GET',
+      'https://api.twitter.com/1.1/account/verify_credentials.json?include_email=true&skip_status=true',
+      {},
+      TWITTER_CONFIG.consumerSecret,
+      access_token_secret
+    );
+
+    const userData = JSON.parse(userResponse);
+
+    res.json({
+      user: {
+        id: userData.id_str,
+        username: userData.screen_name,
+        name: userData.name,
+        profile_image_url: userData.profile_image_url_https,
+        public_metrics: {
+          followers_count: userData.followers_count,
+          following_count: userData.friends_count,
+          tweet_count: userData.statuses_count
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    res.status(500).json({ 
+      error: 'Failed to get user profile',
       message: error.message
     });
   }

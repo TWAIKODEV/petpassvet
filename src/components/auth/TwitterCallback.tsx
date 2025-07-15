@@ -8,48 +8,41 @@ const TwitterCallback: React.FC = () => {
 
   useEffect(() => {
     const handleTwitterCallback = async () => {
-      const code = searchParams.get('code');
-      const state = searchParams.get('state');
-      const error = searchParams.get('error');
+      const oauth_token = searchParams.get('oauth_token');
+      const oauth_verifier = searchParams.get('oauth_verifier');
+      const denied = searchParams.get('denied');
 
-      if (error) {
-        console.error('Twitter OAuth error:', error);
-        // Notificar al padre que hubo un error
+      if (denied) {
+        console.error('Twitter OAuth denied');
         if (window.opener) {
           window.opener.postMessage({ 
             type: 'twitter_auth_error', 
-            error: error 
+            error: 'User denied authorization' 
           }, window.location.origin);
           window.close();
         }
         return;
       }
 
-      if (code && state) {
+      if (oauth_token && oauth_verifier) {
         try {
-          // Recuperar el code verifier del sessionStorage
-          const codeVerifier = sessionStorage.getItem('twitter_code_verifier');
-          const storedState = sessionStorage.getItem('twitter_oauth_state');
+          // Get stored request token secret
+          const oauth_token_secret = sessionStorage.getItem('twitter_oauth_token_secret');
           
-          // Verificar el state parameter
-          if (state !== storedState) {
-            throw new Error('State parameter mismatch');
-          }
-          
-          if (!codeVerifier) {
-            throw new Error('Code verifier not found');
+          if (!oauth_token_secret) {
+            throw new Error('OAuth token secret not found in session');
           }
 
-          // Intercambiar el code por el access token usando nuestro backend
-          const response = await fetch('/api/auth/twitter/token', {
+          // Exchange request token for access token
+          const response = await fetch('/api/auth/twitter/access-token', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              code: code,
-              codeVerifier: codeVerifier,
-              redirectUri: import.meta.env.VITE_TWITTER_REDIRECT_URI
+              oauth_token: oauth_token,
+              oauth_token_secret: oauth_token_secret,
+              oauth_verifier: oauth_verifier
             })
           });
 
@@ -59,9 +52,12 @@ const TwitterCallback: React.FC = () => {
             throw new Error(tokenData.error || 'Failed to exchange token');
           }
 
-          console.log('Twitter auth successful:', tokenData);
+          console.log('Twitter OAuth 1.0a successful:', tokenData);
           
-          // Notificar al padre que la autenticación fue exitosa
+          // Clean up session storage
+          sessionStorage.removeItem('twitter_oauth_token_secret');
+          
+          // Notify parent window
           if (window.opener) {
             window.opener.postMessage({ 
               type: 'twitter_auth_success', 
@@ -80,6 +76,15 @@ const TwitterCallback: React.FC = () => {
             }, window.location.origin);
             window.close();
           }
+        }
+      } else {
+        console.error('Missing OAuth parameters');
+        if (window.opener) {
+          window.opener.postMessage({ 
+            type: 'twitter_auth_error', 
+            error: 'Missing OAuth parameters' 
+          }, window.location.origin);
+          window.close();
         }
       }
     };

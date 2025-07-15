@@ -502,30 +502,26 @@ const SocialMediaDashboard: React.FC = () => {
     setIsConnecting(true);
 
     try {
-      // Generate PKCE code verifier and challenge
-      const codeVerifier = generateCodeVerifier();
-      const codeChallenge = await generateCodeChallenge(codeVerifier);
-      
-      // Store code verifier for later use
-      sessionStorage.setItem('twitter_code_verifier', codeVerifier);
+      // Step 1: Get request token from our backend
+      const response = await fetch('/api/auth/twitter/request-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
 
-      // Generate state parameter for security
-      const state = generateRandomString(32);
-      sessionStorage.setItem('twitter_oauth_state', state);
+      const requestTokenData = await response.json();
 
-      // Build Twitter OAuth URL according to X documentation
-      const authUrl = new URL(TWITTER_CONFIG.authUrl);
-      authUrl.searchParams.append('response_type', 'code');
-      authUrl.searchParams.append('client_id', TWITTER_CONFIG.clientId);
-      authUrl.searchParams.append('redirect_uri', TWITTER_CONFIG.redirectUri);
-      authUrl.searchParams.append('scope', TWITTER_CONFIG.scope);
-      authUrl.searchParams.append('state', state);
-      authUrl.searchParams.append('code_challenge', codeChallenge);
-      authUrl.searchParams.append('code_challenge_method', 'S256');
+      if (!response.ok) {
+        throw new Error(requestTokenData.error || 'Failed to get request token');
+      }
+
+      // Store the request token secret for later use
+      sessionStorage.setItem('twitter_oauth_token_secret', requestTokenData.oauth_token_secret);
 
       // Open popup window for Twitter auth
       const popup = window.open(
-        authUrl.toString(),
+        requestTokenData.auth_url,
         'twitter-auth',
         'width=600,height=700,scrollbars=yes,resizable=yes'
       );
@@ -568,8 +564,7 @@ const SocialMediaDashboard: React.FC = () => {
           setIsConnecting(false);
 
           // Clear stored OAuth data
-          sessionStorage.removeItem('twitter_code_verifier');
-          sessionStorage.removeItem('twitter_oauth_state');
+          sessionStorage.removeItem('twitter_oauth_token_secret');
 
           // Clear status message after 5 seconds
           setTimeout(() => {
@@ -625,35 +620,7 @@ const SocialMediaDashboard: React.FC = () => {
 
   
 
-  // PKCE and OAuth helper functions
-  const generateCodeVerifier = () => {
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return btoa(String.fromCharCode.apply(null, Array.from(array)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-  };
-
-  const generateCodeChallenge = async (verifier: string) => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(verifier);
-    const digest = await crypto.subtle.digest('SHA-256', data);
-    return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-  };
-
-  const generateRandomString = (length: number) => {
-    const array = new Uint8Array(length);
-    crypto.getRandomValues(array);
-    return btoa(String.fromCharCode.apply(null, Array.from(array)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '')
-      .substring(0, length);
-  };
+  
 
   
 
