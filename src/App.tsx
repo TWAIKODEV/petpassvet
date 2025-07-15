@@ -83,6 +83,7 @@ const PageLayout: React.FC = () => {
       <Outlet />
     </div>
   );
+};
 
 function App() {
   return (
