@@ -5,6 +5,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import threadRouter from '../routes/threadRouter';
 import sendRouter from '../routes/sendRouter';
 import messageBus from '../core/messageBus';
+import authRouter from '../routes/authRouter'; // Import authRouter
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +23,7 @@ app.use(express.json());
 // Rutas REST
 app.use('/threads', threadRouter);
 app.use('/send', sendRouter);
+app.use('/auth', authRouter); // Use authRouter
 
 // Configuración de Socket.IO
 const io = new SocketIOServer(server, {
