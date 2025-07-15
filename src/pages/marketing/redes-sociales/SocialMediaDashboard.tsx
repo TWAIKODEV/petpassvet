@@ -77,44 +77,57 @@ const TWITTER_CONFIG = {
   scope: 'tweet.read tweet.write users.read dm.read dm.write offline.access'
 };
 
-// Mock data for social accounts
-const mockSocialAccounts: SocialAccount[] = [
-  {
-    id: '1',
-    platform: 'instagram',
-    handle: '@clinicpro_vet',
-    url: 'https://instagram.com/clinicpro_vet',
-    connected: true,
-    connectedAt: '2024-01-15T10:30:00Z',
-    metrics: {
-      followers: 5240,
-      followersChange: 120,
-      engagement: 3.8,
-      engagementChange: 0.5,
-      reach: 15600,
-      reachChange: 1200,
-      clicks: 320,
-      clicksChange: 45
-    }
-  },
-  {
-    id: '2',
-    platform: 'facebook',
-    handle: 'ClinicPro Veterinaria',
-    url: 'https://facebook.com/clinicpro',
-    connected: false,
-    metrics: {
-      followers: 0,
-      followersChange: 0,
-      engagement: 0,
-      engagementChange: 0,
-      reach: 0,
-      reachChange: 0,
-      clicks: 0,
-      clicksChange: 0
-    }
+// Function to load accounts from localStorage
+const loadAccountsFromStorage = (): SocialAccount[] => {
+  const saved = localStorage.getItem('socialMediaAccounts');
+  if (saved) {
+    return JSON.parse(saved);
   }
-];
+  
+  // Default accounts if none saved
+  return [
+    {
+      id: '1',
+      platform: 'instagram',
+      handle: '@clinicpro_vet',
+      url: 'https://instagram.com/clinicpro_vet',
+      connected: true,
+      connectedAt: '2024-01-15T10:30:00Z',
+      metrics: {
+        followers: 5240,
+        followersChange: 120,
+        engagement: 3.8,
+        engagementChange: 0.5,
+        reach: 15600,
+        reachChange: 1200,
+        clicks: 320,
+        clicksChange: 45
+      }
+    },
+    {
+      id: '2',
+      platform: 'facebook',
+      handle: 'ClinicPro Veterinaria',
+      url: 'https://facebook.com/clinicpro',
+      connected: false,
+      metrics: {
+        followers: 0,
+        followersChange: 0,
+        engagement: 0,
+        engagementChange: 0,
+        reach: 0,
+        reachChange: 0,
+        clicks: 0,
+        clicksChange: 0
+      }
+    }
+  ];
+};
+
+// Function to save accounts to localStorage
+const saveAccountsToStorage = (accounts: SocialAccount[]) => {
+  localStorage.setItem('socialMediaAccounts', JSON.stringify(accounts));
+};
 
 interface Post {
   id: string;
@@ -222,7 +235,7 @@ const SocialMediaDashboard: React.FC = () => {
     to: new Date().toISOString().split('T')[0]
   });
   const [showNewAccountModal, setShowNewAccountModal] = useState(false);
-  const [accounts, setAccounts] = useState<SocialAccount[]>(mockSocialAccounts);
+  const [accounts, setAccounts] = useState<SocialAccount[]>(loadAccountsFromStorage());
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<{
     type: 'success' | 'error' | null;
@@ -233,6 +246,50 @@ const SocialMediaDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
+  // Listen for Twitter auth messages
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'TWITTER_AUTH_SUCCESS') {
+        const newAccount = event.data.account;
+        setAccounts(prev => {
+          const updatedAccounts = [...prev, newAccount];
+          saveAccountsToStorage(updatedAccounts);
+          return updatedAccounts;
+        });
+        setConnectionStatus({
+          type: 'success',
+          message: 'Cuenta de Twitter conectada exitosamente'
+        });
+        setShowNewAccountModal(false);
+        setIsConnecting(false);
+
+        // Clear status message after 5 seconds
+        setTimeout(() => {
+          setConnectionStatus({ type: null, message: '' });
+        }, 5000);
+      } else if (event.data.type === 'TWITTER_AUTH_ERROR') {
+        setConnectionStatus({
+          type: 'error',
+          message: 'Error al conectar con Twitter: ' + event.data.error
+        });
+        setIsConnecting(false);
+
+        // Clear status message after 5 seconds
+        setTimeout(() => {
+          setConnectionStatus({ type: null, message: '' });
+        }, 5000);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Save accounts to localStorage whenever accounts change
+  useEffect(() => {
+    saveAccountsToStorage(accounts);
+  }, [accounts]);
 
     // Filter posts based on search term, platform, and status
     const filteredPosts = mockPosts.filter(post => {
@@ -501,89 +558,69 @@ const SocialMediaDashboard: React.FC = () => {
 
     // Generate PKCE code verifier and challenge
     const codeVerifier = generateCodeVerifier();
-    const codeChallenge = generateCodeChallenge(codeVerifier);
     
     // Store code verifier for later use
     sessionStorage.setItem('twitter_code_verifier', codeVerifier);
 
-    // Build Twitter OAuth URL
-    const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
-    authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('client_id', TWITTER_CONFIG.clientId);
-    authUrl.searchParams.append('redirect_uri', TWITTER_CONFIG.redirectUri);
-    authUrl.searchParams.append('scope', TWITTER_CONFIG.scope);
-    authUrl.searchParams.append('state', Date.now().toString());
-    authUrl.searchParams.append('code_challenge', codeChallenge);
-    authUrl.searchParams.append('code_challenge_method', 'S256');
+    // Generate code challenge
+    generateCodeChallenge(codeVerifier).then(codeChallenge => {
+      // Get current domain for redirect URI
+      const currentDomain = window.location.origin;
+      const redirectUri = `${currentDomain}/tools/twitter-callback`;
 
-    // Open popup window for Twitter auth
-    const popup = window.open(
-      authUrl.toString(),
-      'twitter-auth',
-      'width=600,height=700,scrollbars=yes,resizable=yes'
-    );
+      // Build Twitter OAuth URL
+      const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
+      authUrl.searchParams.append('response_type', 'code');
+      authUrl.searchParams.append('client_id', TWITTER_CONFIG.clientId);
+      authUrl.searchParams.append('redirect_uri', redirectUri);
+      authUrl.searchParams.append('scope', TWITTER_CONFIG.scope);
+      authUrl.searchParams.append('state', Date.now().toString());
+      authUrl.searchParams.append('code_challenge', codeChallenge);
+      authUrl.searchParams.append('code_challenge_method', 'S256');
 
-    // Listen for the auth callback
-    const checkClosed = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkClosed);
-        setIsConnecting(false);
-        // In a real implementation, you would check for the auth code
-        // and complete the OAuth flow
-        simulateTwitterConnection();
-      }
-    }, 1000);
+      // Open popup window for Twitter auth
+      const popup = window.open(
+        authUrl.toString(),
+        'twitter-auth',
+        'width=600,height=700,scrollbars=yes,resizable=yes'
+      );
 
-    // Timeout after 5 minutes
-    setTimeout(() => {
-      if (popup && !popup.closed) {
-        popup.close();
-        setIsConnecting(false);
-        setConnectionStatus({
-          type: 'error',
-          message: 'Conexión cancelada por tiempo de espera'
-        });
-      }
-    }, 300000);
-  };
-
-  // Simulate Twitter connection (in production, this would handle the OAuth callback)
-  const simulateTwitterConnection = () => {
-    setTimeout(() => {
-      const newAccount: SocialAccount = {
-        id: Date.now().toString(),
-        platform: 'twitter',
-        handle: '@clinicpro_vet',
-        url: 'https://twitter.com/clinicpro_vet',
-        connected: true,
-        connectedAt: new Date().toISOString(),
-        userId: 'tw_user_' + Date.now(),
-        accessToken: 'fake_tw_access_token_' + Date.now(),
-        metrics: {
-          followers: 1650,
-          followersChange: 35,
-          engagement: 3.5,
-          engagementChange: 0.4,
-          reach: 4200,
-          reachChange: 180,
-          clicks: 95,
-          clicksChange: 15
+      // Monitor popup for closure
+      const checkClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkClosed);
+          if (isConnecting) {
+            setIsConnecting(false);
+            setConnectionStatus({
+              type: 'error',
+              message: 'Conexión cancelada por el usuario'
+            });
+            setTimeout(() => {
+              setConnectionStatus({ type: null, message: '' });
+            }, 3000);
+          }
         }
-      };
+      }, 1000);
 
-      setAccounts(prev => [...prev, newAccount]);
-      setConnectionStatus({
-        type: 'success',
-        message: 'Cuenta de Twitter/X conectada exitosamente'
-      });
-      setShowNewAccountModal(false);
-
-      // Clear status message after 5 seconds
+      // Timeout after 5 minutes
       setTimeout(() => {
-        setConnectionStatus({ type: null, message: '' });
-      }, 5000);
-    }, 1500);
+        if (popup && !popup.closed) {
+          popup.close();
+          clearInterval(checkClosed);
+          setIsConnecting(false);
+          setConnectionStatus({
+            type: 'error',
+            message: 'Conexión cancelada por tiempo de espera'
+          });
+          setTimeout(() => {
+            setConnectionStatus({ type: null, message: '' });
+          }, 3000);
+        }
+      }, 300000);
+    });
   };
+
+  
 
   // PKCE helper functions
   const generateCodeVerifier = () => {
@@ -595,19 +632,22 @@ const SocialMediaDashboard: React.FC = () => {
       .replace(/=/g, '');
   };
 
-  const generateCodeChallenge = (verifier: string) => {
+  const generateCodeChallenge = async (verifier: string) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(verifier);
-    return crypto.subtle.digest('SHA-256', data).then(digest => {
-      return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-    });
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
   };
 
   const handleDisconnectAccount = (accountId: string) => {
-    setAccounts(prev => prev.filter(account => account.id !== accountId));
+    setAccounts(prev => {
+      const updatedAccounts = prev.filter(account => account.id !== accountId);
+      saveAccountsToStorage(updatedAccounts);
+      return updatedAccounts;
+    });
     setConnectionStatus({
       type: 'success',
       message: 'Cuenta desconectada exitosamente'

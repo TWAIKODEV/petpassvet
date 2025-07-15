@@ -6,56 +6,66 @@ import { InboxProvider } from './context/InboxContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Patients from './pages/Patients';
-import Pets from './pages/Pets';
-import PatientProfile from './pages/patients/PatientProfile';
-import Calendar from './pages/Calendar';
 import Appointments from './pages/agenda/Appointments';
+import Inbox from './pages/Inbox';
+import Calendar from './pages/Calendar';
+import Pets from './pages/Pets';
 import Reports from './pages/Reports';
-import Leads from './pages/oportunidades/Leads';
-import FunnelVentas from './pages/oportunidades/FunnelVentas';
+import Opportunities from './pages/Opportunities';
+import PatientProfile from './pages/patients/PatientProfile';
+import Consultation from './pages/consultorio/Consultation';
+import ConsultationAppointments from './pages/consultorio/ConsultationAppointments';
+import MedicalHistory from './pages/consultorio/MedicalHistory';
+import Inventory from './pages/clinic/Inventory';
+import Orders from './pages/clinic/Orders';
 import Providers from './pages/clinic/Providers';
 import ProviderProfile from './pages/clinic/ProviderProfile';
-import ProductsServices from './pages/clinic/ProductsServices';
-import Inventory from './pages/clinic/Inventory';
 import Staff from './pages/clinic/Staff';
-import Medications from './pages/consultorio/Medicamentos';
+import Medications from './pages/clinic/Medications';
+import ProductsServices from './pages/clinic/ProductsServices';
+import Contabilidad from './pages/clinic/Contabilidad';
+import Medicamentos from './pages/consultorio/Medicamentos';
+import Tratamientos from './pages/consultorio/Tratamientos';
+import Budgets from './pages/finanzas/Budgets';
+import Invoices from './pages/finanzas/Invoices';
+import Sales from './pages/finanzas/Sales';
+import Prescriptions from './pages/finanzas/Prescriptions';
+import General from './pages/informes/General';
+import Financieros from './pages/informes/Financieros';
 import GroomingAppointments from './pages/peluqueria/GroomingAppointments';
+import GroomingAppointment from './pages/peluqueria/GroomingAppointment';
 import GroomingHistory from './pages/peluqueria/GroomingHistory';
 import GroomingTreatments from './pages/peluqueria/GroomingTreatments';
-import ConsultationAppointments from './pages/consultorio/ConsultationAppointments';
-import Consultation from './pages/consultorio/Consultation';
-import MedicalHistory from './pages/consultorio/MedicalHistory';
-import Tratamientos from './pages/consultorio/Tratamientos';
-import Inbox from './pages/Inbox';
-import PageLayout from './components/layout/PageLayout';
-import Placeholder from './components/common/Placeholder';
-import Sales from './pages/finanzas/Sales';
-import Invoices from './pages/finanzas/Invoices';
-import Budgets from './pages/finanzas/Budgets';
-import Prescriptions from './pages/finanzas/Prescriptions';
+import SocialMediaDashboard from './pages/marketing/redes-sociales';
+import WebDashboard from './pages/marketing/web';
 import CampañasMK from './pages/marketing/campanas/CampañasMK';
-import WebDashboard from './pages/marketing/web/WebDashboard';
-import SocialMediaDashboard from './pages/marketing/redes-sociales/SocialMediaDashboard';
+import FunnelVentas from './pages/oportunidades/FunnelVentas';
+import Leads from './pages/oportunidades/Leads';
+import CampañasMK2 from './pages/oportunidades/CampañasMK';
 import TiendaDashboard from './pages/tienda/Dashboard';
 import TiendaInventory from './pages/tienda/Inventory';
 import TiendaProducts from './pages/tienda/Products';
-import Pedidos from './pages/tienda/Pedidos';
-import Tesoreria from './pages/erp/Tesoreria';
+import TiendaPedidos from './pages/tienda/Pedidos';
 import ContaPlus from './pages/erp/ContaPlus';
+import Tesoreria from './pages/erp/Tesoreria';
 import Impuestos from './pages/erp/Impuestos';
 import Asesorias from './pages/erp/Asesorias';
-import General from './pages/informes/General';
-import Financieros from './pages/informes/Financieros';
 import MiPerfil from './pages/rrhh/MiPerfil';
 import ControlHorario from './pages/rrhh/ControlHorario';
 import RegistrarEntradaSalida from './pages/rrhh/RegistrarEntradaSalida';
 import Configuracion from './pages/administracion/configuracion';
 import Usuarios from './pages/administracion/usuarios';
-import GroomingAppointment from './pages/peluqueria/GroomingAppointment';
-import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
 import Integrations from './pages/tools/Integrations';
 import Logs from './pages/tools/Logs';
-import { ConvexClientProvider } from './context/ConvexProvider';
+import TwitterCallback from './pages/tools/TwitterCallback';
+import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
+import { ConvexProvider } from './context/ConvexProvider';
+import { AuthProvider } from './context/AuthContext';
+import { InboxProvider } from './context/InboxContext';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import io from 'socket.io-client';
+import { socketService } from './services/socketService';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -192,6 +202,8 @@ function App() {
                       <Logs />
                     </ProtectedRoute>
                   } />
+                  <Route path="/tools/twitter-callback" element={<TwitterCallback />} />
+                  <Route path="administracion/configuracion" element={<Configuracion />} />
                 </Route>
 
                 {/* Administration routes */}
