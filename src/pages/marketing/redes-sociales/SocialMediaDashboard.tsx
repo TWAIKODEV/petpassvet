@@ -534,29 +534,54 @@ const SocialMediaDashboard: React.FC = () => {
       const handleAuthMessage = (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
         
-        if (event.data.type === 'TWITTER_AUTH_SUCCESS') {
-          const { code, state: returnedState } = event.data;
+        if (event.data.type === 'twitter_auth_success') {
+          const { tokenData, user } = event.data;
           
-          // Verify state parameter
-          const storedState = sessionStorage.getItem('twitter_oauth_state');
-          if (returnedState !== storedState) {
-            console.error('State parameter mismatch');
-            setConnectionStatus({
-              type: 'error',
-              message: 'Error de seguridad en la autenticación'
-            });
-            setIsConnecting(false);
-            return;
-          }
+          // Create account with real data from Twitter
+          const newAccount: SocialAccount = {
+            id: Date.now().toString(),
+            platform: 'twitter',
+            handle: '@' + user.username,
+            url: `https://twitter.com/${user.username}`,
+            connected: true,
+            connectedAt: new Date().toISOString(),
+            userId: user.id,
+            accessToken: tokenData.access_token,
+            metrics: {
+              followers: user.public_metrics?.followers_count || 0,
+              followersChange: 0, // Would need historical data
+              engagement: 0, // Would need to calculate from recent tweets
+              engagementChange: 0,
+              reach: 0, // Would need analytics data
+              reachChange: 0,
+              clicks: 0, // Would need analytics data
+              clicksChange: 0
+            }
+          };
 
-          // Exchange authorization code for access token
-          exchangeTwitterCodeForToken(code);
+          setAccounts(prev => [...prev, newAccount]);
+          setConnectionStatus({
+            type: 'success',
+            message: `Cuenta de Twitter @${user.username} conectada exitosamente`
+          });
+          setShowNewAccountModal(false);
+          setIsConnecting(false);
+
+          // Clear stored OAuth data
+          sessionStorage.removeItem('twitter_code_verifier');
+          sessionStorage.removeItem('twitter_oauth_state');
+
+          // Clear status message after 5 seconds
+          setTimeout(() => {
+            setConnectionStatus({ type: null, message: '' });
+          }, 5000);
+
           popup?.close();
           window.removeEventListener('message', handleAuthMessage);
-        } else if (event.data.type === 'TWITTER_AUTH_ERROR') {
+        } else if (event.data.type === 'twitter_auth_error') {
           setConnectionStatus({
             type: 'error',
-            message: 'Error en la autenticación de Twitter/X'
+            message: `Error en la autenticación de Twitter/X: ${event.data.error}`
           });
           setIsConnecting(false);
           popup?.close();
@@ -572,8 +597,6 @@ const SocialMediaDashboard: React.FC = () => {
           clearInterval(checkClosed);
           setIsConnecting(false);
           window.removeEventListener('message', handleAuthMessage);
-          // For demo purposes, simulate connection
-          simulateTwitterConnection();
         }
       }, 1000);
 
@@ -600,48 +623,7 @@ const SocialMediaDashboard: React.FC = () => {
     }
   };
 
-  // Simulate Twitter connection (in production, this would handle the OAuth callback)
-  const simulateTwitterConnection = (accessToken?: string) => {
-    setTimeout(() => {
-      const newAccount: SocialAccount = {
-        id: Date.now().toString(),
-        platform: 'twitter',
-        handle: '@clinicpro_vet',
-        url: 'https://twitter.com/clinicpro_vet',
-        connected: true,
-        connectedAt: new Date().toISOString(),
-        userId: 'tw_user_' + Date.now(),
-        accessToken: accessToken || 'fake_tw_access_token_' + Date.now(),
-        metrics: {
-          followers: 1650,
-          followersChange: 35,
-          engagement: 3.5,
-          engagementChange: 0.4,
-          reach: 4200,
-          reachChange: 180,
-          clicks: 95,
-          clicksChange: 15
-        }
-      };
-
-      setAccounts(prev => [...prev, newAccount]);
-      setConnectionStatus({
-        type: 'success',
-        message: 'Cuenta de Twitter/X conectada exitosamente'
-      });
-      setShowNewAccountModal(false);
-      setIsConnecting(false);
-
-      // Clear stored OAuth data
-      sessionStorage.removeItem('twitter_code_verifier');
-      sessionStorage.removeItem('twitter_oauth_state');
-
-      // Clear status message after 5 seconds
-      setTimeout(() => {
-        setConnectionStatus({ type: null, message: '' });
-      }, 5000);
-    }, 1500);
-  };
+  
 
   // PKCE and OAuth helper functions
   const generateCodeVerifier = () => {
@@ -673,51 +655,7 @@ const SocialMediaDashboard: React.FC = () => {
       .substring(0, length);
   };
 
-  // Exchange authorization code for access token
-  const exchangeTwitterCodeForToken = async (code: string) => {
-    try {
-      const codeVerifier = sessionStorage.getItem('twitter_code_verifier');
-      if (!codeVerifier) {
-        throw new Error('Code verifier not found');
-      }
-
-      const tokenData = {
-        code,
-        grant_type: 'authorization_code',
-        client_id: TWITTER_CONFIG.clientId,
-        redirect_uri: TWITTER_CONFIG.redirectUri,
-        code_verifier: codeVerifier
-      };
-
-      // In a real implementation, you would make this request from your backend
-      // to avoid exposing client credentials in the frontend
-      console.log('Token exchange data:', tokenData);
-      
-      // For demo purposes, simulate successful token exchange
-      const mockTokenResponse = {
-        access_token: 'mock_twitter_access_token_' + Date.now(),
-        refresh_token: 'mock_twitter_refresh_token_' + Date.now(),
-        token_type: 'bearer',
-        expires_in: 7200,
-        scope: TWITTER_CONFIG.scope
-      };
-
-      // Store tokens securely (in production, this should be done server-side)
-      sessionStorage.setItem('twitter_access_token', mockTokenResponse.access_token);
-      sessionStorage.setItem('twitter_refresh_token', mockTokenResponse.refresh_token);
-      
-      // Create account with real token
-      simulateTwitterConnection(mockTokenResponse.access_token);
-
-    } catch (error) {
-      console.error('Error exchanging code for token:', error);
-      setConnectionStatus({
-        type: 'error',
-        message: 'Error al obtener el token de acceso'
-      });
-      setIsConnecting(false);
-    }
-  };
+  
 
   const handleDisconnectAccount = (accountId: string) => {
     setAccounts(prev => prev.filter(account => account.id !== accountId));
