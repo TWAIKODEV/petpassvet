@@ -74,7 +74,9 @@ const FACEBOOK_CONFIG = {
 const TWITTER_CONFIG = {
   clientId: import.meta.env.VITE_TWITTER_CLIENT_ID || 'your_twitter_client_id',
   redirectUri: import.meta.env.VITE_TWITTER_REDIRECT_URI || 'https://your-domain.com/auth/twitter/callback',
-  scope: 'tweet.read tweet.write users.read dm.read dm.write offline.access'
+  scope: 'tweet.read tweet.write users.read dm.read dm.write offline.access',
+  authUrl: 'https://twitter.com/i/oauth2/authorize',
+  tokenUrl: 'https://api.twitter.com/2/oauth2/token'
 };
 
 // Mock data for social accounts
@@ -495,60 +497,111 @@ const SocialMediaDashboard: React.FC = () => {
     }, 1500);
   };
 
-  // Twitter/X OAuth flow with PKCE
-  const handleTwitterConnect = () => {
+  // Twitter/X OAuth 2.0 flow with PKCE
+  const handleTwitterConnect = async () => {
     setIsConnecting(true);
 
-    // Generate PKCE code verifier and challenge
-    const codeVerifier = generateCodeVerifier();
-    const codeChallenge = generateCodeChallenge(codeVerifier);
-    
-    // Store code verifier for later use
-    sessionStorage.setItem('twitter_code_verifier', codeVerifier);
+    try {
+      // Generate PKCE code verifier and challenge
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      
+      // Store code verifier for later use
+      sessionStorage.setItem('twitter_code_verifier', codeVerifier);
 
-    // Build Twitter OAuth URL
-    const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
-    authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('client_id', TWITTER_CONFIG.clientId);
-    authUrl.searchParams.append('redirect_uri', TWITTER_CONFIG.redirectUri);
-    authUrl.searchParams.append('scope', TWITTER_CONFIG.scope);
-    authUrl.searchParams.append('state', Date.now().toString());
-    authUrl.searchParams.append('code_challenge', codeChallenge);
-    authUrl.searchParams.append('code_challenge_method', 'S256');
+      // Generate state parameter for security
+      const state = generateRandomString(32);
+      sessionStorage.setItem('twitter_oauth_state', state);
 
-    // Open popup window for Twitter auth
-    const popup = window.open(
-      authUrl.toString(),
-      'twitter-auth',
-      'width=600,height=700,scrollbars=yes,resizable=yes'
-    );
+      // Build Twitter OAuth URL according to X documentation
+      const authUrl = new URL(TWITTER_CONFIG.authUrl);
+      authUrl.searchParams.append('response_type', 'code');
+      authUrl.searchParams.append('client_id', TWITTER_CONFIG.clientId);
+      authUrl.searchParams.append('redirect_uri', TWITTER_CONFIG.redirectUri);
+      authUrl.searchParams.append('scope', TWITTER_CONFIG.scope);
+      authUrl.searchParams.append('state', state);
+      authUrl.searchParams.append('code_challenge', codeChallenge);
+      authUrl.searchParams.append('code_challenge_method', 'S256');
 
-    // Listen for the auth callback
-    const checkClosed = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkClosed);
-        setIsConnecting(false);
-        // In a real implementation, you would check for the auth code
-        // and complete the OAuth flow
-        simulateTwitterConnection();
-      }
-    }, 1000);
+      // Open popup window for Twitter auth
+      const popup = window.open(
+        authUrl.toString(),
+        'twitter-auth',
+        'width=600,height=700,scrollbars=yes,resizable=yes'
+      );
 
-    // Timeout after 5 minutes
-    setTimeout(() => {
-      if (popup && !popup.closed) {
-        popup.close();
-        setIsConnecting(false);
-        setConnectionStatus({
-          type: 'error',
-          message: 'Conexión cancelada por tiempo de espera'
-        });
-      }
-    }, 300000);
+      // Listen for the auth callback
+      const handleAuthMessage = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        
+        if (event.data.type === 'TWITTER_AUTH_SUCCESS') {
+          const { code, state: returnedState } = event.data;
+          
+          // Verify state parameter
+          const storedState = sessionStorage.getItem('twitter_oauth_state');
+          if (returnedState !== storedState) {
+            console.error('State parameter mismatch');
+            setConnectionStatus({
+              type: 'error',
+              message: 'Error de seguridad en la autenticación'
+            });
+            setIsConnecting(false);
+            return;
+          }
+
+          // Exchange authorization code for access token
+          exchangeTwitterCodeForToken(code);
+          popup?.close();
+          window.removeEventListener('message', handleAuthMessage);
+        } else if (event.data.type === 'TWITTER_AUTH_ERROR') {
+          setConnectionStatus({
+            type: 'error',
+            message: 'Error en la autenticación de Twitter/X'
+          });
+          setIsConnecting(false);
+          popup?.close();
+          window.removeEventListener('message', handleAuthMessage);
+        }
+      };
+
+      window.addEventListener('message', handleAuthMessage);
+
+      // Check if popup is closed manually
+      const checkClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkClosed);
+          setIsConnecting(false);
+          window.removeEventListener('message', handleAuthMessage);
+          // For demo purposes, simulate connection
+          simulateTwitterConnection();
+        }
+      }, 1000);
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        if (popup && !popup.closed) {
+          popup.close();
+          setIsConnecting(false);
+          setConnectionStatus({
+            type: 'error',
+            message: 'Conexión cancelada por tiempo de espera'
+          });
+          window.removeEventListener('message', handleAuthMessage);
+        }
+      }, 300000);
+
+    } catch (error) {
+      console.error('Error starting Twitter OAuth flow:', error);
+      setIsConnecting(false);
+      setConnectionStatus({
+        type: 'error',
+        message: 'Error al iniciar el proceso de autenticación'
+      });
+    }
   };
 
   // Simulate Twitter connection (in production, this would handle the OAuth callback)
-  const simulateTwitterConnection = () => {
+  const simulateTwitterConnection = (accessToken?: string) => {
     setTimeout(() => {
       const newAccount: SocialAccount = {
         id: Date.now().toString(),
@@ -558,7 +611,7 @@ const SocialMediaDashboard: React.FC = () => {
         connected: true,
         connectedAt: new Date().toISOString(),
         userId: 'tw_user_' + Date.now(),
-        accessToken: 'fake_tw_access_token_' + Date.now(),
+        accessToken: accessToken || 'fake_tw_access_token_' + Date.now(),
         metrics: {
           followers: 1650,
           followersChange: 35,
@@ -577,6 +630,11 @@ const SocialMediaDashboard: React.FC = () => {
         message: 'Cuenta de Twitter/X conectada exitosamente'
       });
       setShowNewAccountModal(false);
+      setIsConnecting(false);
+
+      // Clear stored OAuth data
+      sessionStorage.removeItem('twitter_code_verifier');
+      sessionStorage.removeItem('twitter_oauth_state');
 
       // Clear status message after 5 seconds
       setTimeout(() => {
@@ -585,7 +643,7 @@ const SocialMediaDashboard: React.FC = () => {
     }, 1500);
   };
 
-  // PKCE helper functions
+  // PKCE and OAuth helper functions
   const generateCodeVerifier = () => {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
@@ -595,15 +653,70 @@ const SocialMediaDashboard: React.FC = () => {
       .replace(/=/g, '');
   };
 
-  const generateCodeChallenge = (verifier: string) => {
+  const generateCodeChallenge = async (verifier: string) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(verifier);
-    return crypto.subtle.digest('SHA-256', data).then(digest => {
-      return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-    });
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+  };
+
+  const generateRandomString = (length: number) => {
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return btoa(String.fromCharCode.apply(null, Array.from(array)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
+      .substring(0, length);
+  };
+
+  // Exchange authorization code for access token
+  const exchangeTwitterCodeForToken = async (code: string) => {
+    try {
+      const codeVerifier = sessionStorage.getItem('twitter_code_verifier');
+      if (!codeVerifier) {
+        throw new Error('Code verifier not found');
+      }
+
+      const tokenData = {
+        code,
+        grant_type: 'authorization_code',
+        client_id: TWITTER_CONFIG.clientId,
+        redirect_uri: TWITTER_CONFIG.redirectUri,
+        code_verifier: codeVerifier
+      };
+
+      // In a real implementation, you would make this request from your backend
+      // to avoid exposing client credentials in the frontend
+      console.log('Token exchange data:', tokenData);
+      
+      // For demo purposes, simulate successful token exchange
+      const mockTokenResponse = {
+        access_token: 'mock_twitter_access_token_' + Date.now(),
+        refresh_token: 'mock_twitter_refresh_token_' + Date.now(),
+        token_type: 'bearer',
+        expires_in: 7200,
+        scope: TWITTER_CONFIG.scope
+      };
+
+      // Store tokens securely (in production, this should be done server-side)
+      sessionStorage.setItem('twitter_access_token', mockTokenResponse.access_token);
+      sessionStorage.setItem('twitter_refresh_token', mockTokenResponse.refresh_token);
+      
+      // Create account with real token
+      simulateTwitterConnection(mockTokenResponse.access_token);
+
+    } catch (error) {
+      console.error('Error exchanging code for token:', error);
+      setConnectionStatus({
+        type: 'error',
+        message: 'Error al obtener el token de acceso'
+      });
+      setIsConnecting(false);
+    }
   };
 
   const handleDisconnectAccount = (accountId: string) => {
