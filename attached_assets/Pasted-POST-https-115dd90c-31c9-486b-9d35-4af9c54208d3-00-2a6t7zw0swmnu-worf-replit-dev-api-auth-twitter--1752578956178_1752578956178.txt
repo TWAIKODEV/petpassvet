@@ -1,0 +1,36 @@
+POST https://115dd90c-31c9-486b-9d35-4af9c54208d3-00-2a6t7zw0swmnu.worf.replit.dev/api/auth/twitter/request-token 404 (Not Found)
+handleTwitterConnect @ SocialMediaDashboard.tsx:506
+callCallback2 @ chunk-6BKLQ22S.js?v=752731f2:3674
+invokeGuardedCallbackDev @ chunk-6BKLQ22S.js?v=752731f2:3699
+invokeGuardedCallback @ chunk-6BKLQ22S.js?v=752731f2:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-6BKLQ22S.js?v=752731f2:3736
+executeDispatch @ chunk-6BKLQ22S.js?v=752731f2:7014
+processDispatchQueueItemsInOrder @ chunk-6BKLQ22S.js?v=752731f2:7034
+processDispatchQueue @ chunk-6BKLQ22S.js?v=752731f2:7043
+dispatchEventsForPlugins @ chunk-6BKLQ22S.js?v=752731f2:7051
+(anonymous) @ chunk-6BKLQ22S.js?v=752731f2:7174
+batchedUpdates$1 @ chunk-6BKLQ22S.js?v=752731f2:18913
+batchedUpdates @ chunk-6BKLQ22S.js?v=752731f2:3579
+dispatchEventForPluginEventSystem @ chunk-6BKLQ22S.js?v=752731f2:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-6BKLQ22S.js?v=752731f2:5478
+dispatchEvent @ chunk-6BKLQ22S.js?v=752731f2:5472
+dispatchDiscreteEvent @ chunk-6BKLQ22S.js?v=752731f2:5449
+SocialMediaDashboard.tsx:612 Error starting Twitter OAuth flow: SyntaxError: Failed to execute 'json' on 'Response': Unexpected end of JSON input
+    at handleTwitterConnect (SocialMediaDashboard.tsx:513:47)
+handleTwitterConnect @ SocialMediaDashboard.tsx:612
+await in handleTwitterConnect
+callCallback2 @ chunk-6BKLQ22S.js?v=752731f2:3674
+invokeGuardedCallbackDev @ chunk-6BKLQ22S.js?v=752731f2:3699
+invokeGuardedCallback @ chunk-6BKLQ22S.js?v=752731f2:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-6BKLQ22S.js?v=752731f2:3736
+executeDispatch @ chunk-6BKLQ22S.js?v=752731f2:7014
+processDispatchQueueItemsInOrder @ chunk-6BKLQ22S.js?v=752731f2:7034
+processDispatchQueue @ chunk-6BKLQ22S.js?v=752731f2:7043
+dispatchEventsForPlugins @ chunk-6BKLQ22S.js?v=752731f2:7051
+(anonymous) @ chunk-6BKLQ22S.js?v=752731f2:7174
+batchedUpdates$1 @ chunk-6BKLQ22S.js?v=752731f2:18913
+batchedUpdates @ chunk-6BKLQ22S.js?v=752731f2:3579
+dispatchEventForPluginEventSystem @ chunk-6BKLQ22S.js?v=752731f2:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-6BKLQ22S.js?v=752731f2:5478
+dispatchEvent @ chunk-6BKLQ22S.js?v=752731f2:5472
+dispatchDiscreteEvent @ chunk-6BKLQ22S.js?v=752731f2:5449
