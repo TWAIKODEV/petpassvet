@@ -193,8 +193,10 @@ function App() {
                       <Logs />
                     </ProtectedRoute>
                   } />
-                  <Route path="/auth/twitter/callback" element={<TwitterCallback />} />
                 </Route>
+
+                {/* Auth callback routes - outside of tools group */}
+                <Route path="auth/twitter/callback" element={<TwitterCallback />} /></Route>
 
                 {/* Administration routes */}
                 <Route path="administracion" element={<Placeholder pageName="Administración" />} />
