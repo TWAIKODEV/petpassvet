@@ -1,0 +1,105 @@
+## 📚 Flujo de Autenticación con OAuth 1.0a para X (Twitter)
+
+---
+
+### ✅ Paso 0 — Prerrequisitos
+
+* Tener `consumer_key` y `consumer_secret` de tu app registrados en developer.x.com.
+* Guardarlos en `.env`. Nunca exponerlos en frontend.
+
+---
+
+### 1️⃣ Obtener un Request Token
+
+* Hacer `POST` a `https://api.twitter.com/oauth/request_token`.
+* Firmar la petición con:
+
+  * `oauth_consumer_key`
+  * `oauth_signature_method` = `HMAC-SHA1`
+  * `oauth_timestamp`, `oauth_nonce`
+  * `oauth_signature` generada con `consumer_secret`
+  * `oauth_callback` con tu Callback URI.
+
+**Respuesta:**
+
+* `oauth_token` (Request Token)
+* `oauth_token_secret` (Request Token Secret)
+
+---
+
+### 2️⃣ Redirigir al Usuario
+
+* Redirigir a:
+  `https://api.twitter.com/oauth/authorize?oauth_token=XXXXX`
+
+El usuario autoriza la app.
+
+---
+
+### 3️⃣ Callback URI
+
+* Twitter redirige a:
+  `https://TUAPP.com/auth/callback?oauth_token=XXXXX&oauth_verifier=ZZZZZ`
+
+Obtienes:
+
+* `oauth_token`
+* `oauth_verifier`
+
+---
+
+### 4️⃣ Intercambiar por Access Token
+
+* Hacer `POST` a `https://api.twitter.com/oauth/access_token`.
+* Firmar con:
+
+  * `consumer_key` + `consumer_secret`
+  * `request_token` + `request_token_secret`
+  * `oauth_verifier`
+
+**Respuesta:**
+
+* `oauth_token` (Access Token)
+* `oauth_token_secret` (Access Token Secret)
+* `user_id`, `screen_name`
+
+---
+
+### 5️⃣ Guardar Tokens
+
+* Guardar `access_token` y `access_token_secret` en base de datos **por usuario**.
+
+---
+
+### 6️⃣ Usar Access Tokens
+
+* Para cada petición a la API:
+
+  * Firmar con `consumer_key` + `consumer_secret` + `access_token` + `access_token_secret`.
+  * Usar HMAC-SHA1.
+
+---
+
+### ✅ Tokens y Uso
+
+| Token                                    | Uso                            | Guardar  |
+| ---------------------------------------- | ------------------------------ | -------- |
+| `consumer_key` + `consumer_secret`       | Siempre                        | `.env`   |
+| `request_token` + `request_token_secret` | Solo autorización              | Temporal |
+| `oauth_verifier`                         | Canje único                    | Temporal |
+| `access_token` + `access_token_secret`   | Usar API en nombre del usuario | BD       |
+
+---
+
+### 📌 Resumen Diagrama
+
+1. `POST /oauth/request_token`  → `request_token`
+2. Usuario → `authorize` → Twitter → Callback con `oauth_verifier`
+3. `POST /oauth/access_token` → `access_token`
+4. Guardar tokens y firmar peticiones.
+
+---
+
+**Pro tip:** Usar librerías para firmar (`oauth-1.0a` para Node.js o `requests-oauthlib` para Python).
+
+🚀 ¡Listo! Autenticación OAuth 1.0a documentada.
