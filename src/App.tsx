@@ -60,30 +60,29 @@ import Logs from './pages/tools/Logs';
 import TwitterCallback from './pages/tools/TwitterCallback';
 import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
 import { ConvexProvider } from './context/ConvexProvider';
-import { InboxProvider } from './context/InboxContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import io from 'socket.io-client';
 import { socketService } from './services/socketService';
+import { ConvexProvider as ConvexClientProvider } from 'convex/react';
 
-// Protected route component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+// Placeholder component for incomplete pages
+const Placeholder: React.FC<{ pageName: string }> = ({ pageName }) => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">{pageName}</h1>
+      <p className="text-gray-600">Esta página está en desarrollo</p>
+    </div>
+  </div>
+);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
+// PageLayout component
+const PageLayout: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Outlet />
+    </div>
+  );
 
 function App() {
   return (
@@ -143,7 +142,7 @@ function App() {
                 <Route path="tienda" element={<TiendaDashboard />} />
                 <Route path="tienda/productos" element={<TiendaProducts />} />
                 <Route path="tienda/inventario" element={<TiendaInventory />} />
-                <Route path="tienda/pedidos" element={<Pedidos />} />
+                <Route path="tienda/pedidos" element={<TiendaPedidos />} />
 
                 {/* Sales routes */}
                 <Route path="ventas" element={<Sales />} />
@@ -156,7 +155,7 @@ function App() {
                 <Route path="compras/proveedores/:id" element={<ProviderProfile />} />
                 <Route path="compras/productos-servicios" element={<ProductsServices />} />
                 <Route path="compras/inventario" element={<Inventory />} />
-                <Route path="compras/pedidos" element={<Pedidos />} />
+                <Route path="compras/pedidos" element={<Orders />} />
 
                 {/* Marketing routes */}
                 <Route path="marketing" element={<WebDashboard />} />
@@ -201,23 +200,23 @@ function App() {
                       <Logs />
                     </ProtectedRoute>
                   } />
-                  <Route path="/tools/twitter-callback" element={<TwitterCallback />} />
-                  <Route path="administracion/configuracion" element={<Configuracion />} />
+                  <Route path="twitter-callback" element={<TwitterCallback />} />
                 </Route>
 
                 {/* Administration routes */}
-                <Route path="administracion" element={<Placeholder pageName="Administración" />} />
-                <Route path="administracion/configuracion" element={
-                  <ProtectedRoute>
-                    <Configuracion />
-                  </ProtectedRoute>
-                } />
-                <Route path="administracion/usuarios" element={
-                  <ProtectedRoute>
-                    <Usuarios />
-                  </ProtectedRoute>
-                } />
-                <Route path="administracion/configuracion" element={<Placeholder pageName="Configuración" />} />
+                <Route path="administracion">
+                  <Route index element={<Placeholder pageName="Administración" />} />
+                  <Route path="configuracion" element={
+                    <ProtectedRoute>
+                      <Configuracion />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="usuarios" element={
+                    <ProtectedRoute>
+                      <Usuarios />
+                    </ProtectedRoute>
+                  } />
+                </Route>
 
                 {/* Catch all */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
