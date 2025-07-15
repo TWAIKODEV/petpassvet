@@ -60,7 +60,6 @@ import Logs from './pages/tools/Logs';
 import TwitterCallback from './pages/tools/TwitterCallback';
 import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
 import { ConvexProvider } from './context/ConvexProvider';
-import { AuthProvider } from './context/AuthContext';
 import { InboxProvider } from './context/InboxContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
