@@ -38,8 +38,10 @@ import type * as roles from "../roles.js";
 import type * as schedules from "../schedules.js";
 import type * as services from "../services.js";
 import type * as threads from "../threads.js";
+import type * as tiktok from "../tiktok.js";
 import type * as timeRecording from "../timeRecording.js";
 import type * as treatments from "../treatments.js";
+import type * as twitter from "../twitter.js";
 import type * as userRoles from "../userRoles.js";
 import type * as users from "../users.js";
 
@@ -77,8 +79,10 @@ declare const fullApi: ApiFromModules<{
   schedules: typeof schedules;
   services: typeof services;
   threads: typeof threads;
+  tiktok: typeof tiktok;
   timeRecording: typeof timeRecording;
   treatments: typeof treatments;
+  twitter: typeof twitter;
   userRoles: typeof userRoles;
   users: typeof users;
 }>;

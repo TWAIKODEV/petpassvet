@@ -1,13 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
-  Filter, 
   Download, 
-  Calendar, 
   RefreshCw, 
-  BarChart2, 
   ArrowUp, 
-  ArrowDown, 
   Instagram, 
   Facebook, 
   Twitter, 
@@ -28,6 +24,14 @@ import {
 import Card from '../../../components/common/Card';
 import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
+import ToastContainer from '../../../components/common/ToastContainer';
+import twitterAuthService from '../../../services/twitterAuth';
+import tiktokAuthService from '../../../services/tiktokAuth';
+import { useToastContext } from '../../../context/ToastContext';
+import { useMutation, useQuery, useAction } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
+import { Id } from '../../../../convex/_generated/dataModel';
+import TikTok from '../../../components/icon/TikTok';
 
 // Types for social media metrics
 interface SocialMetrics {
@@ -43,7 +47,7 @@ interface SocialMetrics {
 
 interface SocialAccount {
   id: string;
-  platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube';
+  platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok';
   handle: string;
   url: string;
   connected: boolean;
@@ -52,7 +56,7 @@ interface SocialAccount {
 
 interface Post {
   id: string;
-  platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube';
+  platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok';
   content: string;
   image?: string;
   publishDate: string;
@@ -63,6 +67,27 @@ interface Post {
     shares: number;
     views: number;
   };
+}
+
+interface ConnectedAccount {
+  _id: string;
+  userId: string;
+  platform: 'twitter' | 'facebook' | 'instagram' | 'linkedin' | 'youtube' | 'tiktok';
+  username: string;
+  name: string;
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: number;
+  connected: boolean;
+  // Métricas sociales
+  followers?: number;
+  following?: number;
+  posts?: number;
+  profileImageUrl?: string;
+  verified?: boolean;
+  accountCreatedAt?: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 // Mock data for social accounts
@@ -143,6 +168,23 @@ const mockSocialAccounts: SocialAccount[] = [
     connected: false,
     metrics: {
       followers: 980,
+      followersChange: 0,
+      engagement: 0,
+      engagementChange: 0,
+      reach: 0,
+      reachChange: 0,
+      clicks: 0,
+      clicksChange: 0
+    }
+  },
+  {
+    id: '6',
+    platform: 'tiktok',
+    handle: '@clinicpro_vet',
+    url: 'https://tiktok.com/@clinicpro_vet',
+    connected: false,
+    metrics: {
+      followers: 0,
       followersChange: 0,
       engagement: 0,
       engagementChange: 0,
@@ -250,6 +292,359 @@ const SocialMediaDashboard: React.FC = () => {
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const { showSuccess, showError } = useToastContext();
+  
+  // Convex mutations and actions
+  const exchangeTwitterToken = useAction(api.twitter.exchangeTwitterToken);
+  const getTwitterUserInfo = useAction(api.twitter.getTwitterUserInfo);
+  const saveTwitterAccount = useMutation(api.twitter.saveTwitterAccount);
+  const disconnectAccount = useMutation(api.twitter.disconnectAccount);
+  
+  // TikTok Convex mutations and actions
+  const exchangeTikTokToken = useAction(api.tiktok.exchangeTikTokToken);
+  const getTikTokUserInfo = useAction(api.tiktok.getTikTokUserInfo);
+  const saveTikTokAccount = useMutation(api.tiktok.saveTikTokAccount);
+  
+  // Convex queries
+  const connectedAccounts = useQuery(api.twitter.getConnectedAccounts, { userId: "current-user" });
+
+  // Bandera para evitar dobles ejecuciones del callback
+  const [tiktokCallbackProcessed, setTiktokCallbackProcessed] = useState(false);
+  const [twitterCallbackProcessed, setTwitterCallbackProcessed] = useState(false);
+  const [isUpdatingAccounts, setIsUpdatingAccounts] = useState(false);
+  const [hasInitialUpdate, setHasInitialUpdate] = useState(false);
+
+  // Manejar la respuesta de autenticación de Twitter y TikTok cuando se carga la página
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    
+    if (code && state) {
+      // Pequeño delay para asegurar que el localStorage esté disponible
+      setTimeout(() => {
+        // Verificar si es TikTok o Twitter basándose en el localStorage
+        const twitterState = localStorage.getItem('twitter_auth_state');
+        const tiktokState = localStorage.getItem('tiktok_auth_state');
+        
+        if (state === twitterState && !twitterCallbackProcessed) {
+          handleTwitterCallback();
+        } else if (state === tiktokState && !tiktokCallbackProcessed) {
+          handleTikTokCallback();
+        }
+      }, 100);
+    }
+  }, [twitterCallbackProcessed, tiktokCallbackProcessed]);
+
+  // Actualizar datos de cuentas conectadas al cargar la página (solo una vez)
+  useEffect(() => {
+    if (connectedAccounts && connectedAccounts.length > 0 && !isUpdatingAccounts && !hasInitialUpdate) {
+      // Solo actualizar si hay cuentas conectadas y no hemos hecho la actualización inicial
+      const hasConnectedAccounts = connectedAccounts.some(account => account.connected);
+      if (hasConnectedAccounts) {
+        setHasInitialUpdate(true);
+        updateConnectedAccounts();
+      }
+    }
+  }, [connectedAccounts?.length]); // Solo se ejecuta cuando cambia el número de cuentas
+
+  const handleTwitterCallback = async () => {
+    if (twitterCallbackProcessed) return;
+    setTwitterCallbackProcessed(true);
+    try {
+      setIsConnecting(true);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+
+      console.log('Twitter callback - Parámetros:', { code: !!code, state: !!state, error });
+
+      if (error) {
+        throw new Error(`Error en autenticación: ${error}`);
+      }
+
+      if (!code || !state) {
+        throw new Error('Faltan parámetros de autorización');
+      }
+
+      // Verificar el state
+      const savedState = localStorage.getItem('twitter_auth_state');
+      console.log('Twitter callback - State comparison:', { 
+        received: state, 
+        saved: savedState, 
+        matches: state === savedState 
+      });
+      
+      if (state !== savedState) {
+        throw new Error(`State no coincide. Recibido: ${state}, Guardado: ${savedState}`);
+      }
+
+      // Obtener code verifier
+      const codeVerifier = localStorage.getItem('twitter_code_verifier');
+      if (!codeVerifier) {
+        throw new Error('Code verifier no encontrado');
+      }
+
+      // Limpiar localStorage y la URL ANTES de continuar para evitar múltiples ejecuciones
+      localStorage.removeItem('twitter_auth_state');
+      localStorage.removeItem('twitter_code_verifier');
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      console.log('Twitter callback - Iniciando intercambio de token');
+
+      // Intercambiar código por token usando Convex
+      const authResponse = await exchangeTwitterToken({ code, codeVerifier });
+      
+      if (authResponse) {
+        console.log('Twitter callback - Token obtenido, obteniendo información del usuario');
+        
+        // Obtener información del usuario
+        const userInfo = await getTwitterUserInfo({ accessToken: authResponse.access_token });
+        
+        if (userInfo && userInfo.data) {
+          console.log('Twitter callback - Información del usuario obtenida:', userInfo.data);
+          
+          // Extraer métricas públicas
+          const publicMetrics = userInfo.data.public_metrics || {};
+          
+          // Guardar cuenta en Convex
+          await saveTwitterAccount({
+            userId: "current-user", // Esto debería ser el ID real del usuario
+            username: userInfo.data.username,
+            name: userInfo.data.name,
+            accessToken: authResponse.access_token,
+            refreshToken: authResponse.refresh_token,
+            expiresAt: Date.now() + (authResponse.expires_in * 1000),
+            followers: publicMetrics.followers_count,
+            following: publicMetrics.following_count,
+            posts: publicMetrics.tweet_count,
+            profileImageUrl: userInfo.data.profile_image_url,
+            verified: userInfo.data.verified,
+            accountCreatedAt: userInfo.data.created_at
+          });
+          
+          // Limpiar la URL (el localStorage ya se limpió antes)
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Cerrar el modal
+          setShowAccountModal(false);
+          
+          // Mostrar mensaje de éxito
+          showSuccess('Cuenta de Twitter conectada exitosamente');
+        }
+      } else {
+        throw new Error('No se pudo obtener el token de acceso');
+      }
+    } catch (error) {
+      console.error('Error conectando Twitter:', error);
+      showError(`Error conectando la cuenta de Twitter: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectTwitter = async () => {
+    try {
+      await twitterAuthService.initiateAuth();
+    } catch (error) {
+      console.error('Error iniciando autenticación de Twitter:', error);
+      showError('Error iniciando la autenticación de Twitter');
+    }
+  };
+
+  const handleTikTokCallback = async () => {
+    if (tiktokCallbackProcessed) return;
+    setTiktokCallbackProcessed(true);
+    try {
+      setIsConnecting(true);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+
+      if (error) {
+        throw new Error(`Error en autenticación: ${error}`);
+      }
+
+      if (!code || !state) {
+        throw new Error('Faltan parámetros de autorización');
+      }
+
+      // Verificar el state
+      const savedState = localStorage.getItem('tiktok_auth_state');
+      if (state !== savedState) {
+        throw new Error(`State no coincide. Recibido: ${state}, Guardado: ${savedState}`);
+      }
+
+      // Obtener code verifier
+      const codeVerifier = localStorage.getItem('tiktok_code_verifier');
+      if (!codeVerifier) {
+        throw new Error('Code verifier no encontrado');
+      }
+
+      // Limpiar localStorage y la URL ANTES de continuar
+      localStorage.removeItem('tiktok_auth_state');
+      localStorage.removeItem('tiktok_code_verifier');
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Intercambiar código por token usando Convex
+      const authResponse = await exchangeTikTokToken({ code, codeVerifier });
+      
+      console.log('TikTok callback - Auth response:', authResponse);
+      
+      if (authResponse && authResponse.access_token) {
+        console.log('TikTok callback - Token obtenido:', authResponse.access_token.substring(0, 20) + '...');
+        // Obtener información del usuario
+        const userInfo = await getTikTokUserInfo({ accessToken: authResponse.access_token });
+        console.log('TikTok callback - User info response:', userInfo);
+        
+        if (userInfo && userInfo.data) {
+          console.log('TikTok callback - User data structure:', userInfo.data);
+          
+          // Extraer datos del usuario según la estructura de la respuesta
+          const userData = userInfo.data.user || userInfo.data;
+          console.log('TikTok callback - Extracted user data:', userData);
+          
+          await saveTikTokAccount({
+            userId: "current-user",
+            username: userData.display_name || userData.username || 'tiktok_user',
+            name: userData.display_name || userData.username || 'TikTok User',
+            accessToken: authResponse.access_token,
+            refreshToken: authResponse.refresh_token,
+            expiresAt: Date.now() + (authResponse.expires_in * 1000),
+            followers: userData.follower_count || 0,
+            following: userData.following_count || 0,
+            videos: userData.video_count || 0,
+            profileImageUrl: userData.avatar_url || '',
+            verified: userData.is_verified || false,
+            accountCreatedAt: new Date().toISOString()
+          });
+          setShowAccountModal(false);
+          showSuccess('Cuenta de TikTok conectada exitosamente');
+        }
+      } else {
+        // Verificar si hay un error en la respuesta
+        if (authResponse && authResponse.error) {
+          // Mostrar toast con opción de reintentar
+          showError(`Error en token exchange: ${authResponse.error} - ${authResponse.error_description || ''}. Haz clic en "Conectar con TikTok" para reintentar.`);
+        } else {
+          showError(`No se pudo obtener el token de acceso. Haz clic en "Conectar con TikTok" para reintentar.`);
+        }
+        return;
+      }
+    } catch (error) {
+      // Mostrar toast con opción de reintentar
+      showError(`Error conectando la cuenta de TikTok: ${error instanceof Error ? error.message : String(error)}. Haz clic en "Conectar con TikTok" para reintentar.`);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectTikTok = async () => {
+    try {
+      await tiktokAuthService.initiateAuth();
+    } catch (error) {
+      console.error('Error iniciando autenticación de TikTok:', error);
+      showError('Error iniciando la autenticación de TikTok');
+    }
+  };
+
+  // Función para reconectar una cuenta específica
+  const handleReconnectAccount = async (platform: string) => {
+    if (platform === 'tiktok') {
+      await handleConnectTikTok();
+    } else if (platform === 'twitter') {
+      await handleConnectTwitter();
+    }
+  };
+
+  // Función para actualizar datos de cuentas conectadas
+  const updateConnectedAccounts = async () => {
+    if (!connectedAccounts || connectedAccounts.length === 0) return;
+    
+    setIsUpdatingAccounts(true);
+    try {
+      for (const account of connectedAccounts) {
+        if (!account.connected || !account.accessToken) continue;
+        
+        // Verificar si el token ha expirado
+        if (account.expiresAt && Date.now() > account.expiresAt) {
+          console.log(`Token expirado para ${account.platform}: ${account.username}`);
+          // Marcar como desconectada
+          await disconnectAccount({ accountId: account._id as Id<"socialAccounts"> });
+          showError(`Token expirado para ${account.platform}: ${account.username}. Por favor, reconecta la cuenta.`);
+          continue;
+        }
+
+        try {
+          if (account.platform === 'tiktok') {
+            console.log(`Actualizando datos de TikTok para: ${account.username}`);
+            const userInfo = await getTikTokUserInfo({ accessToken: account.accessToken });
+            
+            if (userInfo && userInfo.data) {
+              const userData = userInfo.data.user || userInfo.data;
+              
+              await saveTikTokAccount({
+                userId: account.userId,
+                username: userData.display_name || userData.username || account.username,
+                name: userData.display_name || userData.username || account.name,
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                expiresAt: account.expiresAt,
+                followers: userData.follower_count || account.followers || 0,
+                following: userData.following_count || account.following || 0,
+                videos: userData.video_count || account.posts || 0,
+                profileImageUrl: userData.avatar_url || account.profileImageUrl || '',
+                verified: userData.is_verified || account.verified || false,
+                accountCreatedAt: account.accountCreatedAt || new Date().toISOString()
+              });
+              
+              console.log(`Datos actualizados para TikTok: ${account.username}`);
+            }
+          } else if (account.platform === 'twitter') {
+            console.log(`Actualizando datos de Twitter para: ${account.username}`);
+            const userInfo = await getTwitterUserInfo({ accessToken: account.accessToken });
+            
+            if (userInfo && userInfo.data) {
+              const publicMetrics = userInfo.data.public_metrics || {};
+              
+              await saveTwitterAccount({
+                userId: account.userId,
+                username: userInfo.data.username,
+                name: userInfo.data.name,
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                expiresAt: account.expiresAt,
+                followers: publicMetrics.followers_count || account.followers || 0,
+                following: publicMetrics.following_count || account.following || 0,
+                posts: publicMetrics.tweet_count || account.posts || 0,
+                profileImageUrl: userInfo.data.profile_image_url || account.profileImageUrl || '',
+                verified: userInfo.data.verified || account.verified || false,
+                accountCreatedAt: userInfo.data.created_at || account.accountCreatedAt || new Date().toISOString()
+              });
+              
+              console.log(`Datos actualizados para Twitter: ${account.username}`);
+            }
+          }
+        } catch (error) {
+          console.error(`Error actualizando ${account.platform}:`, error);
+          
+          // Marcar como desconectada y mostrar error genérico
+          await disconnectAccount({ accountId: account._id as Id<"socialAccounts"> });
+          showError(`Error actualizando ${account.platform}: ${account.username}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error actualizando cuentas:', error);
+      showError('Error actualizando las cuentas conectadas');
+    } finally {
+      setIsUpdatingAccounts(false);
+    }
+  };
 
   // Filter posts based on search term, platform, and status
   const filteredPosts = mockPosts.filter(post => {
@@ -298,7 +693,8 @@ const SocialMediaDashboard: React.FC = () => {
     facebook: { icon: <Facebook size={20} />, color: 'text-blue-600', bgColor: 'bg-blue-100' },
     twitter: { icon: <Twitter size={20} />, color: 'text-blue-400', bgColor: 'bg-blue-50' },
     linkedin: { icon: <Linkedin size={20} />, color: 'text-blue-800', bgColor: 'bg-blue-50' },
-    youtube: { icon: <Youtube size={20} />, color: 'text-red-600', bgColor: 'bg-red-100' }
+    youtube: { icon: <Youtube size={20} />, color: 'text-red-600', bgColor: 'bg-red-100' },
+    tiktok: { icon: <TikTok size={20} />, color: 'text-black', bgColor: 'bg-black' }
   };
 
   // Status styles
@@ -345,12 +741,21 @@ const SocialMediaDashboard: React.FC = () => {
             Exportar
           </Button>
           <Button
+            variant="outline"
+            icon={<RefreshCw size={18} />}
+            className="flex-1 sm:flex-none"
+            onClick={updateConnectedAccounts}
+            disabled={isUpdatingAccounts}
+          >
+            {isUpdatingAccounts ? 'Actualizando...' : 'Actualizar Datos'}
+          </Button>
+          <Button
             variant="primary"
             icon={<Plus size={18} />}
             className="flex-1 sm:flex-none"
-            onClick={() => setShowNewPostModal(true)}
+            onClick={() => setShowAccountModal(true)}
           >
-            Nueva Publicación
+            Nueva Cuenta
           </Button>
         </div>
       </div>
@@ -443,69 +848,118 @@ const SocialMediaDashboard: React.FC = () => {
       {/* Connected Accounts */}
       <Card title="Cuentas Conectadas" icon={<Globe size={20} />}>
         <div className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockSocialAccounts.map(account => (
-              <div 
-                key={account.id} 
-                className={`border rounded-lg p-4 ${account.connected ? '' : 'opacity-60'}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className={`p-2 rounded-full ${platformConfig[account.platform].bgColor}`}>
-                      {platformConfig[account.platform].icon}
+          {/* Indicador de actualización */}
+          {isUpdatingAccounts && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                <RefreshCw className="h-4 w-4 text-blue-500 animate-spin mr-2" />
+                <span className="text-sm text-blue-700">Actualizando datos de cuentas...</span>
+              </div>
+            </div>
+          )}
+          
+          {connectedAccounts && connectedAccounts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {connectedAccounts.map((account: ConnectedAccount) => (
+                <div 
+                  key={account._id} 
+                  className="border rounded-lg p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`p-2 rounded-full ${platformConfig[account.platform as keyof typeof platformConfig].bgColor}`}>
+                        {platformConfig[account.platform as keyof typeof platformConfig].icon}
+                      </div>
+                      <div className="ml-3">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-medium text-gray-900">@{account.username}</h3>
+                          {account.verified && (
+                            <span className="text-blue-500">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">{account.name}</p>
+                      </div>
                     </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-gray-900">{account.handle}</h3>
-                      <a 
-                        href={account.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-xs text-blue-600 hover:underline"
-                      >
-                        Ver perfil
-                      </a>
+                    <div className="flex items-center gap-2">
+                      {account.connected ? (
+                        <>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Conectada
+                          </span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => disconnectAccount({ accountId: account._id as Id<"socialAccounts"> })}
+                          >
+                            Desconectar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Desconectada
+                          </span>
+                          <Button 
+                            variant="primary" 
+                            size="sm"
+                            onClick={() => handleReconnectAccount(account.platform)}
+                          >
+                            Conectar
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    {account.connected ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Conectada
-                      </span>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setShowAccountModal(true)}
-                      >
-                        Conectar
-                      </Button>
-                    )}
+                  
+                  {/* Métricas sociales */}
+                  {account.followers !== undefined && (
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                      <div className="text-center">
+                        <div className="font-medium text-gray-900">{account.followers?.toLocaleString()}</div>
+                        <div className="text-gray-500">Seguidores</div>
+                      </div>
+                      {account.following !== undefined && (
+                        <div className="text-center">
+                          <div className="font-medium text-gray-900">{account.following?.toLocaleString()}</div>
+                          <div className="text-gray-500">Siguiendo</div>
+                        </div>
+                      )}
+                      {account.posts !== undefined && (
+                        <div className="text-center">
+                          <div className="font-medium text-gray-900">{account.posts?.toLocaleString()}</div>
+                          <div className="text-gray-500">Publicaciones</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="mt-4 text-xs text-gray-500">
+                    {account.connected 
+                      ? `Conectada el ${new Date(account.createdAt).toLocaleDateString()}`
+                      : `Desconectada el ${new Date(account.updatedAt).toLocaleDateString()}`
+                    }
                   </div>
                 </div>
-                
-                {account.connected && (
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-xs text-gray-500">Seguidores</p>
-                      <div className="flex items-center">
-                        <p className="text-sm font-medium text-gray-900">{account.metrics.followers.toLocaleString()}</p>
-                        <span className="ml-1 text-xs text-green-600">+{account.metrics.followersChange}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Engagement</p>
-                      <div className="flex items-center">
-                        <p className="text-sm font-medium text-gray-900">{account.metrics.engagement.toFixed(1)}%</p>
-                        <span className={`ml-1 text-xs ${account.metrics.engagementChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {account.metrics.engagementChange >= 0 ? '+' : ''}{account.metrics.engagementChange.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-4">
+                <Globe size={48} className="mx-auto" />
               </div>
-            ))}
-          </div>
+              <p className="text-gray-500 mb-4">No hay cuentas conectadas</p>
+              <Button
+                variant="primary"
+                onClick={() => setShowAccountModal(true)}
+              >
+                Conectar Primera Cuenta
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -532,6 +986,7 @@ const SocialMediaDashboard: React.FC = () => {
               <option value="twitter">Twitter</option>
               <option value="linkedin">LinkedIn</option>
               <option value="youtube">YouTube</option>
+              <option value="tiktok">TikTok</option>
             </select>
             <select
               className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -904,19 +1359,54 @@ const SocialMediaDashboard: React.FC = () => {
                 </p>
                 
                 <div className="space-y-2">
-                  {Object.entries(platformConfig).map(([platform, config]) => (
-                    <button
-                      key={platform}
-                      className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50"
-                    >
-                      <div className={`p-2 rounded-full ${platform === 'instagram' ? 'bg-pink-100' : platform === 'facebook' ? 'bg-blue-100' : platform === 'twitter' ? 'bg-blue-50' : platform === 'linkedin' ? 'bg-blue-50' : 'bg-red-100'}`}>
-                        {config.icon}
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900 capitalize">
-                        Conectar con {platform}
-                      </span>
-                    </button>
-                  ))}
+                  {/* Botón específico para Twitter */}
+                  <button
+                    onClick={handleConnectTwitter}
+                    disabled={isConnecting}
+                    className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="p-2 rounded-full bg-blue-50">
+                      <Twitter size={20} className="text-blue-400" />
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {isConnecting ? 'Conectando...' : 'Conectar con Twitter'}
+                    </span>
+                  </button>
+                  
+                  {/* Botón específico para TikTok */}
+                  <button
+                    onClick={handleConnectTikTok}
+                    disabled={isConnecting}
+                    className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="p-2 rounded-full bg-black">
+                      <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.7-1.35 3.9-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.2.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+                      </svg>
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {isConnecting ? 'Conectando...' : 'Conectar con TikTok'}
+                    </span>
+                  </button>
+                  
+                  {/* Otros botones deshabilitados por ahora */}
+                  {Object.entries(platformConfig).map(([platform, config]) => {
+                    if (platform === 'twitter' || platform === 'tiktok') return null; // Ya incluidos arriba
+                    return (
+                      <button
+                        key={platform}
+                        disabled
+                        className="w-full flex items-center p-3 border rounded-lg opacity-50 cursor-not-allowed"
+                      >
+                        <div className={`p-2 rounded-full ${platform === 'instagram' ? 'bg-pink-100' : platform === 'facebook' ? 'bg-blue-100' : platform === 'linkedin' ? 'bg-blue-50' : 'bg-red-100'}`}>
+                          {config.icon}
+                        </div>
+                        <span className="ml-3 text-sm font-medium text-gray-900 capitalize">
+                          Conectar con {platform} (Próximamente)
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -931,6 +1421,9 @@ const SocialMediaDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {/* Toast Container */}
+      <ToastContainer />
     </div>
   );
 };

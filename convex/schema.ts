@@ -1084,4 +1084,35 @@ export default defineSchema({
     .index("by_employee", ["employeeId"])
     .index("by_role", ["roleId"])
     .index("by_status", ["status"]),
+
+  // Social Accounts table
+  socialAccounts: defineTable({
+    userId: v.string(),
+    platform: v.union(
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("instagram"),
+      v.literal("linkedin"),
+      v.literal("youtube"),
+      v.literal("tiktok"),
+    ),
+    username: v.string(),
+    name: v.string(),
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.number(),
+    connected: v.boolean(),
+    // Métricas sociales
+    followers: v.optional(v.number()),
+    following: v.optional(v.number()),
+    posts: v.optional(v.number()),
+    profileImageUrl: v.optional(v.string()),
+    verified: v.optional(v.boolean()),
+    accountCreatedAt: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_platform", ["userId", "platform"])
+    .index("by_platform", ["platform"]),
 });

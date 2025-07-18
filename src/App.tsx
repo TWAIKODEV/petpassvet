@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { InboxProvider } from './context/InboxContext';
@@ -56,6 +55,7 @@ import NewPrescriptionPage from './pages/dashboard/NewPrescriptionPage';
 import Integrations from './pages/tools/Integrations';
 import Logs from './pages/tools/Logs';
 import { ConvexClientProvider } from './context/ConvexProvider';
+import { ToastProvider } from './context/ToastContext';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -81,6 +81,7 @@ function App() {
     <ConvexClientProvider>
       <AuthProvider>
         <InboxProvider>
+          <ToastProvider>
           <Router>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -213,6 +214,7 @@ function App() {
               </Route>
             </Routes>
           </Router>
+          </ToastProvider>
         </InboxProvider>
       </AuthProvider>
     </ConvexClientProvider>
