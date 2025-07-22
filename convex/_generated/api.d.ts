@@ -22,6 +22,7 @@ import type * as doctors from "../doctors.js";
 import type * as employees from "../employees.js";
 import type * as groomingAppointments from "../groomingAppointments.js";
 import type * as invoices from "../invoices.js";
+import type * as linkedin from "../linkedin.js";
 import type * as medicalHistory from "../medicalHistory.js";
 import type * as medicines from "../medicines.js";
 import type * as messages from "../messages.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   employees: typeof employees;
   groomingAppointments: typeof groomingAppointments;
   invoices: typeof invoices;
+  linkedin: typeof linkedin;
   medicalHistory: typeof medicalHistory;
   medicines: typeof medicines;
   messages: typeof messages;

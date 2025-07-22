@@ -27,6 +27,7 @@ import Input from '../../../components/common/Input';
 import ToastContainer from '../../../components/common/ToastContainer';
 import twitterAuthService from '../../../services/twitterAuth';
 import tiktokAuthService from '../../../services/tiktokAuth';
+import linkedinAuthService from '../../../services/linkedinAuth';
 import { useToastContext } from '../../../context/ToastContext';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -306,12 +307,18 @@ const SocialMediaDashboard: React.FC = () => {
   const getTikTokUserInfo = useAction(api.tiktok.getTikTokUserInfo);
   const saveTikTokAccount = useMutation(api.tiktok.saveTikTokAccount);
   
+  // LinkedIn Convex mutations and actions
+  const exchangeLinkedInToken = useAction(api.linkedin.exchangeLinkedInToken);
+  const getLinkedInUserInfo = useAction(api.linkedin.getLinkedInUserInfo);
+  const saveLinkedInAccount = useMutation(api.linkedin.saveLinkedInAccount);
+  
   // Convex queries
   const connectedAccounts = useQuery(api.twitter.getConnectedAccounts, { userId: "current-user" });
 
   // Bandera para evitar dobles ejecuciones del callback
   const [tiktokCallbackProcessed, setTiktokCallbackProcessed] = useState(false);
   const [twitterCallbackProcessed, setTwitterCallbackProcessed] = useState(false);
+  const [linkedinCallbackProcessed, setLinkedinCallbackProcessed] = useState(false);
   const [isUpdatingAccounts, setIsUpdatingAccounts] = useState(false);
   const [hasInitialUpdate, setHasInitialUpdate] = useState(false);
 
@@ -324,18 +331,21 @@ const SocialMediaDashboard: React.FC = () => {
     if (code && state) {
       // Pequeño delay para asegurar que el localStorage esté disponible
       setTimeout(() => {
-        // Verificar si es TikTok o Twitter basándose en el localStorage
+        // Verificar si es TikTok, Twitter o LinkedIn basándose en el localStorage
         const twitterState = localStorage.getItem('twitter_auth_state');
         const tiktokState = localStorage.getItem('tiktok_auth_state');
+        const linkedinState = localStorage.getItem('linkedin_auth_state');
         
         if (state === twitterState && !twitterCallbackProcessed) {
           handleTwitterCallback();
         } else if (state === tiktokState && !tiktokCallbackProcessed) {
           handleTikTokCallback();
+        } else if (state === linkedinState && !linkedinCallbackProcessed) {
+          handleLinkedInCallback();
         }
       }, 100);
     }
-  }, [twitterCallbackProcessed, tiktokCallbackProcessed]);
+  }, [twitterCallbackProcessed, tiktokCallbackProcessed, linkedinCallbackProcessed]);
 
   // Actualizar datos de cuentas conectadas al cargar la página (solo una vez)
   useEffect(() => {
@@ -553,12 +563,114 @@ const SocialMediaDashboard: React.FC = () => {
     }
   };
 
+  const handleLinkedInCallback = async () => {
+    if (linkedinCallbackProcessed) return;
+    setLinkedinCallbackProcessed(true);
+    try {
+      setIsConnecting(true);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+
+      if (error) {
+        // Limpiar la URL inmediatamente para evitar múltiples procesamientos
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        let errorMessage = error;
+        if (errorDescription) {
+          const decodedDescription = decodeURIComponent(errorDescription);
+          errorMessage = `${error}: ${decodedDescription}`;
+        }
+        
+        // Manejar errores específicos de LinkedIn
+        if (error === 'openid_insufficient_scope_error') {
+          errorMessage = 'Error de configuración: LinkedIn requiere los scopes openid, profile y email. Contacta al administrador.';
+        } else if (error === 'unauthorized_scope_error') {
+          errorMessage = 'Error de permisos: La aplicación no tiene autorización para los scopes solicitados.';
+        }
+        
+        throw new Error(`Error en autenticación: ${errorMessage}`);
+      }
+
+      if (!code || !state) {
+        throw new Error('Faltan parámetros de autorización');
+      }
+
+      // Verificar el state
+      const savedState = localStorage.getItem('linkedin_auth_state');
+              if (state !== savedState) {
+          throw new Error(`State no coincide. Recibido: ${state}, Guardado: ${savedState}`);
+        }
+
+        // Limpiar localStorage y la URL ANTES de continuar para evitar múltiples ejecuciones
+        localStorage.removeItem('linkedin_auth_state');
+        localStorage.removeItem('linkedin_code_verifier');
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        // Intercambiar código por token usando Convex
+        const authResponse = await exchangeLinkedInToken({ code });
+      
+      if (authResponse && authResponse.access_token) {
+        console.log('LinkedIn callback - Token obtenido:', authResponse.access_token.substring(0, 20) + '...');
+        
+        // Obtener información del usuario
+        const userInfo = await getLinkedInUserInfo({ accessToken: authResponse.access_token });
+        
+        if (userInfo) {
+          console.log('LinkedIn callback - User info:', userInfo);
+          
+          // LinkedIn devuelve información diferente, ajustar según la respuesta
+          const userData = userInfo;
+          
+          await saveLinkedInAccount({
+            userId: "current-user",
+            username: userData.sub || userData.email || 'linkedin_user',
+            name: userData.name || userData.given_name + ' ' + userData.family_name || 'LinkedIn User',
+            accessToken: authResponse.access_token,
+            refreshToken: authResponse.refresh_token,
+            expiresAt: Date.now() + (authResponse.expires_in * 1000),
+            followers: 0, // LinkedIn no proporciona followers en el endpoint userinfo
+            following: 0,
+            posts: 0,
+            profileImageUrl: userData.picture || '',
+            verified: false, // LinkedIn no tiene verificación como Twitter
+            accountCreatedAt: new Date().toISOString()
+          });
+          
+          setShowAccountModal(false);
+          showSuccess('Cuenta de LinkedIn conectada exitosamente');
+        }
+      } else {
+        showError('No se pudo obtener el token de acceso de LinkedIn');
+      }
+    } catch (error) {
+      console.error('Error conectando LinkedIn:', error);
+      showError(`Error conectando la cuenta de LinkedIn: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectLinkedIn = async () => {
+    try {
+      await linkedinAuthService.initiateAuth();
+    } catch (error) {
+      console.error('Error iniciando autenticación de LinkedIn:', error);
+      showError('Error iniciando la autenticación de LinkedIn');
+    }
+  };
+
   // Función para reconectar una cuenta específica
   const handleReconnectAccount = async (platform: string) => {
     if (platform === 'tiktok') {
       await handleConnectTikTok();
     } else if (platform === 'twitter') {
       await handleConnectTwitter();
+    } else if (platform === 'linkedin') {
+      await handleConnectLinkedIn();
     }
   };
 
@@ -628,6 +740,31 @@ const SocialMediaDashboard: React.FC = () => {
               });
               
               console.log(`Datos actualizados para Twitter: ${account.username}`);
+            }
+          } else if (account.platform === 'linkedin') {
+            console.log(`Actualizando datos de LinkedIn para: ${account.username}`);
+            const userInfo = await getLinkedInUserInfo({ accessToken: account.accessToken });
+            
+            if (userInfo) {
+              // LinkedIn devuelve información diferente, ajustar según la respuesta
+              const userData = userInfo;
+              
+              await saveLinkedInAccount({
+                userId: account.userId,
+                username: userData.sub || userData.email || account.username,
+                name: userData.name || userData.given_name + ' ' + userData.family_name || account.name,
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                expiresAt: account.expiresAt,
+                followers: 0, // LinkedIn no proporciona followers en el endpoint userinfo
+                following: 0,
+                posts: 0,
+                profileImageUrl: userData.picture || account.profileImageUrl || '',
+                verified: false, // LinkedIn no tiene verificación como Twitter
+                accountCreatedAt: account.accountCreatedAt || new Date().toISOString()
+              });
+              
+              console.log(`Datos actualizados para LinkedIn: ${account.username}`);
             }
           }
         } catch (error) {
@@ -1389,16 +1526,30 @@ const SocialMediaDashboard: React.FC = () => {
                     </span>
                   </button>
                   
+                  {/* Botón específico para LinkedIn */}
+                  <button
+                    onClick={handleConnectLinkedIn}
+                    disabled={isConnecting}
+                    className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="p-2 rounded-full bg-blue-50">
+                      <Linkedin size={20} className="text-blue-800" />
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {isConnecting ? 'Conectando...' : 'Conectar con LinkedIn'}
+                    </span>
+                  </button>
+                  
                   {/* Otros botones deshabilitados por ahora */}
                   {Object.entries(platformConfig).map(([platform, config]) => {
-                    if (platform === 'twitter' || platform === 'tiktok') return null; // Ya incluidos arriba
+                    if (platform === 'twitter' || platform === 'tiktok' || platform === 'linkedin') return null; // Ya incluidos arriba
                     return (
                       <button
                         key={platform}
                         disabled
                         className="w-full flex items-center p-3 border rounded-lg opacity-50 cursor-not-allowed"
                       >
-                        <div className={`p-2 rounded-full ${platform === 'instagram' ? 'bg-pink-100' : platform === 'facebook' ? 'bg-blue-100' : platform === 'linkedin' ? 'bg-blue-50' : 'bg-red-100'}`}>
+                        <div className={`p-2 rounded-full ${platform === 'instagram' ? 'bg-pink-100' : platform === 'facebook' ? 'bg-blue-100' : 'bg-red-100'}`}>
                           {config.icon}
                         </div>
                         <span className="ml-3 text-sm font-medium text-gray-900 capitalize">
