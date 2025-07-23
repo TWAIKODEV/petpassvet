@@ -1105,6 +1105,7 @@ export default defineSchema({
     // Métricas sociales
     followers: v.optional(v.number()),
     following: v.optional(v.number()),
+    views: v.optional(v.number()),
     posts: v.optional(v.number()),
     profileImageUrl: v.optional(v.string()),
     verified: v.optional(v.boolean()),

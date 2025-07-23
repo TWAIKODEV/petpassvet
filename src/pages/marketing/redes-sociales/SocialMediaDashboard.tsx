@@ -28,6 +28,7 @@ import ToastContainer from '../../../components/common/ToastContainer';
 import twitterAuthService from '../../../services/twitterAuth';
 import tiktokAuthService from '../../../services/tiktokAuth';
 import linkedinAuthService from '../../../services/linkedinAuth';
+import youtubeAuthService from '../../../services/youtubeAuth';
 import { useToastContext } from '../../../context/ToastContext';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -84,6 +85,7 @@ interface ConnectedAccount {
   followers?: number;
   following?: number;
   posts?: number;
+  views?: number;
   profileImageUrl?: string;
   verified?: boolean;
   accountCreatedAt?: string;
@@ -312,6 +314,13 @@ const SocialMediaDashboard: React.FC = () => {
   const getLinkedInUserInfo = useAction(api.linkedin.getLinkedInUserInfo);
   const saveLinkedInAccount = useMutation(api.linkedin.saveLinkedInAccount);
   
+  // Google Convex mutations and actions
+  const exchangeGoogleToken = useAction(api.google.exchangeGoogleToken);
+  
+  // YouTube Convex mutations and actions
+  const getYouTubeChannelInfo = useAction(api.youtube.getYouTubeChannelInfo);
+  const saveYouTubeAccount = useMutation(api.youtube.saveYouTubeAccount);
+  
   // Convex queries
   const connectedAccounts = useQuery(api.twitter.getConnectedAccounts, { userId: "current-user" });
 
@@ -319,6 +328,7 @@ const SocialMediaDashboard: React.FC = () => {
   const [tiktokCallbackProcessed, setTiktokCallbackProcessed] = useState(false);
   const [twitterCallbackProcessed, setTwitterCallbackProcessed] = useState(false);
   const [linkedinCallbackProcessed, setLinkedinCallbackProcessed] = useState(false);
+  const [youtubeCallbackProcessed, setYoutubeCallbackProcessed] = useState(false);
   const [isUpdatingAccounts, setIsUpdatingAccounts] = useState(false);
   const [hasInitialUpdate, setHasInitialUpdate] = useState(false);
 
@@ -331,10 +341,11 @@ const SocialMediaDashboard: React.FC = () => {
     if (code && state) {
       // Pequeño delay para asegurar que el localStorage esté disponible
       setTimeout(() => {
-        // Verificar si es TikTok, Twitter o LinkedIn basándose en el localStorage
+        // Verificar si es TikTok, Twitter, LinkedIn o YouTube basándose en el localStorage
         const twitterState = localStorage.getItem('twitter_auth_state');
         const tiktokState = localStorage.getItem('tiktok_auth_state');
         const linkedinState = localStorage.getItem('linkedin_auth_state');
+        const youtubeState = localStorage.getItem('youtube_auth_state');
         
         if (state === twitterState && !twitterCallbackProcessed) {
           handleTwitterCallback();
@@ -342,10 +353,12 @@ const SocialMediaDashboard: React.FC = () => {
           handleTikTokCallback();
         } else if (state === linkedinState && !linkedinCallbackProcessed) {
           handleLinkedInCallback();
+        } else if (state === youtubeState && !youtubeCallbackProcessed) {
+          handleYouTubeCallback();
         }
       }, 100);
     }
-  }, [twitterCallbackProcessed, tiktokCallbackProcessed, linkedinCallbackProcessed]);
+  }, [twitterCallbackProcessed, tiktokCallbackProcessed, linkedinCallbackProcessed, youtubeCallbackProcessed]);
 
   // Actualizar datos de cuentas conectadas al cargar la página (solo una vez)
   useEffect(() => {
@@ -663,6 +676,115 @@ const SocialMediaDashboard: React.FC = () => {
     }
   };
 
+  const handleYouTubeCallback = async () => {
+    if (youtubeCallbackProcessed) return;
+    setYoutubeCallbackProcessed(true);
+    try {
+      setIsConnecting(true);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+
+      if (error) {
+        // Limpiar la URL inmediatamente para evitar múltiples procesamientos
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        let errorMessage = error;
+        if (errorDescription) {
+          const decodedDescription = decodeURIComponent(errorDescription);
+          errorMessage = `${error}: ${decodedDescription}`;
+        }
+        
+        throw new Error(`Error en autenticación: ${errorMessage}`);
+      }
+
+      if (!code || !state) {
+        throw new Error('Faltan parámetros de autorización');
+      }
+
+      // Verificar el state
+      const savedState = localStorage.getItem('youtube_auth_state');
+      if (state !== savedState) {
+        throw new Error(`State no coincide. Recibido: ${state}, Guardado: ${savedState}`);
+      }
+
+      // Obtener code verifier
+      const codeVerifier = localStorage.getItem('youtube_code_verifier');
+      if (!codeVerifier) {
+        throw new Error('Code verifier no encontrado');
+      }
+
+      // Limpiar localStorage y la URL ANTES de continuar para evitar múltiples ejecuciones
+      localStorage.removeItem('youtube_auth_state');
+      localStorage.removeItem('youtube_code_verifier');
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Intercambiar código por token usando Convex
+      const authResponse = await exchangeGoogleToken({ code, codeVerifier });
+      
+      if (authResponse && authResponse.access_token) {
+        console.log('YouTube callback - Token obtenido:', authResponse.access_token.substring(0, 20) + '...');
+        
+        // Obtener información del canal
+        const channelInfo = await getYouTubeChannelInfo({ accessToken: authResponse.access_token });
+        
+        if (channelInfo) {
+          console.log('YouTube callback - Channel info:', channelInfo);
+          
+          // Verificar si el usuario tiene canal de YouTube
+          if (!channelInfo.hasChannel) {
+            setShowAccountModal(false);
+            showError('Esta cuenta de Google no tiene un canal de YouTube. Por favor, crea un canal en YouTube y vuelve a intentarlo.');
+            return;
+          }
+          
+          // Extraer datos del canal según la respuesta
+          const userData = channelInfo.userInfo;
+          const channelData = channelInfo.channelInfo;
+          const statistics = channelInfo.statistics;
+          
+          await saveYouTubeAccount({
+            userId: "current-user",
+            username: channelData?.snippet?.customUrl || userData.email || 'youtube_user',
+            name: channelData?.snippet?.title || userData.name || 'YouTube User',
+            accessToken: authResponse.access_token,
+            refreshToken: authResponse.refresh_token,
+            expiresAt: Date.now() + (authResponse.expires_in * 1000),
+            followers: parseInt(statistics.subscriberCount) || 0, // Suscriptores
+            following: 0, // YouTube no proporciona canales seguidos
+            posts: parseInt(statistics.videoCount) || 0, // Videos subidos
+            views: parseInt(channelInfo.viewCount) || 0, // Visitas del canal
+            profileImageUrl: channelData?.snippet?.thumbnails?.default?.url || userData.picture || '',
+            verified: false, // YouTube no tiene verificación como Twitter
+            accountCreatedAt: channelData?.snippet?.publishedAt || new Date().toISOString()
+          });
+          
+          setShowAccountModal(false);
+          showSuccess('Cuenta de YouTube conectada exitosamente');
+        }
+      } else {
+        showError('No se pudo obtener el token de acceso de Google');
+      }
+    } catch (error) {
+      console.error('Error conectando YouTube:', error);
+      showError(`Error conectando la cuenta de YouTube: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectYouTube = async () => {
+    try {
+      await youtubeAuthService.initiateAuth();
+    } catch (error) {
+      console.error('Error iniciando autenticación de YouTube:', error);
+      showError('Error iniciando la autenticación de YouTube');
+    }
+  };
+
   // Función para reconectar una cuenta específica
   const handleReconnectAccount = async (platform: string) => {
     if (platform === 'tiktok') {
@@ -671,6 +793,8 @@ const SocialMediaDashboard: React.FC = () => {
       await handleConnectTwitter();
     } else if (platform === 'linkedin') {
       await handleConnectLinkedIn();
+    } else if (platform === 'youtube') {
+      await handleConnectYouTube();
     }
   };
 
@@ -765,6 +889,38 @@ const SocialMediaDashboard: React.FC = () => {
               });
               
               console.log(`Datos actualizados para LinkedIn: ${account.username}`);
+            }
+          } else if (account.platform === 'youtube') {
+            console.log(`Actualizando datos de YouTube para: ${account.username}`);
+            const channelInfo = await getYouTubeChannelInfo({ accessToken: account.accessToken });
+            
+            if (channelInfo && channelInfo.hasChannel) {
+              // YouTube devuelve información diferente, ajustar según la respuesta
+              const userData = channelInfo.userInfo;
+              const channelData = channelInfo.channelInfo;
+              const statistics = channelInfo.statistics;
+              
+              await saveYouTubeAccount({
+                userId: account.userId,
+                username: channelData?.snippet?.customUrl || userData.email || account.username,
+                name: channelData?.snippet?.title || userData.name || account.name,
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                expiresAt: account.expiresAt,
+                followers: parseInt(statistics.subscriberCount) || account.followers || 0, // Suscriptores
+                following: 0, // YouTube no proporciona canales seguidos
+                posts: parseInt(statistics.videoCount) || account.posts || 0, // Videos subidos
+                views: parseInt(channelInfo.viewCount) || account.views || 0, // Visitas del canal
+                profileImageUrl: channelData?.snippet?.thumbnails?.default?.url || userData.picture || account.profileImageUrl || '',
+                verified: false, // YouTube no tiene verificación como Twitter
+                accountCreatedAt: channelData?.snippet?.publishedAt || account.accountCreatedAt || new Date().toISOString()
+              });
+              
+              console.log(`Datos actualizados para YouTube: ${account.username}`);
+            } else if (channelInfo && !channelInfo.hasChannel) {
+              // El usuario ya no tiene canal, marcar como desconectada
+              await disconnectAccount({ accountId: account._id as Id<"socialAccounts"> });
+              showError(`La cuenta de YouTube ${account.username} ya no tiene un canal. Por favor, reconecta la cuenta después de crear un canal.`);
             }
           }
         } catch (error) {
@@ -1000,50 +1156,54 @@ const SocialMediaDashboard: React.FC = () => {
               {connectedAccounts.map((account: ConnectedAccount) => (
                 <div 
                   key={account._id} 
-                  className="border rounded-lg p-4"
+                  className="border rounded-lg p-3"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className={`p-2 rounded-full ${platformConfig[account.platform as keyof typeof platformConfig].bgColor}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center min-w-0 flex-1">
+                      <div className={`p-2 rounded-full flex-shrink-0 ${platformConfig[account.platform as keyof typeof platformConfig].bgColor}`}>
                         {platformConfig[account.platform as keyof typeof platformConfig].icon}
                       </div>
-                      <div className="ml-3">
+                      <div className="ml-3 min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-gray-900">@{account.username}</h3>
+                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                            {account.platform === 'youtube' ? account.username : `@${account.username}`}
+                          </h3>
                           {account.verified && (
-                            <span className="text-blue-500">
+                            <span className="text-blue-500 flex-shrink-0">
                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">{account.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{account.name}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       {account.connected ? (
                         <>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
                             Conectada
                           </span>
                           <Button 
                             variant="outline" 
                             size="sm"
                             onClick={() => disconnectAccount({ accountId: account._id as Id<"socialAccounts"> })}
+                            className="text-xs px-1.5 py-0.5 h-6"
                           >
                             Desconectar
                           </Button>
                         </>
                       ) : (
                         <>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 whitespace-nowrap">
                             Desconectada
                           </span>
                           <Button 
                             variant="primary" 
                             size="sm"
                             onClick={() => handleReconnectAccount(account.platform)}
+                            className="text-xs px-1.5 py-0.5 h-6"
                           >
                             Conectar
                           </Button>
@@ -1057,13 +1217,24 @@ const SocialMediaDashboard: React.FC = () => {
                     <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                       <div className="text-center">
                         <div className="font-medium text-gray-900">{account.followers?.toLocaleString()}</div>
-                        <div className="text-gray-500">Seguidores</div>
-                      </div>
-                      {account.following !== undefined && (
-                        <div className="text-center">
-                          <div className="font-medium text-gray-900">{account.following?.toLocaleString()}</div>
-                          <div className="text-gray-500">Siguiendo</div>
+                        <div className="text-gray-500">
+                          Seguidores
                         </div>
+                      </div>
+                      {account.platform === 'youtube' ? (
+                        account.views !== undefined && (
+                          <div className="text-center">
+                            <div className="font-medium text-gray-900">{account.views?.toLocaleString()}</div>
+                            <div className="text-gray-500">{account.platform === 'youtube' ? 'Visitas' : 'Seguidores'}</div>
+                          </div>
+                        )
+                      ) : (
+                        account.following !== undefined && (
+                          <div className="text-center">
+                            <div className="font-medium text-gray-900">{account.following?.toLocaleString()}</div>
+                            <div className="text-gray-500">Siguiendo</div>
+                          </div>
+                        )
                       )}
                       {account.posts !== undefined && (
                         <div className="text-center">
@@ -1540,9 +1711,23 @@ const SocialMediaDashboard: React.FC = () => {
                     </span>
                   </button>
                   
+                  {/* Botón específico para YouTube */}
+                  <button
+                    onClick={handleConnectYouTube}
+                    disabled={isConnecting}
+                    className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="p-2 rounded-full bg-red-50">
+                      <Youtube size={20} className="text-red-600" />
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {isConnecting ? 'Conectando...' : 'Conectar con YouTube'}
+                    </span>
+                  </button>
+                  
                   {/* Otros botones deshabilitados por ahora */}
                   {Object.entries(platformConfig).map(([platform, config]) => {
-                    if (platform === 'twitter' || platform === 'tiktok' || platform === 'linkedin') return null; // Ya incluidos arriba
+                    if (platform === 'twitter' || platform === 'tiktok' || platform === 'linkedin' || platform === 'youtube') return null; // Ya incluidos arriba
                     return (
                       <button
                         key={platform}

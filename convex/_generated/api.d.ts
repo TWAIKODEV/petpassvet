@@ -20,6 +20,7 @@ import type * as campaigns from "../campaigns.js";
 import type * as categories from "../categories.js";
 import type * as doctors from "../doctors.js";
 import type * as employees from "../employees.js";
+import type * as google from "../google.js";
 import type * as groomingAppointments from "../groomingAppointments.js";
 import type * as invoices from "../invoices.js";
 import type * as linkedin from "../linkedin.js";
@@ -45,6 +46,7 @@ import type * as treatments from "../treatments.js";
 import type * as twitter from "../twitter.js";
 import type * as userRoles from "../userRoles.js";
 import type * as users from "../users.js";
+import type * as youtube from "../youtube.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -62,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   categories: typeof categories;
   doctors: typeof doctors;
   employees: typeof employees;
+  google: typeof google;
   groomingAppointments: typeof groomingAppointments;
   invoices: typeof invoices;
   linkedin: typeof linkedin;
@@ -87,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   twitter: typeof twitter;
   userRoles: typeof userRoles;
   users: typeof users;
+  youtube: typeof youtube;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,
