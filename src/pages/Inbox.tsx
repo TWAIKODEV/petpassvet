@@ -1,99 +1,57 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
-  Search, 
   Filter, 
   RefreshCw,
-  Mail,
   MessageSquare,
-  Phone,
-  Instagram,
-  Facebook,
-  AtSign,
-  Send,
-  Paperclip,
-  Image,
-  Smile,
-  MoreVertical,
-  UserCheck,
-  UserX,
-  Calendar,
-  DollarSign,
-  X,
-  Pill,
-  Clock,
-  FileText,
-  Bot
+  Plus
 } from 'lucide-react';
-import Card from '../components/common/Card';
+
 import Button from '../components/common/Button';
-import Input from '../components/common/Input';
-import { InboxProvider, useInbox } from '../context/InboxContext';
-import ChannelBadge from '../components/inbox/ChannelBadge';
-import ThreadList from '../components/inbox/ThreadList';
-import MessageList from '../components/inbox/MessageList';
-import MessageComposer from '../components/inbox/MessageComposer';
-import ClientInfoPanel from '../components/inbox/ClientInfoPanel';
+import { MicrosoftInboxProvider, useMicrosoftInbox } from '../context/MicrosoftInboxContext';
+import MicrosoftThreadList from '../components/inbox/MicrosoftThreadList';
+import MicrosoftMessageList from '../components/inbox/MicrosoftMessageList';
+import MicrosoftMessageComposer from '../components/inbox/MicrosoftMessageComposer';
+import ConnectedAccountsPanel from '../components/inbox/ConnectedAccountsPanel';
+import MainTabs from '../components/inbox/MainTabs';
 
 const InboxPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [showClientInfo, setShowClientInfo] = useState(false);
-
   return (
-    <InboxProvider>
-      <InboxContent 
-        showClientInfo={showClientInfo}
-        setShowClientInfo={setShowClientInfo}
-        navigate={navigate}
-      />
-    </InboxProvider>
+    <MicrosoftInboxProvider>
+      <InboxContent />
+    </MicrosoftInboxProvider>
   );
 };
 
-interface InboxContentProps {
-  showClientInfo: boolean;
-  setShowClientInfo: (show: boolean) => void;
-  navigate: any;
-}
-
-const InboxContent: React.FC<InboxContentProps> = ({ 
-  showClientInfo, 
-  setShowClientInfo,
-  navigate
-}) => {
+const InboxContent: React.FC = () => {
   const { 
-    threads, 
     activeThread, 
-    clientInfo,
-    viewClientInfo
-  } = useInbox();
+    refreshThreads,
+    loading,
+    activeMainTab
+  } = useMicrosoftInbox();
 
-  const activeThreadData = threads.find(t => t.id === activeThread);
+  const [showComposer, setShowComposer] = useState(false);
 
-  const handleViewClientInfo = () => {
-    if (activeThreadData?.contact.isRegistered && activeThreadData?.contact.clientDetails) {
-      viewClientInfo(activeThreadData.contact.clientDetails);
-      setShowClientInfo(true);
-    }
+  const handleRefresh = () => {
+    refreshThreads();
   };
 
-  const handleCloseClientInfo = () => {
-    setShowClientInfo(false);
-    viewClientInfo(null);
+  const handleNewEmail = () => {
+    setShowComposer(true);
   };
 
-  const handleViewFullProfile = (clientId: string) => {
-    navigate(`/pacientes/${clientId}`);
+  const handleCloseComposer = () => {
+    setShowComposer(false);
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 p-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Bandeja de Entrada</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Gestiona todas tus conversaciones en un solo lugar
+            Gestiona tus correos de Microsoft y chats en un solo lugar
           </p>
         </div>
         
@@ -108,93 +66,40 @@ const InboxContent: React.FC<InboxContentProps> = ({
           <Button
             variant="outline"
             icon={<RefreshCw size={18} />}
+            onClick={handleRefresh}
+            disabled={loading}
           >
-            Actualizar
+            {loading ? 'Actualizando...' : 'Actualizar'}
           </Button>
+          
+          {activeMainTab === 'emails' && (
+            <Button
+              variant="primary"
+              icon={<Plus size={18} />}
+              onClick={handleNewEmail}
+            >
+              Nuevo Correo
+            </Button>
+          )}
         </div>
       </div>
 
+      {/* Connected Accounts Panel */}
+      <ConnectedAccountsPanel />
+
       {/* Inbox Layout */}
-      <div className="flex-1 bg-white rounded-lg shadow overflow-hidden min-h-0">
+      <div className="flex-1 bg-white rounded-lg shadow overflow-hidden mx-6 mb-6">
         <div className="flex h-full">
           {/* Thread List */}
-          <ThreadList />
+          <div className="w-80 flex flex-col border-r border-gray-200">
+            <MainTabs />
+            <MicrosoftThreadList />
+          </div>
           
           {/* Message Area */}
           <div className="hidden md:flex flex-col flex-1 min-w-0">
             {activeThread ? (
-              <>
-                {/* Conversation Header */}
-                <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-                  <div className="flex items-center">
-                    {activeThreadData?.contact.avatar ? (
-                      <img
-                        src={activeThreadData.contact.avatar}
-                        alt={activeThreadData.contact.name}
-                        className="h-10 w-10 rounded-full"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-500 font-medium">
-                          {activeThreadData?.contact.name[0]}
-                        </span>
-                      </div>
-                    )}
-                    <div className="ml-3">
-                      <div className="flex items-center">
-                        <h3 className="text-sm font-medium text-gray-900">
-                          {activeThreadData?.contact.name}
-                        </h3>
-                        {activeThreadData?.contact.isRegistered ? (
-                          <button
-                            onClick={handleViewClientInfo}
-                            className="ml-2 text-green-500 hover:text-green-600"
-                            title="Cliente verificado - Ver información"
-                          >
-                            <UserCheck size={16} />
-                          </button>
-                        ) : (
-                          <span className="ml-2 text-gray-400" title="No es cliente">
-                            <UserX size={16} />
-                          </span>
-                        )}
-                        <div className="ml-2">
-                          <ChannelBadge channel={activeThreadData?.channel || 'whatsapp'} size="sm" />
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        {activeThreadData?.contact.handle}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    {activeThreadData?.channel === 'whatsapp' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        icon={<Phone size={16} />}
-                        className="mr-2"
-                      >
-                        Llamar
-                      </Button>
-                    )}
-                    
-                    <button className="text-gray-400 hover:text-gray-500">
-                      <MoreVertical size={20} />
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Message List */}
-                <MessageList />
-                
-                {/* Message Composer */}
-                <MessageComposer 
-                  threadId={activeThread} 
-                  channel={activeThreadData?.channel || 'whatsapp'}
-                />
-              </>
+              <MicrosoftMessageList />
             ) : (
               <div className="flex-1 flex items-center justify-center bg-gray-50">
                 <div className="text-center">
@@ -203,23 +108,38 @@ const InboxContent: React.FC<InboxContentProps> = ({
                     Selecciona una conversación
                   </h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    Elige un mensaje de la lista para ver la conversación completa
+                    Elige un {activeMainTab === 'emails' ? 'correo' : 'chat'} de la lista para ver la conversación completa
                   </p>
                 </div>
               </div>
             )}
           </div>
-          
-          {/* Client Info Panel */}
-          {showClientInfo && clientInfo && (
-            <ClientInfoPanel 
-              clientInfo={clientInfo}
-              onClose={handleCloseClientInfo}
-              onViewFullProfile={handleViewFullProfile}
-            />
-          )}
         </div>
       </div>
+
+      {/* Email Composer Modal */}
+      {showComposer && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">
+                Nuevo Correo
+              </h3>
+              <button
+                onClick={handleCloseComposer}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+              <MicrosoftMessageComposer onClose={handleCloseComposer} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

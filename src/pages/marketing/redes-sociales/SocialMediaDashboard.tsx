@@ -29,6 +29,9 @@ import twitterAuthService from '../../../services/twitterAuth';
 import tiktokAuthService from '../../../services/tiktokAuth';
 import linkedinAuthService from '../../../services/linkedinAuth';
 import youtubeAuthService from '../../../services/youtubeAuth';
+import facebookAuthService from '../../../services/facebookAuth';
+import instagramAuthService from '../../../services/instagramAuth';
+import microsoftAuthService from '../../../services/microsoftAuth';
 import { useToastContext } from '../../../context/ToastContext';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -49,7 +52,7 @@ interface SocialMetrics {
 
 interface SocialAccount {
   id: string;
-  platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok';
+  platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok' | 'microsoft';
   handle: string;
   url: string;
   connected: boolean;
@@ -74,7 +77,7 @@ interface Post {
 interface ConnectedAccount {
   _id: string;
   userId: string;
-  platform: 'twitter' | 'facebook' | 'instagram' | 'linkedin' | 'youtube' | 'tiktok';
+  platform: 'twitter' | 'facebook' | 'instagram' | 'linkedin' | 'youtube' | 'tiktok' | 'microsoft';
   username: string;
   name: string;
   accessToken: string;
@@ -89,6 +92,7 @@ interface ConnectedAccount {
   profileImageUrl?: string;
   verified?: boolean;
   accountCreatedAt?: string;
+  email?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -321,6 +325,21 @@ const SocialMediaDashboard: React.FC = () => {
   const getYouTubeChannelInfo = useAction(api.youtube.getYouTubeChannelInfo);
   const saveYouTubeAccount = useMutation(api.youtube.saveYouTubeAccount);
   
+  // Facebook Convex mutations and actions
+  const exchangeFacebookToken = useAction(api.facebook.exchangeFacebookToken);
+  const getFacebookUserInfo = useAction(api.facebook.getFacebookUserInfo);
+  const saveFacebookAccount = useMutation(api.facebook.saveFacebookAccount);
+  
+  // Instagram Convex mutations and actions
+  const exchangeInstagramToken = useAction(api.instagram.exchangeInstagramToken);
+  const getInstagramUserInfo = useAction(api.instagram.getInstagramUserInfo);
+  const saveInstagramAccount = useMutation(api.instagram.saveInstagramAccount);
+  
+  // Microsoft Convex mutations and actions
+  const exchangeMicrosoftToken = useAction(api.microsoft.exchangeMicrosoftToken);
+  const getMicrosoftUserInfo = useAction(api.microsoft.getMicrosoftUserInfo);
+  const saveMicrosoftAccount = useMutation(api.microsoft.saveMicrosoftAccount);
+  
   // Convex queries
   const connectedAccounts = useQuery(api.twitter.getConnectedAccounts, { userId: "current-user" });
 
@@ -329,6 +348,9 @@ const SocialMediaDashboard: React.FC = () => {
   const [twitterCallbackProcessed, setTwitterCallbackProcessed] = useState(false);
   const [linkedinCallbackProcessed, setLinkedinCallbackProcessed] = useState(false);
   const [youtubeCallbackProcessed, setYoutubeCallbackProcessed] = useState(false);
+  const [facebookCallbackProcessed, setFacebookCallbackProcessed] = useState(false);
+  const [instagramCallbackProcessed, setInstagramCallbackProcessed] = useState(false);
+  const [microsoftCallbackProcessed, setMicrosoftCallbackProcessed] = useState(false);
   const [isUpdatingAccounts, setIsUpdatingAccounts] = useState(false);
   const [hasInitialUpdate, setHasInitialUpdate] = useState(false);
 
@@ -346,6 +368,9 @@ const SocialMediaDashboard: React.FC = () => {
         const tiktokState = localStorage.getItem('tiktok_auth_state');
         const linkedinState = localStorage.getItem('linkedin_auth_state');
         const youtubeState = localStorage.getItem('youtube_auth_state');
+        const facebookState = localStorage.getItem('facebook_auth_state');
+        const instagramState = localStorage.getItem('instagram_auth_state');
+        const microsoftState = localStorage.getItem('microsoft_auth_state');
         
         if (state === twitterState && !twitterCallbackProcessed) {
           handleTwitterCallback();
@@ -355,10 +380,16 @@ const SocialMediaDashboard: React.FC = () => {
           handleLinkedInCallback();
         } else if (state === youtubeState && !youtubeCallbackProcessed) {
           handleYouTubeCallback();
+        } else if (state === facebookState && !facebookCallbackProcessed) {
+          handleFacebookCallback();
+        } else if (state === instagramState && !instagramCallbackProcessed) {
+          handleInstagramCallback();
+        } else if (state === microsoftState && !microsoftCallbackProcessed) {
+          handleMicrosoftCallback();
         }
       }, 100);
     }
-  }, [twitterCallbackProcessed, tiktokCallbackProcessed, linkedinCallbackProcessed, youtubeCallbackProcessed]);
+  }, [twitterCallbackProcessed, tiktokCallbackProcessed, linkedinCallbackProcessed, youtubeCallbackProcessed, facebookCallbackProcessed, instagramCallbackProcessed]);
 
   // Actualizar datos de cuentas conectadas al cargar la página (solo una vez)
   useEffect(() => {
@@ -785,6 +816,296 @@ const SocialMediaDashboard: React.FC = () => {
     }
   };
 
+  const handleFacebookCallback = async () => {
+    if (facebookCallbackProcessed) return;
+    setFacebookCallbackProcessed(true);
+    try {
+      setIsConnecting(true);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+
+      if (error) {
+        // Limpiar la URL inmediatamente para evitar múltiples procesamientos
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        let errorMessage = error;
+        if (errorDescription) {
+          const decodedDescription = decodeURIComponent(errorDescription);
+          errorMessage = `${error}: ${decodedDescription}`;
+        }
+        
+        throw new Error(`Error en autenticación: ${errorMessage}`);
+      }
+
+      if (!code || !state) {
+        throw new Error('Faltan parámetros de autorización');
+      }
+
+      // Verificar el state
+      const savedState = localStorage.getItem('facebook_auth_state');
+      if (state !== savedState) {
+        throw new Error(`State no coincide. Recibido: ${state}, Guardado: ${savedState}`);
+      }
+
+      // Limpiar localStorage y la URL ANTES de continuar para evitar múltiples ejecuciones
+      localStorage.removeItem('facebook_auth_state');
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Intercambiar código por token usando Convex
+      const authResponse = await exchangeFacebookToken({ code });
+      
+      if (authResponse && authResponse.access_token) {
+        console.log('Facebook callback - Token obtenido:', authResponse.access_token.substring(0, 20) + '...');
+        
+        // Obtener información del usuario
+        const userInfo = await getFacebookUserInfo({ accessToken: authResponse.access_token });
+        
+        if (userInfo) {
+          console.log('Facebook callback - User info:', userInfo);
+          
+          // Determinar si el usuario tiene una página o es solo perfil personal
+          const hasPage = userInfo.hasPage;
+          const userData = userInfo.user;
+          const pageData = userInfo.page;
+          
+          // Verificar si el usuario tiene páginas de negocio
+          if (!hasPage || !pageData) {
+            setShowAccountModal(false);
+            showError('Esta cuenta de Facebook no tiene páginas de negocio. Por favor, crea una página de Facebook para tu negocio y vuelve a intentarlo. Solo se pueden conectar páginas de Facebook, no perfiles personales.');
+            return;
+          }
+          
+          // Usar datos de página ya que verificamos que existe
+          const accountData = {
+            username: pageData.username || pageData.name || userData.name,
+            name: userData.name,
+            followers: pageData.followers_count || 0,
+            following: pageData.fan_count || 0,
+            posts: pageData.published_posts.data.length || 0, // Se puede obtener con otra llamada si es necesario
+            profileImageUrl: pageData.picture?.data?.url || userData.picture?.data?.url || '',
+            verified: pageData.verification_status === 'verified' || false,
+            accountCreatedAt: pageData.created_time || userData.created_time || new Date().toISOString()
+          };
+          
+          await saveFacebookAccount({
+            userId: "current-user",
+            username: accountData.username,
+            name: accountData.name,
+            accessToken: authResponse.access_token,
+            refreshToken: authResponse.refresh_token,
+            expiresAt: Date.now() + (authResponse.expires_in * 1000),
+            followers: accountData.followers,
+            following: accountData.following,
+            posts: accountData.posts,
+            profileImageUrl: accountData.profileImageUrl,
+            verified: accountData.verified,
+            accountCreatedAt: accountData.accountCreatedAt
+          });
+          
+          setShowAccountModal(false);
+          showSuccess('Cuenta de Facebook conectada exitosamente');
+        }
+      } else {
+        showError('No se pudo obtener el token de acceso de Facebook');
+      }
+    } catch (error) {
+      console.error('Error conectando Facebook:', error);
+      showError(`Error conectando la cuenta de Facebook: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectFacebook = async () => {
+    try {
+      await facebookAuthService.initiateAuth();
+    } catch (error) {
+      console.error('Error iniciando autenticación de Facebook:', error);
+      showError('Error iniciando la autenticación de Facebook');
+    }
+  };
+
+  const handleInstagramCallback = async () => {
+    if (instagramCallbackProcessed) return;
+    setInstagramCallbackProcessed(true);
+    try {
+      setIsConnecting(true);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+
+      if (error) {
+        // Limpiar la URL inmediatamente para evitar múltiples procesamientos
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        let errorMessage = error;
+        if (errorDescription) {
+          const decodedDescription = decodeURIComponent(errorDescription);
+          errorMessage = `${error}: ${decodedDescription}`;
+        }
+        
+        throw new Error(`Error en autenticación: ${errorMessage}`);
+      }
+
+      if (!code || !state) {
+        throw new Error('Faltan parámetros de autorización');
+      }
+
+      // Verificar el state
+      const savedState = localStorage.getItem('instagram_auth_state');
+      if (state !== savedState) {
+        throw new Error(`State no coincide. Recibido: ${state}, Guardado: ${savedState}`);
+      }
+
+      // Limpiar localStorage y la URL ANTES de continuar para evitar múltiples ejecuciones
+      localStorage.removeItem('instagram_auth_state');
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Intercambiar código por token usando Convex
+      const authResponse = await exchangeInstagramToken({ code });
+      
+      if (authResponse && authResponse.access_token) {
+        console.log('Instagram callback - Token obtenido:', authResponse.access_token.substring(0, 20) + '...');
+        
+        // Obtener información del usuario
+        const userInfo = await getInstagramUserInfo({ accessToken: authResponse.access_token });
+        
+        if (userInfo) {
+          console.log('Instagram callback - User info:', userInfo);
+          
+          const userData = userInfo.user;
+          
+          await saveInstagramAccount({
+            userId: "current-user",
+            username: userData.username || 'instagram_user',
+            name: userData.username || 'Instagram User',
+            accessToken: authResponse.access_token,
+            refreshToken: authResponse.refresh_token,
+            expiresAt: Date.now() + (authResponse.expires_in * 1000),
+            followers: userData.followers_count || 0,
+            following: userData.follows_count || 0,
+            posts: userData.media_count || 0,
+            profileImageUrl: '', // Instagram no proporciona URL de imagen en este endpoint
+            verified: false, // Instagram no tiene verificación como Twitter
+            accountCreatedAt: new Date().toISOString()
+          });
+          
+          setShowAccountModal(false);
+          showSuccess('Cuenta de Instagram conectada exitosamente');
+        }
+      } else {
+        showError('No se pudo obtener el token de acceso de Instagram');
+      }
+    } catch (error) {
+      console.error('Error conectando Instagram:', error);
+      showError(`Error conectando la cuenta de Instagram: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectInstagram = async () => {
+    try {
+      await instagramAuthService.initiateAuth();
+    } catch (error) {
+      console.error('Error iniciando autenticación de Instagram:', error);
+      showError('Error iniciando la autenticación de Instagram');
+    }
+  };
+
+  const handleMicrosoftCallback = async () => {
+    if (microsoftCallbackProcessed) return;
+    setMicrosoftCallbackProcessed(true);
+    try {
+      setIsConnecting(true);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+
+      if (error) {
+        // Limpiar la URL inmediatamente para evitar múltiples procesamientos
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        let errorMessage = error;
+        if (errorDescription) {
+          const decodedDescription = decodeURIComponent(errorDescription);
+          errorMessage = `${error}: ${decodedDescription}`;
+        }
+        
+        throw new Error(`Error en autenticación: ${errorMessage}`);
+      }
+
+      if (!code || !state) {
+        throw new Error('Faltan parámetros de autorización');
+      }
+
+      // Verificar el state
+      const savedState = localStorage.getItem('microsoft_auth_state');
+      if (state !== savedState) {
+        throw new Error(`State no coincide. Recibido: ${state}, Guardado: ${savedState}`);
+      }
+
+      // Limpiar localStorage y la URL ANTES de continuar para evitar múltiples ejecuciones
+      localStorage.removeItem('microsoft_auth_state');
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Intercambiar código por token usando Convex
+      const authResponse = await exchangeMicrosoftToken({ code });
+      
+      if (authResponse && authResponse.access_token) {
+        console.log('Microsoft callback - Token obtenido:', authResponse.access_token.substring(0, 20) + '...');
+        
+        // Obtener información del usuario
+        const userInfo = await getMicrosoftUserInfo({ accessToken: authResponse.access_token });
+        
+        if (userInfo) {
+          console.log('Microsoft callback - User info:', userInfo);
+          
+          await saveMicrosoftAccount({
+            userId: "current-user",
+            username: userInfo.userPrincipalName || userInfo.displayName || 'microsoft_user',
+            name: userInfo.displayName || userInfo.userPrincipalName || 'Microsoft User',
+            accessToken: authResponse.access_token,
+            refreshToken: authResponse.refresh_token,
+            expiresAt: Date.now() + (authResponse.expires_in * 1000),
+            email: userInfo.mail || userInfo.userPrincipalName || '',
+            profileImageUrl: '', // Microsoft no proporciona URL de imagen en este endpoint
+            accountCreatedAt: new Date().toISOString()
+          });
+          
+          setShowAccountModal(false);
+          showSuccess('Cuenta de Microsoft conectada exitosamente');
+        }
+      } else {
+        showError('No se pudo obtener el token de acceso de Microsoft');
+      }
+    } catch (error) {
+      console.error('Error conectando Microsoft:', error);
+      showError(`Error conectando la cuenta de Microsoft: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectMicrosoft = async () => {
+    try {
+      await microsoftAuthService.initiateAuth();
+    } catch (error) {
+      console.error('Error iniciando autenticación de Microsoft:', error);
+      showError('Error iniciando la autenticación de Microsoft');
+    }
+  };
+
   // Función para reconectar una cuenta específica
   const handleReconnectAccount = async (platform: string) => {
     if (platform === 'tiktok') {
@@ -795,6 +1116,12 @@ const SocialMediaDashboard: React.FC = () => {
       await handleConnectLinkedIn();
     } else if (platform === 'youtube') {
       await handleConnectYouTube();
+    } else if (platform === 'facebook') {
+      await handleConnectFacebook();
+    } else if (platform === 'instagram') {
+      await handleConnectInstagram();
+    } else if (platform === 'microsoft') {
+      await handleConnectMicrosoft();
     }
   };
 
@@ -844,6 +1171,7 @@ const SocialMediaDashboard: React.FC = () => {
           } else if (account.platform === 'twitter') {
             console.log(`Actualizando datos de Twitter para: ${account.username}`);
             const userInfo = await getTwitterUserInfo({ accessToken: account.accessToken });
+            console.log('User info:', userInfo);
             
             if (userInfo && userInfo.data) {
               const publicMetrics = userInfo.data.public_metrics || {};
@@ -922,6 +1250,96 @@ const SocialMediaDashboard: React.FC = () => {
               await disconnectAccount({ accountId: account._id as Id<"socialAccounts"> });
               showError(`La cuenta de YouTube ${account.username} ya no tiene un canal. Por favor, reconecta la cuenta después de crear un canal.`);
             }
+          } else if (account.platform === 'facebook') {
+            console.log(`Actualizando datos de Facebook para: ${account.username}`);
+            const userInfo = await getFacebookUserInfo({ accessToken: account.accessToken });
+            
+            if (userInfo) {
+              // Determinar si el usuario tiene una página o es solo perfil personal
+              const hasPage = userInfo.hasPage;
+              const userData = userInfo.user;
+              const pageData = userInfo.page;
+              
+              // Verificar si el usuario tiene páginas de negocio
+              if (!hasPage || !pageData) {
+                // Marcar como desconectada y mostrar error
+                await disconnectAccount({ accountId: account._id as Id<"socialAccounts"> });
+                showError(`La cuenta de Facebook ${account.username} ya no tiene páginas de negocio. Por favor, reconecta la cuenta después de crear una página de Facebook para tu negocio.`);
+                continue;
+              }
+              
+              // Usar datos de página ya que verificamos que existe
+              const accountData = {
+                username: pageData.username || pageData.name || userData.name,
+                name: userData.name,
+                followers: pageData.followers_count || 0,
+                following: pageData.fan_count || 0,
+                posts: pageData.published_posts.data.length || 0, // Se puede obtener con otra llamada si es necesario
+                profileImageUrl: pageData.picture?.data?.url || userData.picture?.data?.url || account.profileImageUrl || '',
+                verified: pageData.verification_status === 'verified' || account.verified || false,
+                accountCreatedAt: pageData.created_time || userData.created_time || account.accountCreatedAt || new Date().toISOString()
+              };
+              
+              await saveFacebookAccount({
+                userId: account.userId,
+                username: accountData.username,
+                name: accountData.name,
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                expiresAt: account.expiresAt,
+                followers: accountData.followers,
+                following: accountData.following,
+                posts: accountData.posts,
+                profileImageUrl: accountData.profileImageUrl,
+                verified: accountData.verified,
+                accountCreatedAt: accountData.accountCreatedAt
+              });
+              
+              console.log(`Datos actualizados para Facebook: ${account.username}`);
+            }
+          } else if (account.platform === 'instagram') {
+            console.log(`Actualizando datos de Instagram para: ${account.username}`);
+            const userInfo = await getInstagramUserInfo({ accessToken: account.accessToken });
+            
+            if (userInfo) {
+              const userData = userInfo.user;
+              
+              await saveInstagramAccount({
+                userId: account.userId,
+                username: userData.username || account.username,
+                name: userData.username || account.name,
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                expiresAt: account.expiresAt,
+                followers: userData.followers_count || account.followers || 0,
+                following: userData.follows_count || account.following || 0,
+                posts: userData.media_count || account.posts || 0,
+                profileImageUrl: account.profileImageUrl || '',
+                verified: account.verified || false,
+                accountCreatedAt: account.accountCreatedAt || new Date().toISOString()
+              });
+              
+              console.log(`Datos actualizados para Instagram: ${account.username}`);
+            }
+          } else if (account.platform === 'microsoft') {
+            console.log(`Actualizando datos de Microsoft para: ${account.username}`);
+            const userInfo = await getMicrosoftUserInfo({ accessToken: account.accessToken });
+            
+            if (userInfo) {
+              await saveMicrosoftAccount({
+                userId: account.userId,
+                username: userInfo.userPrincipalName || userInfo.displayName || account.username,
+                name: userInfo.displayName || userInfo.userPrincipalName || account.name,
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                expiresAt: account.expiresAt,
+                email: userInfo.mail || userInfo.userPrincipalName || account.email || '',
+                profileImageUrl: account.profileImageUrl || '',
+                accountCreatedAt: account.accountCreatedAt || new Date().toISOString()
+              });
+              
+              console.log(`Datos actualizados para Microsoft: ${account.username}`);
+            }
           }
         } catch (error) {
           console.error(`Error actualizando ${account.platform}:`, error);
@@ -987,7 +1405,16 @@ const SocialMediaDashboard: React.FC = () => {
     twitter: { icon: <Twitter size={20} />, color: 'text-blue-400', bgColor: 'bg-blue-50' },
     linkedin: { icon: <Linkedin size={20} />, color: 'text-blue-800', bgColor: 'bg-blue-50' },
     youtube: { icon: <Youtube size={20} />, color: 'text-red-600', bgColor: 'bg-red-100' },
-    tiktok: { icon: <TikTok size={20} />, color: 'text-black', bgColor: 'bg-black' }
+    tiktok: { icon: <TikTok size={20} />, color: 'text-black', bgColor: 'bg-black' },
+    microsoft: { 
+      icon: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+        </svg>
+      ), 
+      color: 'text-blue-600', 
+      bgColor: 'bg-blue-50' 
+    }
   };
 
   // Status styles
@@ -1218,14 +1645,21 @@ const SocialMediaDashboard: React.FC = () => {
                       <div className="text-center">
                         <div className="font-medium text-gray-900">{account.followers?.toLocaleString()}</div>
                         <div className="text-gray-500">
-                          Seguidores
+                          {account.platform === 'facebook' ? 'Seguidores' : 'Seguidores'}
                         </div>
                       </div>
                       {account.platform === 'youtube' ? (
                         account.views !== undefined && (
                           <div className="text-center">
                             <div className="font-medium text-gray-900">{account.views?.toLocaleString()}</div>
-                            <div className="text-gray-500">{account.platform === 'youtube' ? 'Visitas' : 'Seguidores'}</div>
+                            <div className="text-gray-500">Visitas</div>
+                          </div>
+                        )
+                      ) : account.platform === 'facebook' ? (
+                        account.following !== undefined && (
+                          <div className="text-center">
+                            <div className="font-medium text-gray-900">{account.following?.toLocaleString()}</div>
+                            <div className="text-gray-500">Fans</div>
                           </div>
                         )
                       ) : (
@@ -1239,7 +1673,9 @@ const SocialMediaDashboard: React.FC = () => {
                       {account.posts !== undefined && (
                         <div className="text-center">
                           <div className="font-medium text-gray-900">{account.posts?.toLocaleString()}</div>
-                          <div className="text-gray-500">Publicaciones</div>
+                          <div className="text-gray-500">
+                            {account.platform === 'facebook' ? 'Publicaciones' : 'Publicaciones'}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1295,6 +1731,7 @@ const SocialMediaDashboard: React.FC = () => {
               <option value="linkedin">LinkedIn</option>
               <option value="youtube">YouTube</option>
               <option value="tiktok">TikTok</option>
+              <option value="microsoft">Microsoft</option>
             </select>
             <select
               className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -1725,16 +2162,60 @@ const SocialMediaDashboard: React.FC = () => {
                     </span>
                   </button>
                   
+                  {/* Botón específico para Facebook */}
+                  <button
+                    onClick={handleConnectFacebook}
+                    disabled={isConnecting}
+                    className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="p-2 rounded-full bg-blue-50">
+                      <Facebook size={20} className="text-blue-600" />
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {isConnecting ? 'Conectando...' : 'Conectar con Facebook'}
+                    </span>
+                  </button>
+                  
+                  {/* Botón específico para Instagram */}
+                  <button
+                    onClick={handleConnectInstagram}
+                    disabled={isConnecting}
+                    className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="p-2 rounded-full bg-pink-50">
+                      <Instagram size={20} className="text-pink-600" />
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {isConnecting ? 'Conectando...' : 'Conectar con Instagram'}
+                    </span>
+                  </button>
+                  
+                  {/* Botón específico para Microsoft */}
+                  <button
+                    onClick={handleConnectMicrosoft}
+                    disabled={isConnecting}
+                    className="w-full flex items-center p-3 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="p-2 rounded-full bg-blue-50">
+                      <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+                      </svg>
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {isConnecting ? 'Conectando...' : 'Conectar con Microsoft'}
+                    </span>
+                  </button>
+                  
                   {/* Otros botones deshabilitados por ahora */}
                   {Object.entries(platformConfig).map(([platform, config]) => {
-                    if (platform === 'twitter' || platform === 'tiktok' || platform === 'linkedin' || platform === 'youtube') return null; // Ya incluidos arriba
+                    if (platform === 'twitter' || platform === 'tiktok' || platform === 'linkedin' || platform === 'youtube' || platform === 'facebook' || platform === 'instagram' || platform === 'microsoft') return null; // Ya incluidos arriba
                     return (
                       <button
                         key={platform}
                         disabled
                         className="w-full flex items-center p-3 border rounded-lg opacity-50 cursor-not-allowed"
                       >
-                        <div className={`p-2 rounded-full ${platform === 'instagram' ? 'bg-pink-100' : platform === 'facebook' ? 'bg-blue-100' : 'bg-red-100'}`}>
+                        <div className={`p-2 rounded-full ${platform === 'instagram' ? 'bg-pink-100' : 'bg-red-100'}`}>
                           {config.icon}
                         </div>
                         <span className="ml-3 text-sm font-medium text-gray-900 capitalize">

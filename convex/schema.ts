@@ -1095,6 +1095,7 @@ export default defineSchema({
       v.literal("linkedin"),
       v.literal("youtube"),
       v.literal("tiktok"),
+      v.literal("microsoft"),
     ),
     username: v.string(),
     name: v.string(),
@@ -1110,6 +1111,7 @@ export default defineSchema({
     profileImageUrl: v.optional(v.string()),
     verified: v.optional(v.boolean()),
     accountCreatedAt: v.optional(v.string()),
+    email: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
