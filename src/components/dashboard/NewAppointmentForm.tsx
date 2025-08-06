@@ -1,30 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Calendar, Clock, User, Stethoscope, Users } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { X, Search, Calendar, Clock, User } from 'lucide-react';
 import Button from '../common/Button';
 import Input from '../common/Input';
-import Card from '../common/Card';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Id } from '../../../convex/_generated/dataModel';
+import { Id, Doc } from '../../../convex/_generated/dataModel';
+import { FunctionReturnType } from 'convex/server';
 
 interface NewAppointmentFormProps {
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Omit<Doc<"appointments">, "_id" | "createdAt" | "updatedAt" | "_creationTime">) => void;
 }
 
 const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubmit }) => {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPatientPet, setSelectedPatientPet] = useState<any>(null);
+  const [selectedPatientPet, setSelectedPatientPet] = useState<NonNullable<FunctionReturnType<typeof api.appointments.searchPatientsAndPets>[number]> | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<Doc<"appointments">>>({
     date: new Date().toISOString().split('T')[0],
-    time: '09:00',
+    time: '09:00', 
     duration: 30,
     serviceType: '',
     consultationType: 'normal',
-    employeeId: '',
+    employeeId: '' as Id<"employees">,
     notes: ''
   });
 
@@ -32,14 +30,13 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
   const searchResults = useQuery(api.appointments.searchPatientsAndPets, 
     searchTerm.length >= 2 ? { searchTerm } : "skip"
   ) || [];
-  const doctors = useQuery(api.doctors.getDoctors) || [];
   const createAppointment = useMutation(api.appointments.createAppointment);
 
   useEffect(() => {
     setShowSearchResults(searchTerm.length >= 2);
   }, [searchTerm]);
 
-  const handlePatientPetSelect = (patientPet: any) => {
+    const handlePatientPetSelect = (patientPet: NonNullable<FunctionReturnType<typeof api.appointments.searchPatientsAndPets>[number]>) => {
     setSelectedPatientPet(patientPet);
     setSearchTerm('');
     setShowSearchResults(false);
@@ -53,15 +50,15 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     }
 
     try {
-      const appointmentData = {
-        petId: selectedPatientPet.petId as Id<"pets">,
-        consultationType: formData.consultationType as any,
-        serviceType: formData.serviceType as any,
-        employeeId: formData.employeeId as Id<"employees">,
-        date: formData.date,
-        time: formData.time,
-        duration: formData.duration,
-        status: 'pending' as any,
+      const appointmentData: Omit<Doc<"appointments">, "_id" | "createdAt" | "updatedAt" | "_creationTime"> = {
+        petId: selectedPatientPet.petId || '' as Id<"pets">,
+        consultationType: formData.consultationType || 'normal',
+        serviceType: formData.serviceType || '',
+        employeeId: formData.employeeId || '' as Id<"employees">,
+        date: formData.date || '',
+        time: formData.time || '',
+        duration: formData.duration || 0,
+        status: 'pending',
         notes: formData.notes || undefined
       };
 
@@ -217,7 +214,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
               </label>
               <select
                 value={formData.consultationType}
-                onChange={(e) => setFormData(prev => ({ ...prev, consultationType: e.target.value }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, consultationType: e.target.value as "emergency" | "normal" | "insurance" }))}
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
                 {consultationTypes.map(type => (
@@ -234,7 +231,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
               <select
                 required
                 value={formData.employeeId}
-                onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value as Id<"employees"> }))}
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
                 <option value="">Seleccionar especialista</option>

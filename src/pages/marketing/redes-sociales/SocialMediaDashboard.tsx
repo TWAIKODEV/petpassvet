@@ -378,7 +378,7 @@ const SocialMediaDashboard: React.FC = () => {
         });
       }
     }
-  }, [connectedAccounts?.length, isUpdatingAccounts, hasInitialUpdate, updateAccounts]); // Solo se ejecuta cuando cambia el número de cuentas
+  }, [connectedAccounts?.length, isUpdatingAccounts, hasInitialUpdate, updateAccounts, connectedAccounts]); // Solo se ejecuta cuando cambia el número de cuentas
 
   // Filter posts based on search term, platform, and status
   const filteredPosts = mockPosts.filter(post => {
