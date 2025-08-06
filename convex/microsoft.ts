@@ -7,7 +7,7 @@ export const exchangeMicrosoftToken = action({
   args: {
     code: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { code } = args;
     
     const clientId = process.env.MS_CLIENT_ID;
@@ -73,7 +73,7 @@ export const getMicrosoftUserInfo = action({
   args: {
     accessToken: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { accessToken } = args;
 
     try {
@@ -200,16 +200,6 @@ export const disconnectAccount = mutation({
   },
 });
 
-// Función de prueba para verificar que las actions funcionan
-export const testAction = action({
-  args: {},
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  handler: async (_ctx, _args) => {
-    console.log('Test action ejecutada correctamente');
-    return { success: true, message: 'Action funciona correctamente' };
-  },
-}); 
-
 // Obtener correos recibidos de Microsoft
 export const getMicrosoftEmails = action({
   args: {
@@ -217,7 +207,7 @@ export const getMicrosoftEmails = action({
     top: v.optional(v.number()),
     skip: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { accessToken, top = 50, skip = 0 } = args;
 
     try {
@@ -283,7 +273,7 @@ export const sendMicrosoftEmail = action({
       contentBytes: v.string()
     }))),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { 
       accessToken, 
       toRecipients, 
@@ -399,7 +389,7 @@ export const replyToMicrosoftEmail = action({
     messageId: v.string(),
     body: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { accessToken, messageId, body } = args;
 
     try {
@@ -435,7 +425,7 @@ export const getMicrosoftMessageDetails = action({
     accessToken: v.string(),
     messageId: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { accessToken, messageId } = args;
 
     try {
@@ -466,7 +456,7 @@ export const markMicrosoftEmailAsRead = action({
     accessToken: v.string(),
     messageId: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { accessToken, messageId } = args;
 
     try {
@@ -548,7 +538,7 @@ export const getMicrosoftSentEmails = action({
     top: v.optional(v.number()),
     skip: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { accessToken, top = 50, skip = 0 } = args;
 
     try {
