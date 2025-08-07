@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Calendar, Clock, User } from 'lucide-react';
 import Button from '../common/Button';
 import Input from '../common/Input';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id, Doc } from '../../../convex/_generated/dataModel';
 import { FunctionReturnType } from 'convex/server';
+import { useToastContext } from '../../context/ToastContext';
+import { getTodayFormatted } from '../../utils/dateUtils';
 
 interface NewAppointmentFormProps {
   onClose: () => void;
@@ -13,11 +15,13 @@ interface NewAppointmentFormProps {
 }
 
 const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubmit }) => {
+  const { showSuccess, showError } = useToastContext();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatientPet, setSelectedPatientPet] = useState<NonNullable<FunctionReturnType<typeof api.appointments.searchPatientsAndPets>[number]> | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [formData, setFormData] = useState<Partial<Doc<"appointments">>>({
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayFormatted(),
     time: '09:00', 
     duration: 30,
     serviceType: '',
@@ -25,16 +29,27 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     employeeId: '' as Id<"employees">,
     notes: ''
   });
+  const [addToCalendar, setAddToCalendar] = useState(false);
 
   // Convex queries and mutations
   const searchResults = useQuery(api.appointments.searchPatientsAndPets, 
     searchTerm.length >= 2 ? { searchTerm } : "skip"
   ) || [];
   const createAppointment = useMutation(api.appointments.createAppointment);
+  const connectedAccounts = useQuery(api.microsoft.getConnectedAccounts, { userId: "current-user" }) || [];
+  const createCalendarEvent = useAction(api.microsoft.createMicrosoftCalendarEvent);
 
   useEffect(() => {
     setShowSearchResults(searchTerm.length >= 2);
   }, [searchTerm]);
+
+  // Check if there's a valid Microsoft account connected
+  const validMicrosoftAccount = connectedAccounts?.find(
+    account => account.platform === 'microsoft' && 
+               account.connected && 
+               account.expiresAt && 
+               Date.now() < account.expiresAt
+  );
 
     const handlePatientPetSelect = (patientPet: NonNullable<FunctionReturnType<typeof api.appointments.searchPatientsAndPets>[number]>) => {
     setSelectedPatientPet(patientPet);
@@ -45,11 +60,52 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPatientPet) {
-      alert('Por favor selecciona un paciente y mascota');
+      showError('Por favor selecciona un paciente y mascota');
       return;
     }
 
     try {
+      let calendarEventId: string | undefined;
+
+      // Create calendar event first if Microsoft account is connected and user opted in
+      if (addToCalendar && validMicrosoftAccount) {
+        try {
+          const serviceTypeLabel = serviceTypes.find(type => type.value === formData.serviceType)?.label || formData.serviceType;
+          const consultationTypeLabel = consultationTypes.find(type => type.value === formData.consultationType)?.label || formData.consultationType;
+
+          // Calculate start and end times
+          const appointmentDate = new Date(`${formData.date}T${formData.time}:00`);
+          const endTime = new Date(appointmentDate.getTime() + (formData.duration! * 60000));
+
+          // Format dates for Microsoft Graph API (ISO 8601)
+          const startDateTime = appointmentDate.toISOString();
+          const endDateTime = endTime.toISOString();
+
+          const calendarResult = await createCalendarEvent({
+            accessToken: validMicrosoftAccount.accessToken!,
+            subject: `Cita Petpassvet con ${selectedPatientPet.petName}`,
+            description: `Cita de ${serviceTypeLabel} (${consultationTypeLabel})`,
+            startDateTime,
+            endDateTime,
+            timeZone: 'Europe/Madrid',
+            reminderMinutes: 1440 // 24 horas antes
+          });
+
+          // Extract the event ID from the response
+          if (calendarResult && calendarResult.event && calendarResult.event.id) {
+            calendarEventId = calendarResult.event.id;
+            console.log('Evento de calendario creado exitosamente con ID:', calendarEventId);
+          } else {
+            console.warn('No se pudo obtener el ID del evento de calendario');
+          }
+        } catch (calendarError) {
+          console.error('Error creando evento de calendario:', calendarError);
+          showError('Error al crear el evento en el calendario de Microsoft. La cita no se ha creado.');
+          return; // Stop the process if calendar creation fails
+        }
+      }
+
+      // Create the appointment in database with calendar event ID if available
       const appointmentData: Omit<Doc<"appointments">, "_id" | "createdAt" | "updatedAt" | "_creationTime"> = {
         petId: selectedPatientPet.petId || '' as Id<"pets">,
         consultationType: formData.consultationType || 'normal',
@@ -59,15 +115,24 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
         time: formData.time || '',
         duration: formData.duration || 0,
         status: 'pending',
-        notes: formData.notes || undefined
+        notes: formData.notes || undefined,
+        microsoftCalendarEventId: calendarEventId
       };
 
       await createAppointment(appointmentData);
+
+      // Show appropriate success message
+      if (addToCalendar && validMicrosoftAccount && calendarEventId) {
+        showSuccess('Cita creada exitosamente y añadida al calendario de Microsoft.');
+      } else {
+        showSuccess('Cita creada exitosamente.');
+      }
+
       onSubmit(appointmentData);
       onClose();
     } catch (error) {
       console.error('Error creating appointment:', error);
-      alert('Error al crear la cita. Por favor intenta de nuevo.');
+      showError('Error al crear la cita. Por favor intenta de nuevo.');
     }
   };
 
@@ -301,6 +366,22 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
                 placeholder="Notas adicionales sobre la cita..."
               />
             </div>
+
+            {/* Add to Calendar Checkbox */}
+            {validMicrosoftAccount && (
+              <div className="flex items-center">
+                <input
+                  id="add-to-calendar"
+                  type="checkbox"
+                  checked={addToCalendar}
+                  onChange={(e) => setAddToCalendar(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="add-to-calendar" className="ml-2 block text-sm text-gray-900">
+                  Añadir al Calendario de Microsoft
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 flex justify-end space-x-3">

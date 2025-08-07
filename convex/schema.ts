@@ -121,6 +121,7 @@ export default defineSchema({
       v.literal("scheduled"),
     ),
     notes: v.optional(v.string()),
+    microsoftCalendarEventId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

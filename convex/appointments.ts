@@ -13,6 +13,7 @@ export const createAppointment = mutation({
     duration: v.number(),
     status: v.union(v.literal("pending"), v.literal("confirmed"), v.literal("waiting"), v.literal("in_progress"), v.literal("completed"), v.literal("no_show"), v.literal("scheduled")),
     notes: v.optional(v.string()),
+    microsoftCalendarEventId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -178,29 +179,6 @@ export const getAppointment = query({
   },
 });
 
-// Actualizar una cita
-export const updateAppointment = mutation({
-  args: {
-    id: v.id("appointments"),
-    petId: v.optional(v.id("pets")),
-    consultationType: v.optional(v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency"))),
-    serviceType: v.string(),
-    employeeId: v.optional(v.id("employees")),
-    date: v.optional(v.string()),
-    time: v.optional(v.string()),
-    duration: v.optional(v.number()),
-    status: v.optional(v.union(v.literal("pending"), v.literal("confirmed"), v.literal("waiting"), v.literal("in_progress"), v.literal("completed"), v.literal("no_show"), v.literal("scheduled"))),
-    notes: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const { id, ...updateData } = args;
-    await ctx.db.patch(id, {
-      ...updateData,
-      updatedAt: Date.now(),
-    });
-  },
-});
-
 // Actualizar estado de cita
 export const updateAppointmentStatus = mutation({
   args: {
@@ -287,5 +265,33 @@ export const searchPatientsAndPets = query({
     }
 
     return results.slice(0, 10); // Limitar a 10 resultados
+  },
+});
+
+// Actualizar una cita existente
+export const updateAppointment = mutation({
+  args: {
+    appointmentId: v.id("appointments"),
+    petId: v.optional(v.id("pets")),
+    consultationType: v.optional(v.union(v.literal("normal"), v.literal("insurance"), v.literal("emergency"))),
+    serviceType: v.optional(v.string()),
+    employeeId: v.optional(v.id("employees")),
+    date: v.optional(v.string()),
+    time: v.optional(v.string()),
+    duration: v.optional(v.number()),
+    status: v.optional(v.union(v.literal("pending"), v.literal("confirmed"), v.literal("waiting"), v.literal("in_progress"), v.literal("completed"), v.literal("no_show"), v.literal("scheduled"))),
+    notes: v.optional(v.string()),
+    microsoftCalendarEventId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { appointmentId, ...updateData } = args;
+    const now = Date.now();
+    
+    const updatedAppointment = await ctx.db.patch(appointmentId, {
+      ...updateData,
+      updatedAt: now,
+    });
+    
+    return updatedAppointment;
   },
 });

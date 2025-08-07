@@ -26,7 +26,7 @@ export const exchangeMicrosoftToken = action({
       redirect_uri: redirectUri,
       client_id: clientId,
       client_secret: clientSecret,
-      scope: 'https://graph.microsoft.com/.default'
+      scope: 'openid profile email User.Read Mail.Read Mail.Send Calendars.ReadWrite'
     });
 
     try {
@@ -563,3 +563,222 @@ export const getMicrosoftSentEmails = action({
     }
   },
 }); 
+
+
+// Crear evento en el calendario de Microsoft
+export const createMicrosoftCalendarEvent = action({
+  args: {
+    accessToken: v.string(),
+    subject: v.string(),
+    description: v.string(),
+    startDateTime: v.string(),
+    endDateTime: v.string(),
+    timeZone: v.optional(v.string()),
+    reminderMinutes: v.optional(v.number()),
+  },
+  handler: async (_ctx, args) => {
+    const { 
+      accessToken, 
+      subject, 
+      description, 
+      startDateTime, 
+      endDateTime, 
+      timeZone = 'Europe/Madrid',
+      reminderMinutes = 1440 // 24 horas = 1440 minutos
+    } = args;
+
+    try {
+      const eventData = {
+        subject: subject,
+        body: {
+          contentType: 'HTML',
+          content: description
+        },
+        start: {
+          dateTime: startDateTime,
+          timeZone: timeZone
+        },
+        end: {
+          dateTime: endDateTime,
+          timeZone: timeZone
+        },
+        reminderMinutesBeforeStart: reminderMinutes,
+        isReminderOn: true
+      };
+
+      const response = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eventData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let parsedError;
+        try {
+          parsedError = JSON.parse(errorText);
+        } catch {
+          parsedError = { error: { message: errorText } };
+        }
+        
+        const errorMessage = parsedError.error?.message || errorText;
+        const errorCode = parsedError.error?.code || 'Unknown';
+        
+        console.error('Microsoft Calendar API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorCode,
+          errorMessage,
+          fullError: parsedError
+        });
+        
+        throw new Error(`Error creando evento en calendario (${errorCode}): ${errorMessage}`);
+      }
+
+      const createdEvent = await response.json();
+      console.log('Calendar event created:', createdEvent);
+      return { success: true, event: createdEvent };
+    } catch (error) {
+      console.error('Error creando evento en calendario:', error);
+      throw new Error('Error creando evento en calendario');
+    }
+  },
+});
+
+// Actualizar evento en el calendario de Microsoft
+export const updateMicrosoftCalendarEvent = action({
+  args: {
+    accessToken: v.string(),
+    eventId: v.string(),
+    subject: v.string(),
+    description: v.string(),
+    startDateTime: v.string(),
+    endDateTime: v.string(),
+    timeZone: v.optional(v.string()),
+    reminderMinutes: v.optional(v.number()),
+  },
+  handler: async (_ctx, args) => {
+    const { 
+      accessToken, 
+      eventId,
+      subject, 
+      description, 
+      startDateTime, 
+      endDateTime, 
+      timeZone = 'Europe/Madrid',
+      reminderMinutes = 1440
+    } = args;
+
+    try {
+      const eventData = {
+        subject: subject,
+        body: {
+          contentType: 'HTML',
+          content: description
+        },
+        start: {
+          dateTime: startDateTime,
+          timeZone: timeZone
+        },
+        end: {
+          dateTime: endDateTime,
+          timeZone: timeZone
+        },
+        reminderMinutesBeforeStart: reminderMinutes,
+        isReminderOn: true
+      };
+
+      const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eventData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let parsedError;
+        try {
+          parsedError = JSON.parse(errorText);
+        } catch {
+          parsedError = { error: { message: errorText } };
+        }
+        
+        const errorMessage = parsedError.error?.message || errorText;
+        const errorCode = parsedError.error?.code || 'Unknown';
+        
+        console.error('Microsoft Calendar API Error (Update):', {
+          status: response.status,
+          statusText: response.statusText,
+          errorCode,
+          errorMessage,
+          fullError: parsedError
+        });
+        
+        throw new Error(`Error actualizando evento en calendario (${errorCode}): ${errorMessage}`);
+      }
+
+      const updatedEvent = await response.json();
+      console.log('Calendar event updated:', updatedEvent);
+      return { success: true, event: updatedEvent };
+    } catch (error) {
+      console.error('Error actualizando evento en calendario:', error);
+      throw new Error('Error actualizando evento en calendario');
+    }
+  },
+});
+
+// Eliminar evento del calendario de Microsoft
+export const deleteMicrosoftCalendarEvent = action({
+  args: {
+    accessToken: v.string(),
+    eventId: v.string(),
+  },
+  handler: async (_ctx, args) => {
+    const { accessToken, eventId } = args;
+
+    try {
+      const response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let parsedError;
+        try {
+          parsedError = JSON.parse(errorText);
+        } catch {
+          parsedError = { error: { message: errorText } };
+        }
+        
+        const errorMessage = parsedError.error?.message || errorText;
+        const errorCode = parsedError.error?.code || 'Unknown';
+        
+        console.error('Microsoft Calendar API Error (Delete):', {
+          status: response.status,
+          statusText: response.statusText,
+          errorCode,
+          errorMessage,
+          fullError: parsedError
+        });
+        
+        throw new Error(`Error eliminando evento del calendario (${errorCode}): ${errorMessage}`);
+      }
+
+      console.log('Calendar event deleted successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Error eliminando evento del calendario:', error);
+      throw new Error('Error eliminando evento del calendario');
+    }
+  },
+});

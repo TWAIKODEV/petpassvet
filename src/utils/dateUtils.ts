@@ -64,3 +64,40 @@ export function formatTime(date: Date): string {
     minute: '2-digit'
   });
 }
+
+/**
+ * Utility functions for date handling
+ */
+
+/**
+ * Format a Date object to YYYY-MM-DD string in local timezone
+ * This avoids timezone issues that can cause dates to shift by one day
+ */
+export const formatDateToLocalString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Get today's date formatted as YYYY-MM-DD in local timezone
+ */
+export const getTodayFormatted = (): string => {
+  return formatDateToLocalString(new Date());
+};
+
+/**
+ * Parse a YYYY-MM-DD string to a Date object
+ */
+export const parseDateString = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+/**
+ * Check if two dates are the same day
+ */
+export const isSameDay = (date1: Date, date2: Date): boolean => {
+  return formatDateToLocalString(date1) === formatDateToLocalString(date2);
+};

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import ToastContainer from '../common/ToastContainer';
 
 const pageTitles: Record<string, string> = {
   '/': 'Inicio',
@@ -115,6 +116,9 @@ const PageLayout: React.FC = () => {
           </div>
         </main>
       </div>
+      
+      {/* Toast Container */}
+      <ToastContainer />
     </div>
   );
 };

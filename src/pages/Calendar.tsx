@@ -1,20 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, Download } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import NewAppointmentForm from '../components/dashboard/NewAppointmentForm';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { Id } from '../../convex/_generated/dataModel';
+import { useToastContext } from '../context/ToastContext';
+import { formatDateToLocalString } from '../utils/dateUtils';
 
 const CalendarPage = () => {
+  const { showSuccess, showError } = useToastContext();
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
   const [selectedDoctorFilter, setSelectedDoctorFilter] = useState('all');
+  
+  // Drag & Drop state
+  const [draggedAppointment, setDraggedAppointment] = useState<any>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverDate, setDragOverDate] = useState<Date | null>(null);
 
-  // Convex queries
+  // Convex queries and mutations
   const appointments = useQuery(api.appointments.getAppointments) || [];
   const doctors = useQuery(api.doctors.getDoctors) || [];
+  const updateAppointment = useMutation(api.appointments.updateAppointment);
+  const updateCalendarEvent = useAction(api.microsoft.updateMicrosoftCalendarEvent);
+  const connectedAccounts = useQuery(api.microsoft.getConnectedAccounts, { userId: "current-user" }) || [];
 
   // Generate calendar days
   const getDaysInMonth = (date: Date) => {
@@ -42,11 +55,12 @@ const CalendarPage = () => {
 
   // Get appointments for a specific date
   const getAppointmentsForDate = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatDateToLocalString(date);
+    
     return appointments.filter(appointment => {
       const appointmentDate = appointment.date;
       const matchesDate = appointmentDate === dateString;
-      const matchesDoctor = selectedDoctorFilter === 'all' || appointment.doctorId === selectedDoctorFilter;
+      const matchesDoctor = selectedDoctorFilter === 'all' || appointment.employeeId === selectedDoctorFilter;
       return matchesDate && matchesDoctor;
     });
   };
@@ -76,7 +90,7 @@ const CalendarPage = () => {
 
   // Status colors
   const getStatusColor = (status: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       'pending': 'bg-orange-400',
       'confirmed': 'bg-yellow-400',
       'waiting': 'bg-pink-400',
@@ -100,6 +114,89 @@ const CalendarPage = () => {
     setShowNewAppointmentForm(false);
   };
 
+  // Drag & Drop handlers
+  const handleDragStart = (e: React.DragEvent, appointment: any) => {
+    setDraggedAppointment(appointment);
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDraggedAppointment(null);
+    setDragOverDate(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, date: Date) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverDate(date);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    
+    if (!draggedAppointment) return;
+
+    const newDate = formatDateToLocalString(targetDate);
+    
+    if (newDate === draggedAppointment.date) {
+      // Same date, no need to update
+      return;
+    }
+
+    setDragOverDate(null);
+
+    try {
+      // Check if there's a valid Microsoft account connected
+      const validMicrosoftAccount = connectedAccounts?.find(
+        account => account.platform === 'microsoft' && 
+                   account.connected && 
+                   account.expiresAt && 
+                   Date.now() < account.expiresAt
+      );
+
+      // Update appointment in database
+      await updateAppointment({
+        appointmentId: draggedAppointment._id,
+        date: newDate
+      });
+
+      // Update calendar event if it exists
+      if (draggedAppointment.microsoftCalendarEventId && validMicrosoftAccount) {
+        try {
+          // Calculate new start and end times
+          const appointmentDate = new Date(`${newDate}T${draggedAppointment.time}:00`);
+          const endTime = new Date(appointmentDate.getTime() + (draggedAppointment.duration * 60000));
+
+          const startDateTime = appointmentDate.toISOString();
+          const endDateTime = endTime.toISOString();
+
+          await updateCalendarEvent({
+            accessToken: validMicrosoftAccount.accessToken!,
+            eventId: draggedAppointment.microsoftCalendarEventId,
+            subject: `Cita Petpassvet con ${draggedAppointment.pet.name}`,
+            description: `Cita de ${draggedAppointment.serviceType}`,
+            startDateTime,
+            endDateTime,
+            timeZone: 'Europe/Madrid',
+            reminderMinutes: 1440
+          });
+
+          showSuccess('Cita movida exitosamente y actualizada en el calendario de Microsoft.');
+        } catch (calendarError) {
+          console.error('Error actualizando evento de calendario:', calendarError);
+          showError('Cita movida pero hubo un error al actualizar el calendario de Microsoft.');
+        }
+      } else {
+        showSuccess('Cita movida exitosamente.');
+      }
+    } catch (error) {
+      console.error('Error moving appointment:', error);
+      showError('Error al mover la cita. Por favor intenta de nuevo.');
+    }
+  };
+
   // Loading state
   if (!appointments || !doctors) {
     return (
@@ -111,6 +208,18 @@ const CalendarPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Drag & Drop Indicator */}
+      {isDragging && draggedAppointment && (
+        <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          <div className="text-sm font-medium">
+            Arrastrando: {draggedAppointment.pet?.name} - {draggedAppointment.time}
+          </div>
+          <div className="text-xs opacity-90">
+            Suelta en cualquier día para mover la cita
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -153,7 +262,9 @@ const CalendarPage = () => {
                   size="sm"
                   icon={<ChevronLeft size={16} />}
                   onClick={goToPreviousMonth}
-                />
+                >
+                  Anterior
+                </Button>
                 <h2 className="text-lg font-semibold text-gray-900 min-w-[200px] text-center">
                   {formatMonthYear(currentDate)}
                 </h2>
@@ -162,7 +273,9 @@ const CalendarPage = () => {
                   size="sm"
                   icon={<ChevronRight size={16} />}
                   onClick={goToNextMonth}
-                />
+                >
+                  Siguiente
+                </Button>
               </div>
               <Button
                 variant="outline"
@@ -220,8 +333,12 @@ const CalendarPage = () => {
                     ${date ? 'hover:bg-gray-50' : 'bg-gray-50'}
                     ${isSelected ? 'bg-blue-50 border-blue-300' : ''}
                     ${isToday(date) ? 'bg-yellow-50 border-yellow-300' : ''}
+                    ${isDragging ? 'border-dashed border-blue-400' : ''}
+                    ${dragOverDate && date && dragOverDate.toDateString() === date.toDateString() ? 'bg-blue-100 border-blue-500' : ''}
                   `}
                   onClick={() => date && setSelectedDate(date)}
+                  onDragOver={(e) => date && handleDragOver(e, date)}
+                  onDrop={(e) => date && handleDrop(e, date)}
                 >
                   {date && (
                     <>
@@ -243,14 +360,17 @@ const CalendarPage = () => {
                         {dayAppointments.slice(0, 3).map((appointment) => (
                           <div
                             key={appointment._id}
-                            className="text-xs p-1 rounded bg-white border-l-2 shadow-sm"
+                            className="text-xs p-1 rounded bg-white border-l-2 shadow-sm cursor-move hover:shadow-md transition-shadow"
                             style={{ borderLeftColor: getStatusColor(appointment.status).replace('bg-', '#') }}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, appointment)}
+                            onDragEnd={handleDragEnd}
                           >
                             <div className="font-medium text-gray-800 truncate">
                               {appointment.time} - {appointment.pet?.name}
                             </div>
                             <div className="text-gray-600 truncate">
-                              {appointment.doctor?.name}
+                              {appointment.employee?.name}
                             </div>
                           </div>
                         ))}
@@ -291,7 +411,10 @@ const CalendarPage = () => {
                 {getAppointmentsForDate(selectedDate).map((appointment) => (
                   <div
                     key={appointment._id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-move hover:bg-gray-100 transition-colors"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, appointment)}
+                    onDragEnd={handleDragEnd}
                   >
                     <div className="flex items-center space-x-3">
                       <div className={`w-3 h-3 rounded-full ${getStatusColor(appointment.status)}`}></div>
@@ -300,7 +423,7 @@ const CalendarPage = () => {
                           {appointment.time} - {appointment.pet?.name}
                         </div>
                         <div className="text-sm text-gray-600">
-                          Propietario: {appointment.patient?.name} | Doctor: {appointment.doctor?.name}
+                          Propietario: {appointment.patient?.name} | Doctor: {appointment.employee?.name}
                         </div>
                         <div className="text-xs text-gray-500">
                           Tipo: {appointment.serviceType} | Duración: {appointment.duration} min

@@ -45,7 +45,7 @@ class MicrosoftAuthService {
       client_id: this.config.clientId,
       response_type: 'code',
       redirect_uri: this.config.redirectUri,
-      scope: 'https://graph.microsoft.com/.default',
+      scope: 'openid profile email User.Read Mail.Read Mail.Send Calendars.ReadWrite',
       state: state,
       response_mode: 'query'
     });
