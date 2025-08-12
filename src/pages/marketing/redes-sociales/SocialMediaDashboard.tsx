@@ -24,7 +24,6 @@ import {
 import Card from '../../../components/common/Card';
 import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
-import ToastContainer from '../../../components/common/ToastContainer';
 
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -1268,9 +1267,6 @@ const SocialMediaDashboard: React.FC = () => {
           </div>
         </div>
       )}
-      
-      {/* Toast Container */}
-      <ToastContainer />
     </div>
   );
 };

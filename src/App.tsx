@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { InboxProvider } from './context/InboxContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Patients from './pages/Patients';
@@ -80,7 +79,6 @@ function App() {
   return (
     <ConvexClientProvider>
       <AuthProvider>
-        <InboxProvider>
           <ToastProvider>
           <Router>
             <Routes>
@@ -215,7 +213,6 @@ function App() {
             </Routes>
           </Router>
           </ToastProvider>
-        </InboxProvider>
       </AuthProvider>
     </ConvexClientProvider>
   );
