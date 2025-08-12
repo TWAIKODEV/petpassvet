@@ -2,21 +2,21 @@ import React, { useState } from 'react';
 import { Calendar, Clock, User, Mail, Phone, MessageSquare, PhoneCall, ArrowRight } from 'lucide-react';
 import Card from '../common/Card';
 import Button from '../common/Button';
-import { Appointment, Patient, Doctor } from '../../types';
-import PetHistoryModal from './PetHistoryModal';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { Doc } from '../../../convex/_generated/dataModel';
 
 interface AppointmentListProps {
-  appointments?: any[];
-  patients?: any[];
-  employees?: any[];
+  appointments?: Doc<"appointments">[];
+  patients?: Doc<"patients">[];
+  employees?: Doc<"employees">[];
   title?: string;
   limit?: number;
   dateRange?: {
     from: string;
     to: string;
   };
+  onStatusChange?: (appointmentId: string, newStatus: string) => void;
 }
 
 const AppointmentList: React.FC<AppointmentListProps> = ({ 
@@ -25,10 +25,9 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   employees: propEmployees, 
   title = "Próximas Citas", 
   limit = 5,
-  dateRange
+  dateRange,
+  onStatusChange
 }) => {
-  const [selectedPet, setSelectedPet] = useState<any>(null);
-
   // Use prop data or fallback to Convex queries
   const convexAppointments = useQuery(api.appointments.getAppointments);
   const convexPatients = useQuery(api.patients.getPatients);
@@ -142,7 +141,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   };
 
   const handleCommunication = (method: string, contact: string) => {
-    const config = communicationMethods[method];
+    const config = communicationMethods[method as keyof typeof communicationMethods];
     if (config) {
       window.open(config.action(contact), '_blank');
     }
@@ -156,55 +155,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
   const handleStatusChange = (appointmentId: string, newStatus: string) => {
     // Here you would typically make an API call to update the appointment status
     console.log('Updating appointment', appointmentId, 'to status:', newStatus);
-  };
-
-  const handleViewHistory = (petId: string) => {
-    // Mock pet data - in a real app, you would fetch this from your API
-    const mockPet = {
-      id: petId,
-      name: "Luna",
-      species: "Perro",
-      breed: "Labrador",
-      sex: "female",
-      birthDate: "2020-06-15",
-      owner: {
-        name: "María García",
-        phone: "+34 666 777 888",
-        email: "maria.garcia@example.com"
-      },
-      visits: [
-        {
-          date: "2025-05-20",
-          doctor: "Dr. Alejandro Ramírez",
-          area: "Veterinaria",
-          service: "Revisión Anual",
-          amount: 75.00
-        },
-        {
-          date: "2025-04-15",
-          doctor: "Ana López",
-          area: "Peluquería",
-          service: "Corte y Baño",
-          amount: 45.00
-        },
-        {
-          date: "2025-03-10",
-          doctor: "Dra. Laura Gómez",
-          area: "Veterinaria",
-          service: "Vacunación",
-          amount: 60.00
-        },
-        {
-          date: "2025-02-01",
-          doctor: "Dr. Miguel Torres",
-          area: "Cirugía",
-          service: "Limpieza Dental",
-          amount: 120.00
-        }
-      ]
-    };
-
-    setSelectedPet(mockPet);
+    onStatusChange?.(appointmentId, newStatus);
   };
 
   return (
@@ -305,16 +256,6 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
               )}
 
               <div className="mt-2 flex justify-between items-center">
-                <a 
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleViewHistory(appointment._id);
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Ver historial completo →
-                </a>
                 {appointment.status !== 'completed' && appointment.status !== 'no_show' && (
                   <Button
                     variant="outline"
@@ -342,13 +283,6 @@ const AppointmentList: React.FC<AppointmentListProps> = ({
             Ver todas las citas
           </button>
         </div>
-      )}
-
-      {selectedPet && (
-        <PetHistoryModal
-          pet={selectedPet}
-          onClose={() => setSelectedPet(null)}
-        />
       )}
     </Card>
   );

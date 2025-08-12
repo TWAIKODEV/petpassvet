@@ -6,7 +6,7 @@ import Input from '../../components/common/Input';
 import NewAppointmentForm from '../../components/dashboard/NewAppointmentForm';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Id } from '../../../convex/_generated/dataModel';
+import { Doc, Id } from '../../../convex/_generated/dataModel';
 
 const Appointments = () => {
   const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
@@ -18,7 +18,7 @@ const Appointments = () => {
   const [selectedSpecialist, setSelectedSpecialist] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Doc<"appointments"> | null>(null);
   const [appointmentTitle, setAppointmentTitle] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentStartTime, setAppointmentStartTime] = useState('');
@@ -30,8 +30,7 @@ const Appointments = () => {
 
   // Convex queries and mutations
   const appointments = useQuery(api.appointments.getAppointments) || [];
-  const doctors = useQuery(api.doctors.getDoctors) || [];
-    const employees = useQuery(api.employees.getEmployees) || [];
+  const employees = useQuery(api.employees.getEmployees) || [];
   const updateAppointmentStatus = useMutation(api.appointments.updateAppointmentStatus);
   const updateAppointment = useMutation(api.appointments.updateAppointment);
 
@@ -57,17 +56,9 @@ const Appointments = () => {
     'scheduled': 'Programada'
   };
 
-  // Service areas
-  const areas = [
-    { id: 'all', name: 'Todas las áreas' },
-    { id: 'veterinary', name: 'Veterinaria' },
-    { id: 'grooming', name: 'Peluquería' },
-    { id: 'administration', name: 'Administración' }
-  ];
-
   // Filter appointments
   const filteredAppointments = appointments.filter(appointment => {
-    const searchString = `${appointment.pet?.name} ${appointment.patient?.name} ${appointment.employee?.firstName} ${appointment.employee?.lastName}`.toLowerCase();
+    const searchString = `${appointment.pet?.name} ${appointment.patient?.name}`.toLowerCase();
 
     return (
       searchString.includes(searchTerm.toLowerCase()) &&
@@ -76,7 +67,7 @@ const Appointments = () => {
     );
   });
 
-  const handleNewAppointment = (appointmentData: any) => {
+  const handleNewAppointment = (appointmentData: Omit<Doc<"appointments">, "_id" | "_creationTime" | "createdAt" | "updatedAt">) => {
     console.log('New appointment data:', appointmentData);
     setShowNewAppointmentForm(false);
   };
@@ -85,7 +76,7 @@ const Appointments = () => {
     try {
       await updateAppointmentStatus({
         id: appointmentId,
-        status: newStatus as any
+        status: newStatus as "pending" | "confirmed" | "waiting" | "in_progress" | "completed" | "no_show"
       });
     } catch (error) {
       console.error('Error updating appointment status:', error);
@@ -101,7 +92,7 @@ const Appointments = () => {
     setExpandedRow(current => current === appointmentId ? null : appointmentId);
   };
 
-  const handleManageAppointment = (appointment: any) => {
+  const handleManageAppointment = (appointment: Doc<"appointments">) => {
     setSelectedAppointment(appointment);
 
     // Initialize modal form with appointment data
@@ -143,7 +134,7 @@ const Appointments = () => {
 
     try {
       await updateAppointment({
-        id: selectedAppointment._id,
+        appointmentId: selectedAppointment._id,
         notes: appointmentNotes,
         date: appointmentDate,
         time: appointmentStartTime,
@@ -297,7 +288,7 @@ const Appointments = () => {
                     <div className="text-sm text-gray-900">{appointment.patient?.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{appointment.employee?.firstName} {appointment.employee?.lastName}</div>
+                    <div className="text-sm text-gray-900">{appointment.employee?.name}</div>
                     <div className="text-sm text-gray-500">{appointment.employee?.position}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -381,7 +372,7 @@ const Appointments = () => {
 
                     <div className="border-t pt-4">
                       <div className="text-sm font-medium text-gray-700">Especialista</div>
-                      <div className="mt-1 text-sm text-gray-900">{appointment.employee?.firstName} {appointment.employee?.lastName}</div>
+                      <div className="mt-1 text-sm text-gray-900">{appointment.employee?.name}</div>
                       <div className="text-sm text-gray-500">{appointment.employee?.position}</div>
                     </div>
 

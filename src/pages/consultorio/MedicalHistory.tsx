@@ -7,44 +7,45 @@ import PetHistoryModal from '../../components/dashboard/PetHistoryModal';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import * as XLSX from 'xlsx';
+import { Id } from '../../../convex/_generated/dataModel';
 
 const MedicalHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPet, setSelectedPet] = useState<any>(null);
+  const [selectedPetId, setSelectedPetId] = useState<Id<"pets"> | null>(null);
 
   // Obtener datos del historial médico desde Convex
   const medicalHistoryData = useQuery(api.medicalHistory.getMedicalHistoryData);
   const petDetailedHistory = useQuery(
     api.medicalHistory.getPetDetailedHistory,
-    selectedPet ? { petId: selectedPet } : "skip"
+    selectedPetId ? { petId: selectedPetId } : "skip"
   );
 
   // Filtrar registros basado en el término de búsqueda
   const filteredHistory = medicalHistoryData?.filter(record => 
-    record.owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.owner.phone.includes(searchTerm) ||
-    record.pet.microchip.includes(searchTerm)
+    record?.owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record?.pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record?.owner.phone.includes(searchTerm) ||
+    record?.pet.microchip.includes(searchTerm)
   ) || [];
 
   const handleExportExcel = () => {
     if (!medicalHistoryData) return;
 
     const excelData = medicalHistoryData.map(record => ({
-      'Fecha Alta': new Date(record.date).toLocaleDateString('es-ES'),
-      'Propietario': record.owner.name,
-      'Teléfono': record.owner.phone,
-      'Mascota': record.pet.name,
-      'Edad': `${record.pet.age} años`,
-      'Sexo': record.pet.sex === 'male' ? 'Macho' : 'Hembra',
-      'Microchip': record.pet.microchip,
-      'Especie': record.pet.species,
-      'Raza': record.pet.breed,
-      'Nº': record.recordCount,
-      'PetPass': record.petPass ? 'Sí' : 'No',
-      'Plan de Salud': record.healthPlan || '-',
-      'Seguro': record.insurance?.provider || '-',
-      'Nº Póliza': record.insurance?.number || '-'
+      'Fecha Alta': new Date(record?.date || '').toLocaleDateString('es-ES'),
+      'Propietario': record?.owner.name,
+      'Teléfono': record?.owner.phone,
+      'Mascota': record?.pet.name,
+      'Edad': `${record?.pet.age} años`,
+      'Sexo': record?.pet.sex === 'male' ? 'Macho' : 'Hembra',
+      'Microchip': record?.pet.microchip,
+      'Especie': record?.pet.species,
+      'Raza': record?.pet.breed,
+      'Nº': record?.recordCount,
+      'PetPass': record?.petPass ? 'Sí' : 'No',
+      'Plan de Salud': record?.healthPlan || '-',
+      'Seguro': record?.insurance?.provider || '-',
+      'Nº Póliza': record?.insurance?.number || '-'
     }));
 
     const wb = XLSX.utils.book_new();
@@ -53,8 +54,8 @@ const MedicalHistory = () => {
     XLSX.writeFile(wb, 'historial-medico.xlsx');
   };
 
-  const handleViewHistory = (petId: string) => {
-    setSelectedPet(petId);
+  const handleViewHistory = (petId: Id<"pets">) => {
+    setSelectedPetId(petId);
   };
 
   if (!medicalHistoryData) {
@@ -147,10 +148,10 @@ const MedicalHistory = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredHistory.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
+                  <tr key={record?.id} className="hover:bg-gray-50">
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {new Date(record.date).toLocaleDateString('es-ES', {
+                        {new Date(record?.date || '').toLocaleDateString('es-ES', {
                           day: '2-digit',
                           month: '2-digit',
                           year: '2-digit'
@@ -158,52 +159,52 @@ const MedicalHistory = () => {
                       </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{record.owner.name}</div>
-                      <div className="text-sm text-gray-500">{record.owner.phone}</div>
+                      <div className="text-sm font-medium text-gray-900">{record?.owner.name}</div>
+                      <div className="text-sm text-gray-500">{record?.owner.phone}</div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{record.pet.name}</div>
+                      <div className="text-sm font-medium text-gray-900">{record?.pet.name}</div>
                       <div className="text-sm text-gray-500">
-                        {record.pet.species} {record.pet.breed}
+                        {record?.pet.species} {record?.pet.breed}
                       </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{record.pet.age} años</div>
+                      <div className="text-sm text-gray-900">{record?.pet.age} años</div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {record.pet.sex === 'male' ? 'Macho' : 'Hembra'}
+                        {record?.pet.sex === 'male' ? 'Macho' : 'Hembra'}
                       </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono text-gray-900">{record.pet.microchip}</div>
+                      <div className="text-sm font-mono text-gray-900">{record?.pet.microchip}</div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{record.recordCount}</div>
+                      <div className="text-sm text-gray-900">{record?.recordCount}</div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        record.petPass 
+                        record?.petPass 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {record.petPass ? 'Sí' : 'No'}
+                        {record?.petPass ? 'Sí' : 'No'}
                       </span>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      {record.healthPlan ? (
+                      {record?.healthPlan ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {record.healthPlan}
+                          {record?.healthPlan}
                         </span>
                       ) : (
                         <span className="text-sm text-gray-500">-</span>
                       )}
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      {record.insurance ? (
+                      {record?.insurance ? (
                         <>
-                          <div className="text-sm font-medium text-gray-900">{record.insurance.provider}</div>
-                          <div className="text-sm text-gray-500">{record.insurance.number}</div>
+                          <div className="text-sm font-medium text-gray-900">{record?.insurance.provider}</div>
+                          <div className="text-sm text-gray-500">{record?.insurance.number}</div>
                         </>
                       ) : (
                         <span className="text-sm text-gray-500">Sin seguro</span>
@@ -214,7 +215,7 @@ const MedicalHistory = () => {
                         variant="outline"
                         size="sm"
                         icon={<Eye size={16} />}
-                        onClick={() => handleViewHistory(record.id)}
+                        onClick={() => handleViewHistory(record?.id as Id<"pets">)}
                       >
                         Ver Historial
                       </Button>
@@ -234,10 +235,10 @@ const MedicalHistory = () => {
       </div>
 
       {/* Pet History Modal */}
-      {selectedPet && petDetailedHistory && (
+      {selectedPetId && petDetailedHistory && (
         <PetHistoryModal
           pet={petDetailedHistory}
-          onClose={() => setSelectedPet(null)}
+          onClose={() => setSelectedPetId(null)}
         />
       )}
     </div>

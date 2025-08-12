@@ -6,7 +6,7 @@ import { v } from "convex/values";
 export const getMedicalHistoryData = query({
   handler: async (ctx) => {
     // Obtener todas las mascotas
-    const pets = await ctx.db.query("pets").order("desc").collect();
+    const pets = await ctx.db.query("pets").order("desc", "updatedAt").collect();
     
     // Para cada mascota, obtener el paciente y contar las citas
     const medicalHistory = await Promise.all(
@@ -22,7 +22,7 @@ export const getMedicalHistoryData = query({
 
         return {
           id: pet._id,
-          date: new Date(pet.createdAt).toISOString().split('T')[0],
+          date: new Date(pet.updatedAt).toISOString().split('T')[0],
           owner: {
             name: `${patient.firstName} ${patient.lastName}`,
             email: patient.email,
@@ -66,20 +66,20 @@ export const getPetDetailedHistory = query({
     const appointments = await ctx.db
       .query("appointments")
       .withIndex("by_pet", (q) => q.eq("petId", args.petId))
-      .order("desc")
+      .order("desc", "date")
       .collect();
 
-    // Obtener información de los doctores para cada cita
-    const appointmentsWithDoctors = await Promise.all(
+    // Obtener información de los empleados para cada cita
+    const appointmentsWithEmployees = await Promise.all(
       appointments.map(async (appointment) => {
-        const doctor = await ctx.db.get(appointment.doctorId);
+        const employee = await ctx.db.get(appointment.employeeId);
         return {
           id: appointment._id,
           date: appointment.date,
           time: appointment.time,
-          doctor: doctor?.name || 'Doctor no encontrado',
+          doctor: employee ? `${employee.firstName} ${employee.lastName}` : 'Empleado no encontrado',
           area: appointment.serviceType,
-          service: appointment.consultationKind,
+          service: appointment.consultationType,
           amount: 75.00, // Valor por defecto, podrías añadir este campo a appointments
           status: appointment.status,
           notes: appointment.notes
@@ -99,7 +99,7 @@ export const getPetDetailedHistory = query({
         phone: patient.phone,
         email: patient.email
       },
-      visits: appointmentsWithDoctors
+      visits: appointmentsWithEmployees
     };
   },
 });

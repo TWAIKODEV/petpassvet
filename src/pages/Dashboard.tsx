@@ -22,8 +22,9 @@ import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { mockDashboardSummary } from '../data/mockData';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { Doc, Id } from '../../convex/_generated/dataModel';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +42,9 @@ const Dashboard: React.FC = () => {
     from: new Date().toISOString().split('T')[0],
     to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   });
+
+  // Convex mutations
+  const updateAppointmentStatus = useMutation(api.appointments.updateAppointmentStatus);
 
   useEffect(() => {
     setMounted(true);
@@ -61,28 +65,39 @@ const Dashboard: React.FC = () => {
     console.log('Refreshing data for range:', dateRange);
   };
 
-  const handleNewAppointment = (appointmentData: any) => {
+  const handleNewAppointment = (appointmentData: Omit<Doc<"appointments">, "_id" | "createdAt" | "updatedAt" | "_creationTime">) => {
     // Here you would typically make an API call to save the new appointment
     console.log('New appointment data:', appointmentData);
     setShowNewAppointmentForm(false);
   };
 
-  const handleNewPatient = (patientData: any) => {
+  const handleNewPatient = (patientData: unknown) => {
     // Here you would typically make an API call to save the new patient
     console.log('New patient data:', patientData);
     setShowNewPatientForm(false);
   };
 
-  const handleNewSale = (saleData: any) => {
+  const handleNewSale = (saleData: unknown) => {
     // Here you would typically make an API call to save the new sale
     console.log('New sale data:', saleData);
     setShowNewSaleForm(false);
   };
 
-  const handleNewBudget = (budgetData: any) => {
+  const handleNewBudget = (budgetData: unknown) => {
     // Here you would typically make an API call to save the new budget
     console.log('New budget data:', budgetData);
     setShowNewBudgetForm(false);
+  };
+
+  const handleStatusChange = async (appointmentId: string, newStatus: string) => {
+    try {
+      await updateAppointmentStatus({
+        id: appointmentId as Id<"appointments">,
+        status: newStatus as "pending" | "confirmed" | "waiting" | "in_progress" | "completed" | "no_show"
+      });
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+    }
   };
 
   
@@ -169,13 +184,9 @@ const Dashboard: React.FC = () => {
       <Card title="Gestión" icon={<BarChart2 size={20} />}>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 py-2">
           {quickActions.map((action, index) => (
-            <a
+            <div
               key={index}
-              href={action.href}
-              onClick={action.onClick ? (e) => {
-                e.preventDefault();
-                action.onClick();
-              } : undefined}
+              onClick={action.onClick}
               className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer"
             >
               <div className={`p-2 rounded-lg ${action.color} transition-colors`}>
@@ -185,7 +196,7 @@ const Dashboard: React.FC = () => {
                 {action.title}
               </span>
               <ArrowRight size={16} className="ml-auto text-gray-400 group-hover:text-gray-600" />
-            </a>
+            </div>
           ))}
         </div>
       </Card>
@@ -198,6 +209,7 @@ const Dashboard: React.FC = () => {
             employees={employees}
             title="Próximas Citas"
             dateRange={dateRange}
+            onStatusChange={handleStatusChange}
           />
         </div>
         
@@ -206,7 +218,7 @@ const Dashboard: React.FC = () => {
             <div className="text-center py-8">
               {(() => {
                 const today = new Date().toISOString().split('T')[0];
-                const todayAppointments = appointments.filter(app => app.date === today);
+                const todayAppointments = appointments.filter((app: Doc<"appointments">) => app.date === today);
                 return (
                   <>
                     <div className="text-5xl font-bold text-blue-600 flex items-center justify-center">
@@ -221,12 +233,12 @@ const Dashboard: React.FC = () => {
               <div className="mt-6 grid grid-cols-2 gap-4 text-center">
                 {appointmentStatusConfig.map((config) => {
                   const today = new Date().toISOString().split('T')[0];
-                  const todayAppointments = appointments.filter(app => app.date === today);
+                  const todayAppointments = appointments.filter((app: Doc<"appointments">) => app.date === today);
                   return (
                     <div key={config.status} className="border rounded-lg p-3">
                       <p className="text-gray-500 text-xs">{config.label}</p>
                       <p className={`text-xl font-semibold ${config.color}`}>
-                        {todayAppointments.filter(a => a.status === config.status).length}
+                        {todayAppointments.filter((a: Doc<"appointments">) => a.status === config.status).length}
                       </p>
                     </div>
                   );
