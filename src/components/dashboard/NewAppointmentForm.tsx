@@ -9,6 +9,9 @@ import { FunctionReturnType } from 'convex/server';
 import { useToastContext } from '../../context/ToastContext';
 import { getTodayFormatted } from '../../utils/dateUtils';
 import { useSocialMediaAuth } from '../../hooks/useSocialMediaAuth';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FormValidator, type NewAppointmentFormInput, type NewAppointmentFormOutput } from '../../validators/formValidator';
 
 interface NewAppointmentFormProps {
   onClose: () => void;
@@ -22,15 +25,21 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatientPet, setSelectedPatientPet] = useState<NonNullable<FunctionReturnType<typeof api.appointments.searchPatientsAndPets>[number]> | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [formData, setFormData] = useState<Partial<Doc<"appointments">>>({
-    date: getTodayFormatted(),
-    time: '09:00', 
-    duration: 30,
-    serviceType: '',
-    consultationType: 'normal',
-    employeeId: '' as Id<"employees">,
-    notes: ''
+  const form = useForm<NewAppointmentFormInput, unknown, NewAppointmentFormOutput>({
+    resolver: zodResolver(FormValidator.newAppointment()),
+    defaultValues: {
+      petId: '',
+      consultationType: 'normal',
+      serviceType: '',
+      employeeId: '',
+      date: getTodayFormatted(),
+      time: '09:00',
+      duration: 30,
+      status: 'pending',
+      notes: ''
+    }
   });
+  const { control, handleSubmit, setValue, formState: { errors }, reset } = form;
   const [addToCalendar, setAddToCalendar] = useState(false);
   const [accountsUpdated, setAccountsUpdated] = useState(false);
 
@@ -67,10 +76,10 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     setSelectedPatientPet(patientPet);
     setSearchTerm('');
     setShowSearchResults(false);
+    setValue('petId', (patientPet.petId as unknown as string) ?? '');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmitForm: (values: NewAppointmentFormOutput) => Promise<void> = async (values) => {
     if (!selectedPatientPet) {
       showError('Por favor selecciona un paciente y mascota');
       return;
@@ -79,17 +88,14 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     try {
       let calendarEventId: string | undefined;
 
-      // Create calendar event first if Microsoft account is connected and user opted in
       if (addToCalendar && validMicrosoftAccount) {
         try {
-          const serviceTypeLabel = serviceTypes.find(type => type.value === formData.serviceType)?.label || formData.serviceType;
-          const consultationTypeLabel = consultationTypes.find(type => type.value === formData.consultationType)?.label || formData.consultationType;
+          const serviceTypeLabel = serviceTypes.find(type => type.value === values.serviceType)?.label || values.serviceType;
+          const consultationTypeLabel = consultationTypes.find(type => type.value === values.consultationType)?.label || values.consultationType;
 
-          // Calculate start and end times
-          const appointmentDate = new Date(`${formData.date}T${formData.time}:00`);
-          const endTime = new Date(appointmentDate.getTime() + (formData.duration! * 60000));
+          const appointmentDate = new Date(`${values.date}T${values.time}:00`);
+          const endTime = new Date(appointmentDate.getTime() + (values.duration * 60000));
 
-          // Format dates for Microsoft Graph API (ISO 8601)
           const startDateTime = appointmentDate.toISOString();
           const endDateTime = endTime.toISOString();
 
@@ -100,40 +106,34 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
             startDateTime,
             endDateTime,
             timeZone: 'Europe/Madrid',
-            reminderMinutes: 1440 // 24 horas antes
+            reminderMinutes: 1440
           });
 
-          // Extract the event ID from the response
           if (calendarResult && calendarResult.event && calendarResult.event.id) {
             calendarEventId = calendarResult.event.id;
-            console.log('Evento de calendario creado exitosamente con ID:', calendarEventId);
-          } else {
-            console.warn('No se pudo obtener el ID del evento de calendario');
           }
         } catch (calendarError) {
           console.error('Error creando evento de calendario:', calendarError);
           showError('Error al crear el evento en el calendario de Microsoft. La cita no se ha creado.');
-          return; // Stop the process if calendar creation fails
+          return;
         }
       }
 
-      // Create the appointment in database with calendar event ID if available
-      const appointmentData: Omit<Doc<"appointments">, "_id" | "createdAt" | "updatedAt" | "_creationTime"> = {
-        petId: selectedPatientPet.petId || '' as Id<"pets">,
-        consultationType: formData.consultationType || 'normal',
-        serviceType: formData.serviceType || '',
-        employeeId: formData.employeeId || '' as Id<"employees">,
-        date: formData.date || '',
-        time: formData.time || '',
-        duration: formData.duration || 0,
-        status: 'pending',
-        notes: formData.notes || undefined,
-        microsoftCalendarEventId: calendarEventId
+      const appointmentData: Omit<Doc<'appointments'>, '_id' | 'createdAt' | 'updatedAt' | '_creationTime'> = {
+        petId: values.petId as unknown as Id<'pets'>,
+        consultationType: values.consultationType,
+        serviceType: values.serviceType,
+        employeeId: values.employeeId as unknown as Id<'employees'>,
+        date: values.date,
+        time: values.time,
+        duration: values.duration,
+        status: values.status,
+        notes: values.notes ? values.notes : undefined,
+        microsoftCalendarEventId: calendarEventId,
       };
 
       await createAppointment(appointmentData);
 
-      // Show appropriate success message
       if (addToCalendar && validMicrosoftAccount && calendarEventId) {
         showSuccess('Cita creada exitosamente y añadida al calendario de Microsoft.');
       } else {
@@ -141,6 +141,7 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
       }
 
       onSubmit(appointmentData);
+      reset();
       onClose();
     } catch (error) {
       console.error('Error creating appointment:', error);
@@ -185,12 +186,12 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit(onSubmitForm)} className="p-6">
           <div className="space-y-6">
             {/* Patient/Pet Search */}
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar Cliente y Mascota
+                Buscar Cliente y Mascota *
               </label>
               <div className="relative">
                 <Input
@@ -251,11 +252,12 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
                         Propietario: {selectedPatientPet.patientName}
                       </div>
                     </div>
-                    <button
+                     <button
                       type="button"
                       onClick={() => {
                         setSelectedPatientPet(null);
                         setSearchTerm('');
+                         setValue('petId', '');
                       }}
                       className="text-blue-600 hover:text-blue-800"
                     >
@@ -264,40 +266,58 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
                   </div>
                 </div>
               )}
+              {!selectedPatientPet && errors.petId && (
+                <p className="mt-2 text-xs text-red-600">{errors.petId.message}</p>
+              )}
             </div>
 
             {/* Service Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Cita
+                Tipo de Cita *
               </label>
-              <select
-                required
-                value={formData.serviceType}
-                onChange={(e) => setFormData(prev => ({ ...prev, serviceType: e.target.value }))}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar tipo de cita</option>
-                {serviceTypes.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
+              <Controller
+                control={control}
+                name="serviceType"
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar tipo de cita</option>
+                    {serviceTypes.map(type => (
+                      <option key={type.value} value={type.value}>{type.label}</option>
+                    ))}
+                  </select>
+                )}
+              />
+              {errors.serviceType && (
+                <p className="mt-1 text-xs text-red-600">{errors.serviceType.message}</p>
+              )}
             </div>
 
             {/* Consultation Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Modalidad
+                Modalidad *
               </label>
-              <select
-                value={formData.consultationType}
-                onChange={(e) => setFormData(prev => ({ ...prev, consultationType: e.target.value as "emergency" | "normal" | "insurance" }))}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                {consultationTypes.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
+              <Controller
+                control={control}
+                name="consultationType"
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    {consultationTypes.map(type => (
+                      <option key={type.value} value={type.value}>{type.label}</option>
+                    ))}
+                  </select>
+                )}
+              />
+              {errors.consultationType && (
+                <p className="mt-1 text-xs text-red-600">{errors.consultationType.message}</p>
+              )}
             </div>
 
             {/* Employee */}
@@ -305,63 +325,93 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Especialista
               </label>
-              <select
-                required
-                value={formData.employeeId}
-                onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value as Id<"employees"> }))}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar especialista</option>
-                {employees.map(employee => (
-                  <option key={employee._id} value={employee._id}>
-                    {employee.firstName} {employee.lastName} - {employee.position} ({employee.department})
-                  </option>
-                ))}
-              </select>
+              <Controller
+                control={control}
+                name="employeeId"
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar especialista *</option>
+                    {employees.map(employee => (
+                      <option key={employee._id} value={employee._id}>
+                        {employee.firstName} {employee.lastName} - {employee.position} ({employee.department})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
+              {errors.employeeId && (
+                <p className="mt-1 text-xs text-red-600">{errors.employeeId.message}</p>
+              )}
             </div>
 
             {/* Date and Time */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha
+                  Fecha *
                 </label>
-                <Input
-                  type="date"
-                  required
-                  value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                  icon={<Calendar size={18} />}
+                <Controller
+                  control={control}
+                  name="date"
+                  render={({ field }) => (
+                    <Input
+                      type="date"
+                      {...field}
+                      icon={<Calendar size={18} />}
+                    />
+                  )}
                 />
+                {errors.date && (
+                  <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hora
+                  Hora *
                 </label>
-                <Input
-                  type="time"
-                  required
-                  value={formData.time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                  icon={<Clock size={18} />}
+                <Controller
+                  control={control}
+                  name="time"
+                  render={({ field }) => (
+                    <Input
+                      type="time"
+                      {...field}
+                      icon={<Clock size={18} />}
+                    />
+                  )}
                 />
+                {errors.time && (
+                  <p className="mt-1 text-xs text-red-600">{errors.time.message}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Duración (min)
+                  Duración (min) *
                 </label>
-                <select
-                  value={formData.duration}
-                  onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value={15}>15 minutos</option>
-                  <option value={30}>30 minutos</option>
-                  <option value={45}>45 minutos</option>
-                  <option value={60}>60 minutos</option>
-                  <option value={90}>90 minutos</option>
-                  <option value={120}>120 minutos</option>
-                </select>
+                <Controller
+                  control={control}
+                  name="duration"
+                  render={({ field }) => (
+                    <select
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                      <option value={15}>15 minutos</option>
+                      <option value={30}>30 minutos</option>
+                      <option value={45}>45 minutos</option>
+                      <option value={60}>60 minutos</option>
+                      <option value={90}>90 minutos</option>
+                      <option value={120}>120 minutos</option>
+                    </select>
+                  )}
+                />
+                {errors.duration && (
+                  <p className="mt-1 text-xs text-red-600">{errors.duration.message}</p>
+                )}
               </div>
             </div>
 
@@ -370,13 +420,21 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Notas
               </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                rows={3}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Notas adicionales sobre la cita..."
+              <Controller
+                control={control}
+                name="notes"
+                render={({ field }) => (
+                  <textarea
+                    {...field}
+                    rows={3}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="Notas adicionales sobre la cita..."
+                  />
+                )}
               />
+              {errors.notes && (
+                <p className="mt-1 text-xs text-red-600">{errors.notes.message}</p>
+              )}
             </div>
 
             {/* Add to Calendar Checkbox */}

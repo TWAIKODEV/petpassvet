@@ -6,7 +6,7 @@ import { v } from "convex/values";
 export const getMedicalHistoryData = query({
   handler: async (ctx) => {
     // Obtener todas las mascotas
-    const pets = await ctx.db.query("pets").order("desc", "updatedAt").collect();
+    const pets = await ctx.db.query("pets").order("desc").collect();
     
     // Para cada mascota, obtener el paciente y contar las citas
     const medicalHistory = await Promise.all(
@@ -66,7 +66,7 @@ export const getPetDetailedHistory = query({
     const appointments = await ctx.db
       .query("appointments")
       .withIndex("by_pet", (q) => q.eq("petId", args.petId))
-      .order("desc", "date")
+      .order("desc")
       .collect();
 
     // Obtener información de los empleados para cada cita
