@@ -8,6 +8,7 @@ import { Id, Doc } from '../../../convex/_generated/dataModel';
 import { FunctionReturnType } from 'convex/server';
 import { useToastContext } from '../../context/ToastContext';
 import { getTodayFormatted } from '../../utils/dateUtils';
+import { useSocialMediaAuth } from '../../hooks/useSocialMediaAuth';
 
 interface NewAppointmentFormProps {
   onClose: () => void;
@@ -16,6 +17,7 @@ interface NewAppointmentFormProps {
 
 const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubmit }) => {
   const { showSuccess, showError } = useToastContext();
+  const { updateConnectedAccounts } = useSocialMediaAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatientPet, setSelectedPatientPet] = useState<NonNullable<FunctionReturnType<typeof api.appointments.searchPatientsAndPets>[number]> | null>(null);
@@ -30,22 +32,32 @@ const NewAppointmentForm: React.FC<NewAppointmentFormProps> = ({ onClose, onSubm
     notes: ''
   });
   const [addToCalendar, setAddToCalendar] = useState(false);
+  const [accountsUpdated, setAccountsUpdated] = useState(false);
 
   // Convex queries and mutations
   const searchResults = useQuery(api.appointments.searchPatientsAndPets, 
     searchTerm.length >= 2 ? { searchTerm } : "skip"
   ) || [];
   const createAppointment = useMutation(api.appointments.createAppointment);
-  const connectedAccounts = useQuery(api.microsoft.getConnectedAccounts, { userId: "current-user" }) || [];
+  const connectedAccounts = useQuery(api.microsoft.getConnectedAccounts, { userId: "current-user" });
   const createCalendarEvent = useAction(api.microsoft.createMicrosoftCalendarEvent);
 
   useEffect(() => {
     setShowSearchResults(searchTerm.length >= 2);
   }, [searchTerm]);
 
+  // Update connected accounts when form opens (only once when accounts are available)
+  useEffect(() => {
+    if (connectedAccounts && connectedAccounts.length > 0 && !accountsUpdated) {
+      console.log('Updating connected accounts');
+      updateConnectedAccounts(connectedAccounts);
+      setAccountsUpdated(true);
+    }
+  }, [connectedAccounts, accountsUpdated, updateConnectedAccounts]);
+
   // Check if there's a valid Microsoft account connected
   const validMicrosoftAccount = connectedAccounts?.find(
-    account => account.platform === 'microsoft' && 
+    (account: Doc<"socialAccounts">) => account.platform === 'microsoft' && 
                account.connected && 
                account.expiresAt && 
                Date.now() < account.expiresAt
