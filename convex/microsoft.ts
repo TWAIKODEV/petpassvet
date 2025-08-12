@@ -26,7 +26,87 @@ export const exchangeMicrosoftToken = action({
       redirect_uri: redirectUri,
       client_id: clientId,
       client_secret: clientSecret,
-      scope: 'openid profile email User.Read Mail.Read Mail.Send Calendars.ReadWrite'
+      scope: 'openid profile email User.Read Mail.Read Mail.Send Calendars.ReadWrite offline_access'
+    });
+
+    try {
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body.toString()
+      });
+
+      const responseText = await response.text();
+      
+      // Log the response for debugging
+      console.log('Microsoft token response:', responseText);
+      
+      // Try to parse as JSON for better error details
+      let parsedResponse;
+      try {
+        parsedResponse = JSON.parse(responseText);
+        console.log('Parsed Microsoft response:', parsedResponse);
+      } catch {
+        parsedResponse = { raw: responseText };
+        console.log('Failed to parse Microsoft response as JSON');
+      }
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch {
+          errorData = { error: 'unknown', error_description: responseText };
+        }
+        
+        throw new Error(`Error en intercambio de token: ${errorData.error} - ${errorData.error_description || ''}`);
+      }
+
+      // Log what we're returning
+      console.log('Returning Microsoft token data:', {
+        hasAccessToken: !!parsedResponse.access_token,
+        hasRefreshToken: !!parsedResponse.refresh_token,
+        hasExpiresIn: !!parsedResponse.expires_in,
+        scopes: parsedResponse.scope
+      });
+
+      return parsedResponse;
+    } catch (error) {
+      console.error('Error en intercambio de token:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Error en intercambio de token: ${errorMessage}`);
+    }
+  },
+});
+
+// Función alternativa para intercambiar tokens con soporte para refresh tokens
+export const exchangeMicrosoftTokenWithRefresh = action({
+  args: {
+    code: v.string(),
+  },
+  handler: async (_ctx, args) => {
+    const { code } = args;
+    
+    const clientId = process.env.MS_CLIENT_ID;
+    const clientSecret = process.env.MS_CLIENT_SECRET;
+    const redirectUri = process.env.MS_REDIRECT_URI;
+    const tenantId = process.env.MS_TENANT_ID;
+
+    if (!clientId || !clientSecret || !redirectUri || !tenantId) {
+      throw new Error("Configuración de Microsoft incompleta. Verifica las variables de entorno: MS_CLIENT_ID, MS_CLIENT_SECRET, MS_REDIRECT_URI, MS_TENANT_ID");
+    }
+
+    // Usar el endpoint correcto para obtener refresh tokens
+    const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: 'openid profile email User.Read Mail.Read Mail.Send Calendars.ReadWrite offline_access'
     });
 
     try {
@@ -65,6 +145,155 @@ export const exchangeMicrosoftToken = action({
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Error en intercambio de token: ${errorMessage}`);
     }
+  },
+});
+
+// Renovar token de acceso usando refresh token
+export const refreshMicrosoftToken = action({
+  args: {
+    refreshToken: v.string(),
+  },
+  handler: async (_ctx, args) => {
+    const { refreshToken } = args;
+    
+    const clientId = process.env.MS_CLIENT_ID;
+    const clientSecret = process.env.MS_CLIENT_SECRET;
+    const tenantId = process.env.MS_TENANT_ID;
+
+    if (!clientId || !clientSecret || !tenantId) {
+      throw new Error("Configuración de Microsoft incompleta");
+    }
+
+    const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: 'openid profile email User.Read Mail.Read Mail.Send Calendars.ReadWrite'
+    });
+
+    try {
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body.toString()
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error renovando token: ${errorText}`);
+      }
+
+      const tokenData = await response.json();
+      
+      // Calcular nueva fecha de expiración
+      const expiresIn = tokenData.expires_in || 3600; // 1 hora por defecto
+      const expiresAt = Date.now() + (expiresIn * 1000);
+
+      return {
+        ...tokenData,
+        expiresAt
+      };
+    } catch (error) {
+      console.error('Error renovando token:', error);
+      throw new Error('Error renovando token');
+    }
+  },
+});
+
+// Verificar si un token necesita renovación y renovarlo si es necesario
+export const ensureValidToken = action({
+  args: {
+    accountId: v.id("socialAccounts"),
+  },
+  handler: async (ctx, args): Promise<{ accessToken: string; refreshed: boolean }> => {
+    const { accountId } = args;
+
+    try {
+      // Obtener la cuenta
+      const account = await ctx.runQuery(api.microsoft.getAccountById, { accountId });
+      
+      if (!account) {
+        throw new Error('Cuenta no encontrada');
+      }
+
+      // Verificar si el token está próximo a expirar (5 minutos antes)
+      const now = Date.now();
+      const timeUntilExpiry = account.expiresAt - now;
+      const needsRefresh = timeUntilExpiry < (5 * 60 * 1000); // 5 minutos
+
+      if (needsRefresh && account.refreshToken) {
+        // Renovar el token
+        const newTokenData = await ctx.runAction(api.microsoft.refreshMicrosoftToken, {
+          refreshToken: account.refreshToken
+        });
+
+        // Actualizar la cuenta con el nuevo token
+        await ctx.runMutation(api.microsoft.updateTokens, {
+          accountId,
+          accessToken: newTokenData.access_token,
+          refreshToken: newTokenData.refresh_token || account.refreshToken,
+          expiresAt: newTokenData.expiresAt
+        });
+
+        return {
+          accessToken: newTokenData.access_token,
+          refreshed: true
+        };
+      }
+
+      return {
+        accessToken: account.accessToken,
+        refreshed: false
+      };
+    } catch (error) {
+      console.error('Error verificando token:', error);
+      throw new Error('Error verificando token');
+    }
+  },
+});
+
+// Actualizar tokens de una cuenta
+export const updateTokens = mutation({
+  args: {
+    accountId: v.id("socialAccounts"),
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { accountId, accessToken, refreshToken, expiresAt } = args;
+
+    const updateData: {
+      accessToken: string;
+      expiresAt: number;
+      updatedAt: number;
+      refreshToken?: string;
+    } = {
+      accessToken,
+      expiresAt,
+      updatedAt: new Date().getTime(),
+    };
+
+    if (refreshToken) {
+      updateData.refreshToken = refreshToken;
+    }
+
+    return await ctx.db.patch(accountId, updateData);
+  },
+});
+
+// Obtener cuenta por ID
+export const getAccountById = query({
+  args: {
+    accountId: v.id("socialAccounts"),
+  },
+  handler: async (ctx, args) => {
+    const { accountId } = args;
+    return await ctx.db.get(accountId);
   },
 });
 
@@ -779,6 +1008,81 @@ export const deleteMicrosoftCalendarEvent = action({
     } catch (error) {
       console.error('Error eliminando evento del calendario:', error);
       throw new Error('Error eliminando evento del calendario');
+    }
+  },
+});
+
+// Función combinada para verificar token y obtener información del usuario
+export const getMicrosoftUserInfoWithTokenRefresh = action({
+  args: {
+    accountId: v.id("socialAccounts"),
+  },
+  handler: async (ctx, args) => {
+    const { accountId } = args;
+
+    try {
+      // Obtener la cuenta
+      const account = await ctx.runQuery(api.microsoft.getAccountById, { accountId });
+      
+      if (!account) {
+        throw new Error('Cuenta no encontrada');
+      }
+
+      // Verificar si el token está próximo a expirar (5 minutos antes)
+      const now = Date.now();
+      const timeUntilExpiry = account.expiresAt - now;
+      const needsRefresh = timeUntilExpiry < (5 * 60 * 1000); // 5 minutos
+
+      let accessToken = account.accessToken;
+      let tokenRefreshed = false;
+
+      // Si el token necesita renovación y tenemos refresh token, renovarlo
+      if (needsRefresh && account.refreshToken) {
+        try {
+          console.log(`Token próximo a expirar para ${account.username}, renovando...`);
+          const newTokenData = await ctx.runAction(api.microsoft.refreshMicrosoftToken, {
+            refreshToken: account.refreshToken
+          });
+
+          // Actualizar la cuenta con el nuevo token
+          await ctx.runMutation(api.microsoft.updateTokens, {
+            accountId,
+            accessToken: newTokenData.access_token,
+            refreshToken: newTokenData.refresh_token || account.refreshToken,
+            expiresAt: newTokenData.expiresAt
+          });
+
+          accessToken = newTokenData.access_token;
+          tokenRefreshed = true;
+          console.log(`Token renovado exitosamente para ${account.username}`);
+        } catch (refreshError) {
+          console.error(`Error renovando token para ${account.username}:`, refreshError);
+          // Continuar con el token actual, puede que aún funcione
+        }
+      }
+
+      // Obtener información del usuario con el token disponible
+      const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!userResponse.ok) {
+        throw new Error('Error obteniendo información del usuario');
+      }
+
+      const userData = await userResponse.json();
+
+      return {
+        userData,
+        tokenRefreshed,
+        accessToken
+      };
+    } catch (error) {
+      console.error('Error obteniendo información del usuario con renovación de token:', error);
+      throw new Error('Error obteniendo información del usuario');
     }
   },
 });

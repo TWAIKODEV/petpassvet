@@ -11,6 +11,29 @@ import facebookAuthService from '../services/facebookAuth';
 import instagramAuthService from '../services/instagramAuth';
 import microsoftAuthService from '../services/microsoftAuth';
 
+// Tipo para las cuentas sociales
+interface SocialAccount {
+  _id: Id<"socialAccounts">;
+  userId: string;
+  platform: 'twitter' | 'facebook' | 'instagram' | 'linkedin' | 'youtube' | 'tiktok' | 'microsoft';
+  username: string;
+  name: string;
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: number;
+  connected: boolean;
+  followers?: number;
+  following?: number;
+  posts?: number;
+  views?: number;
+  profileImageUrl?: string;
+  verified?: boolean;
+  accountCreatedAt?: string;
+  email?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export const useSocialMediaAuth = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [tiktokCallbackProcessed, setTiktokCallbackProcessed] = useState(false);
@@ -49,9 +72,11 @@ export const useSocialMediaAuth = () => {
   const getInstagramUserInfo = useAction(api.instagram.getInstagramUserInfo);
   const saveInstagramAccount = useMutation(api.instagram.saveInstagramAccount);
   
-  const exchangeMicrosoftToken = useAction(api.microsoft.exchangeMicrosoftToken);
+  const exchangeMicrosoftToken = useAction(api.microsoft.exchangeMicrosoftTokenWithRefresh);
   const getMicrosoftUserInfo = useAction(api.microsoft.getMicrosoftUserInfo);
+  const getMicrosoftUserInfoWithTokenRefresh = useAction(api.microsoft.getMicrosoftUserInfoWithTokenRefresh);
   const saveMicrosoftAccount = useMutation(api.microsoft.saveMicrosoftAccount);
+
 
   // Twitter Authentication
   const handleTwitterCallback = async () => {
@@ -638,10 +663,24 @@ export const useSocialMediaAuth = () => {
 
       const authResponse = await exchangeMicrosoftToken({ code });
       
+      // Log the auth response for debugging
+      console.log('Microsoft auth response received:', {
+        hasAccessToken: !!authResponse?.access_token,
+        hasRefreshToken: !!authResponse?.refresh_token,
+        hasExpiresIn: !!authResponse?.expires_in,
+        fullResponse: authResponse
+      });
+      
       if (authResponse && authResponse.access_token) {
         const userInfo = await getMicrosoftUserInfo({ accessToken: authResponse.access_token });
         
         if (userInfo) {
+          console.log('Saving Microsoft account with tokens:', {
+            accessToken: authResponse.access_token ? 'Present' : 'Missing',
+            refreshToken: authResponse.refresh_token ? 'Present' : 'Missing',
+            expiresIn: authResponse.expires_in
+          });
+          
           await saveMicrosoftAccount({
             userId: "current-user",
             username: userInfo.userPrincipalName || userInfo.displayName || 'microsoft_user',
@@ -709,7 +748,7 @@ export const useSocialMediaAuth = () => {
   };
 
   // Update connected accounts function
-  const updateConnectedAccounts = async (connectedAccounts: any[]) => {
+  const updateConnectedAccounts = async (connectedAccounts: SocialAccount[]) => {
     if (!connectedAccounts || connectedAccounts.length === 0) return;
     
     try {
@@ -760,7 +799,7 @@ export const useSocialMediaAuth = () => {
   };
 
   // Helper functions for updating accounts
-  const updateTikTokAccount = async (account: any) => {
+  const updateTikTokAccount = async (account: SocialAccount) => {
     console.log(`Actualizando datos de TikTok para: ${account.username}`);
     const userInfo = await getTikTokUserInfo({ accessToken: account.accessToken });
     
@@ -786,7 +825,7 @@ export const useSocialMediaAuth = () => {
     }
   };
 
-  const updateTwitterAccount = async (account: any) => {
+  const updateTwitterAccount = async (account: SocialAccount) => {
     console.log(`Actualizando datos de Twitter para: ${account.username}`);
     const userInfo = await getTwitterUserInfo({ accessToken: account.accessToken });
     
@@ -812,7 +851,7 @@ export const useSocialMediaAuth = () => {
     }
   };
 
-  const updateLinkedInAccount = async (account: any) => {
+  const updateLinkedInAccount = async (account: SocialAccount) => {
     console.log(`Actualizando datos de LinkedIn para: ${account.username}`);
     const userInfo = await getLinkedInUserInfo({ accessToken: account.accessToken });
     
@@ -838,7 +877,7 @@ export const useSocialMediaAuth = () => {
     }
   };
 
-  const updateYouTubeAccount = async (account: any) => {
+  const updateYouTubeAccount = async (account: SocialAccount) => {
     console.log(`Actualizando datos de YouTube para: ${account.username}`);
     const channelInfo = await getYouTubeChannelInfo({ accessToken: account.accessToken });
     
@@ -870,7 +909,7 @@ export const useSocialMediaAuth = () => {
     }
   };
 
-  const updateFacebookAccount = async (account: any) => {
+  const updateFacebookAccount = async (account: SocialAccount) => {
     console.log(`Actualizando datos de Facebook para: ${account.username}`);
     const userInfo = await getFacebookUserInfo({ accessToken: account.accessToken });
     
@@ -915,7 +954,7 @@ export const useSocialMediaAuth = () => {
     }
   };
 
-  const updateInstagramAccount = async (account: any) => {
+  const updateInstagramAccount = async (account: SocialAccount) => {
     console.log(`Actualizando datos de Instagram para: ${account.username}`);
     const userInfo = await getInstagramUserInfo({ accessToken: account.accessToken });
     
@@ -941,24 +980,50 @@ export const useSocialMediaAuth = () => {
     }
   };
 
-  const updateMicrosoftAccount = async (account: any) => {
+  const updateMicrosoftAccount = async (account: SocialAccount) => {
     console.log(`Actualizando datos de Microsoft para: ${account.username}`);
-    const userInfo = await getMicrosoftUserInfo({ accessToken: account.accessToken });
     
-    if (userInfo) {
-      await saveMicrosoftAccount({
-        userId: account.userId,
-        username: userInfo.userPrincipalName || userInfo.displayName || account.username,
-        name: userInfo.displayName || userInfo.userPrincipalName || account.name,
-        accessToken: account.accessToken,
-        refreshToken: account.refreshToken,
-        expiresAt: account.expiresAt,
-        email: userInfo.mail || userInfo.userPrincipalName || account.email || '',
-        profileImageUrl: account.profileImageUrl || '',
-        accountCreatedAt: account.accountCreatedAt || new Date().toISOString()
-      });
+    try {
+      // Usar la función del servidor que maneja automáticamente la renovación de tokens
+      const result = await getMicrosoftUserInfoWithTokenRefresh({ accountId: account._id });
       
-      console.log(`Datos actualizados para Microsoft: ${account.username}`);
+      if (result && result.userData) {
+        const userInfo = result.userData;
+        
+        // Actualizar la cuenta con la información más reciente
+        await saveMicrosoftAccount({
+          userId: account.userId,
+          username: userInfo.userPrincipalName || userInfo.displayName || account.username,
+          name: userInfo.displayName || userInfo.userPrincipalName || account.name,
+          accessToken: result.accessToken,
+          refreshToken: account.refreshToken,
+          expiresAt: account.expiresAt,
+          email: userInfo.mail || userInfo.userPrincipalName || account.email || '',
+          profileImageUrl: account.profileImageUrl || '',
+          accountCreatedAt: account.accountCreatedAt || new Date().toISOString()
+        });
+        
+        if (result.tokenRefreshed) {
+          console.log(`Token renovado y datos actualizados para Microsoft: ${account.username}`);
+        } else {
+          console.log(`Datos actualizados para Microsoft: ${account.username} (token aún válido)`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error actualizando cuenta de Microsoft ${account.username}:`, error);
+      
+      // Si hay error de token o autenticación, desconectar la cuenta
+      if (error instanceof Error && (
+        error.message.includes('token') || 
+        error.message.includes('unauthorized') ||
+        error.message.includes('forbidden') ||
+        error.message.includes('401') ||
+        error.message.includes('403')
+      )) {
+        console.log(`Cuenta de Microsoft ${account.username} desconectada por error de autenticación`);
+        await disconnectAccount({ accountId: account._id as Id<"socialAccounts"> });
+        showError(`Token expirado para ${account.platform}: ${account.username}. Por favor, reconecta la cuenta.`);
+      }
     }
   };
 
