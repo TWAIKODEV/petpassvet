@@ -1,22 +1,22 @@
 
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Download, PawPrint, RefreshCw, Eye, Edit, Printer } from 'lucide-react';
-import { useQuery, useMutation } from "convex/react";
+import { Search, Filter, Download, PawPrint, RefreshCw, Eye, Edit, Printer } from 'lucide-react';
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import Input from '../components/common/Input';
+import NewPetForm from '../components/pets/NewPetForm';
+import { type NewPetFormOutput } from '../validators/formValidator';
+import { Doc } from "../../convex/_generated/dataModel";
 
 const Pets: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [showNewPetForm, setShowNewPetForm] = useState(false);
-  const [selectedPet, setSelectedPet] = useState<any>(null);
+  const [selectedPet, setSelectedPet] = useState<Doc<"pets"> & { owner: { name: string; email: string; phone: string } | null } | null>(null);
 
   // Fetch pets from Convex
   const pets = useQuery(api.pets.getAllPets) || [];
-  const createPet = useMutation(api.pets.createPet);
-  const patients = useQuery(api.patients.getPatients) || [];
 
   const filteredPets = pets.filter(pet => 
     pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -24,57 +24,16 @@ const Pets: React.FC = () => {
     (pet.microchipNumber && pet.microchipNumber.includes(searchTerm))
   );
 
-  const handleNewPet = async (petData: any) => {
-    try {
-      await createPet({
-        patientId: petData.ownerId,
-        name: petData.petName,
-        species: petData.petSpecies,
-        breed: petData.petBreed || undefined,
-        sex: petData.petSex || undefined,
-        birthDate: petData.birthDate || undefined,
-        isNeutered: petData.isNeutered || false,
-        microchipNumber: petData.microchip || undefined,
-        color: petData.furColor || undefined,
-        weight: petData.weight ? parseFloat(petData.weight) : undefined,
-        height: petData.height ? parseFloat(petData.height) : undefined,
-        furType: petData.furType || undefined,
-        observations: petData.observations || undefined,
-        currentTreatments: petData.currentTreatments || undefined,
-        allergies: petData.allergies || undefined,
-        bloodTest: petData.test_blood ? {
-          done: true,
-          date: petData.test_blood_date || undefined,
-        } : undefined,
-        xrayTest: petData.test_xray ? {
-          done: true,
-          date: petData.test_xray_date || undefined,
-        } : undefined,
-        ultrasoundTest: petData.test_ultrasound ? {
-          done: true,
-          date: petData.test_ultrasound_date || undefined,
-        } : undefined,
-        urineTest: petData.test_urine ? {
-          done: true,
-          date: petData.test_urine_date || undefined,
-        } : undefined,
-        otherTests: petData.otherTests || undefined,
-        hasPetPass: petData.hasPetPass || false,
-        hasInsurance: petData.hasInsurance || false,
-        insuranceProvider: petData.hasInsurance ? petData.insuranceProvider : undefined,
-        insuranceNumber: petData.hasInsurance ? petData.insuranceNumber : undefined,
-      });
-      setShowNewPetForm(false);
-    } catch (error) {
-      console.error('Error creating pet:', error);
-    }
+  const handleNewPet = (petData: NewPetFormOutput) => {
+    console.log('Nueva mascota creada:', petData);
+    setShowNewPetForm(false);
   };
 
-  const handleViewPetDetails = (pet: any) => {
+  const handleViewPetDetails = (pet: Doc<"pets"> & { owner: { name: string; email: string; phone: string } | null }) => {
     setSelectedPet(pet);
   };
 
-  const calculateAge = (birthDate: string) => {
+  const calculateAge = (birthDate: string | undefined) => {
     if (!birthDate) return 'N/A';
     const today = new Date();
     const birth = new Date(birthDate);
@@ -113,11 +72,10 @@ const Pets: React.FC = () => {
       {/* Filters and Search */}
       <Card>
         <div className="flex flex-col sm:flex-row gap-4">
-          <Input
+          <input
             placeholder="Buscar mascotas..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            icon={<Search size={18} />}
             className="flex-1"
           />
           <div className="flex flex-col sm:flex-row gap-2">
@@ -352,7 +310,7 @@ const Pets: React.FC = () => {
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Sexo</label>
                           <p className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
-                            {selectedPet.sex === 'male' ? 'Macho' : selectedPet.sex === 'female' ? 'Hembra' : 'No especificado'}
+                            {selectedPet.sex === 'male' ? 'Macho' : selectedPet.sex === 'female' ? 'Hembra' : 'N/A'}
                           </p>
                         </div>
                         <div>
@@ -537,365 +495,7 @@ const Pets: React.FC = () => {
 
       {/* New Pet Form Modal */}
       {showNewPetForm && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Nueva Mascota</h2>
-              <button
-                onClick={() => setShowNewPetForm(false)}
-                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Cerrar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="overflow-y-auto p-6 flex-1">
-              <form 
-                className="space-y-6"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.target as HTMLFormElement);
-                  const data = Object.fromEntries(formData);
-                  handleNewPet(data);
-                }}
-              >
-                {/* Basic Information */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Información Básica</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="Nombre de la Mascota"
-                      name="petName"
-                      required
-                    />
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Especie
-                      </label>
-                      <select
-                        name="petSpecies"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Seleccionar especie</option>
-                        <option value="Perro">Perro</option>
-                        <option value="Gato">Gato</option>
-                        <option value="Conejo">Conejo</option>
-                        <option value="Ave">Ave</option>
-                        <option value="Reptil">Reptil</option>
-                        <option value="Otro">Otro</option>
-                      </select>
-                    </div>
-                    <Input
-                      label="Raza"
-                      name="petBreed"
-                    />
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Sexo
-                      </label>
-                      <select
-                        name="petSex"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar sexo</option>
-                        <option value="male">Macho</option>
-                        <option value="female">Hembra</option>
-                      </select>
-                    </div>
-                    <Input
-                      label="Fecha de Nacimiento"
-                      type="date"
-                      name="birthDate"
-                    />
-                    <Input
-                      label="Nº Microchip"
-                      name="microchip"
-                      placeholder="Ej: 941000024680135"
-                    />
-                    <div className="md:col-span-2">
-                      <label className="flex items-center space-x-2">
-                        <input 
-                          type="checkbox" 
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          name="isNeutered"
-                        />
-                        <span className="text-sm text-gray-700">Esterilizado/a</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Physical Characteristics */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Características Físicas</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo de Pelo
-                      </label>
-                      <select
-                        name="furType"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      >
-                        <option value="">Seleccionar tipo</option>
-                        <option value="corto">Corto</option>
-                        <option value="medio">Medio</option>
-                        <option value="largo">Largo</option>
-                        <option value="rizado">Rizado</option>
-                        <option value="duro">Duro</option>
-                        <option value="sin_pelo">Sin pelo</option>
-                      </select>
-                    </div>
-                    <Input
-                      label="Color de Pelo"
-                      name="furColor"
-                      placeholder="Ej: Negro, Marrón, Atigrado..."
-                    />
-                    <Input
-                      label="Peso (kg)"
-                      type="number"
-                      name="weight"
-                      step="0.1"
-                      min="0"
-                    />
-                    <Input
-                      label="Altura (cm)"
-                      type="number"
-                      name="height"
-                      min="0"
-                    />
-                  </div>
-                </div>
-
-                {/* Medical Information */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Información Médica</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tratamientos en Curso
-                      </label>
-                      <textarea
-                        name="currentTreatments"
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Describa los tratamientos actuales..."
-                      ></textarea>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Alergias Conocidas
-                      </label>
-                      <textarea
-                        name="allergies"
-                        rows={2}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Alergias a medicamentos, alimentos, etc..."
-                      ></textarea>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Observaciones
-                      </label>
-                      <textarea
-                        name="observations"
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Notas adicionales sobre la mascota..."
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Medical Tests */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Pruebas Médicas Relevantes</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Análisis de Sangre
-                        </label>
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            name="test_blood"
-                          />
-                          <span className="text-sm text-gray-700">Realizado</span>
-                          <Input
-                            type="date"
-                            name="test_blood_date"
-                            className="ml-2"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Radiografía
-                        </label>
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            name="test_xray"
-                          />
-                          <span className="text-sm text-gray-700">Realizado</span>
-                          <Input
-                            type="date"
-                            name="test_xray_date"
-                            className="ml-2"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Ecografía
-                        </label>
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            name="test_ultrasound"
-                          />
-                          <span className="text-sm text-gray-700">Realizado</span>
-                          <Input
-                            type="date"
-                            name="test_ultrasound_date"
-                            className="ml-2"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Análisis de Orina
-                        </label>
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            name="test_urine"
-                          />
-                          <span className="text-sm text-gray-700">Realizado</span>
-                          <Input
-                            type="date"
-                            name="test_urine_date"
-                            className="ml-2"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Otras Pruebas o Resultados Relevantes
-                      </label>
-                      <textarea
-                        name="otherTests"
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Describa otras pruebas realizadas y sus resultados..."
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Information */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Información Adicional</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Propietario
-                      </label>
-                      <select
-                        name="ownerId"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Seleccionar propietario</option>
-                        {patients.map(patient => (
-                          <option key={patient._id} value={patient._id}>
-                            {patient.firstName} {patient.lastName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="flex items-center space-x-2">
-                        <input 
-                          type="checkbox" 
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          name="hasPetPass"
-                        />
-                        <span className="text-sm text-gray-700">Tiene PetPass</span>
-                      </label>
-                    </div>
-                    
-                    <div>
-                      <label className="flex items-center space-x-2">
-                        <input 
-                          type="checkbox" 
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          name="hasInsurance"
-                        />
-                        <span className="text-sm text-gray-700">Tiene seguro</span>
-                      </label>
-                    </div>
-
-                    <div>
-                      <Input
-                        label="Compañía de seguros"
-                        name="insuranceProvider"
-                        placeholder="Nombre de la aseguradora"
-                      />
-                    </div>
-
-                    <div>
-                      <Input
-                        label="Número de póliza"
-                        name="insuranceNumber"
-                        placeholder="Número de la póliza"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </form>
-            </div>
-            
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowNewPetForm(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  const form = document.querySelector('form') as HTMLFormElement;
-                  if (form) {
-                    const formData = new FormData(form);
-                    const data = Object.fromEntries(formData);
-                    handleNewPet(data);
-                  }
-                }}
-              >
-                Guardar Mascota
-              </Button>
-            </div>
-          </div>
-        </div>
+        <NewPetForm onClose={() => setShowNewPetForm(false)} onSubmit={handleNewPet} />
       )}
     </div>
   );

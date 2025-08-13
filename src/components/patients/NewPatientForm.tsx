@@ -1,13 +1,16 @@
 import React, { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { X, Plus, Trash, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { X, ChevronDown, ChevronRight, Check } from "lucide-react";
 import Button from "../common/Button";
 import Input from "../common/Input";
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FormValidator, type NewPatientFormInput, type NewPatientFormOutput } from '../../validators/formValidator';
 
 interface NewPatientFormProps {
   onClose: () => void;
-  onSubmit: (patientData: any) => void;
+  onSubmit: (patientData: NewPatientFormOutput) => void;
 }
 
 const NewPatientForm: React.FC<NewPatientFormProps> = ({
@@ -15,57 +18,66 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
   onSubmit,
 }) => {
   const createPatient = useMutation(api.patients.createPatient);
-  const [formData, setFormData] = useState({
-    // Owner information
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    birthDate: "",
-    idNumber: "", // DNI/NIE
-    language: "",
-    preferredContact: "",
-    couponCode: "",
-    affiliateClub: "",
-    address: "",
-
-    // Marketing and communications
-    marketing: {
-      acceptsEmail: false,
-      acceptsSms: false,
-      acceptsWhatsApp: false,
-    },
-
-    // PetPass information
-    petPass: {
-      hasPetPass: false,
-      product: "", // Changed from 'plan' to 'product' for clarity
-    },
-
-    // Additional services
-    services: {
-      wantsGrooming: false,
-      wantsFoodDelivery: false,
-      wantsHotelService: false,
-      wantsTraining: false,
-    },
-
-    // Pet information
-    pet: {
-      name: undefined,
-      species: undefined,
-      breed: "",
-      sex: "",
+  
+  const form = useForm<NewPatientFormInput, unknown, NewPatientFormOutput>({
+    resolver: zodResolver(FormValidator.newPatient()),
+    defaultValues: {
+      // Owner information
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
       birthDate: "",
-      microchipNumber: "",
-      isNeutered: false,
-      color: "",
-      observations: "",
-      hasInsurance: false,
-      insuranceProvider: "",
-      insuranceNumber: "",
-    },
+      idNumber: "",
+      language: "",
+      preferredContact: undefined,
+      couponCode: "",
+      affiliateClub: "",
+      address: "",
+
+      // Marketing and communications
+      marketing: {
+        acceptsEmail: false,
+        acceptsSms: false,
+        acceptsWhatsApp: false,
+        signedAt: undefined,
+      },
+
+      // PetPass information
+      petPass: {
+        hasPetPass: false,
+        product: undefined,
+      },
+
+      // Additional services
+      services: {
+        wantsGrooming: false,
+        wantsFoodDelivery: false,
+        wantsHotelService: false,
+        wantsTraining: false,
+      },
+
+      // Pet information
+      pet: {
+        name: "",
+        species: "",
+        breed: "",
+        sex: undefined,
+        birthDate: "",
+        isNeutered: false,
+        microchipNumber: "",
+        color: "",
+        observations: "",
+        hasInsurance: false,
+        insuranceProvider: "",
+        insuranceNumber: "",
+      },
+    }
   });
+
+  const { control, handleSubmit, setValue, formState: { errors }, reset, watch } = form;
+  const petPassHasPetPass = watch("petPass.hasPetPass");
+  const petHasInsurance = watch("pet.hasInsurance");
 
   const [expandedSections, setExpandedSections] = useState({
     owner: true,
@@ -79,7 +91,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -93,100 +105,98 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
   const handleVerifyOTP = () => {
     if (otpCode.length === 6) {
       setShowSignatureModal(false);
-      setFormData((prev) => ({
-        ...prev,
-        marketing: {
-          ...prev.marketing,
-          signedAt: new Date().toISOString(),
-        },
-      }));
+      setValue("marketing.signedAt", new Date().toISOString());
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-
-    // Handle nested object updates
-    if (name.includes(".")) {
-      const [section, field] = name.split(".");
-      setFormData((prev) => ({
-        ...prev,
-        [section]: {
-          ...prev[section],
-          [field]: type === "checkbox" ? checked : value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmitForm = async (values: NewPatientFormOutput) => {
     try {
-      const patientData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        birthDate: formData.birthDate,
-        address: formData.address,
-        preferredContact: formData.preferredContact
-          ? (formData.preferredContact as
-              | "phone"
-              | "email"
-              | "whatsapp"
-              | "sms")
-          : undefined,
+      const patientData: {
+        firstName: string;
+        lastName: string;
+        email?: string;
+        phone: string;
+        birthDate: string;
+        address?: string;
+        preferredContact?: "phone" | "email" | "whatsapp" | "sms";
+        bankAccount: undefined;
+        creditCard: undefined;
+        marketing: {
+          acceptsEmail: boolean;
+          acceptsSms: boolean;
+          acceptsWhatsApp: boolean;
+        };
+        petPass: {
+          hasPetPass: boolean;
+          plan?: "track" | "protect" | "vetcare";
+        };
+        services: {
+          wantsGrooming: boolean;
+          wantsFoodDelivery: boolean;
+          wantsHotelService: boolean;
+          wantsTraining: boolean;
+        };
+        medicalHistory: undefined;
+        pet?: {
+          name: string;
+          species: string;
+          breed?: string;
+          sex?: "male" | "female";
+          birthDate?: string;
+          isNeutered: boolean;
+          microchipNumber?: string;
+          color?: string;
+          observations?: string;
+          hasInsurance: boolean;
+          insuranceProvider?: string;
+          insuranceNumber?: string;
+        };
+      } = {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email || undefined,
+        phone: values.phone,
+        birthDate: values.birthDate,
+        address: values.address || undefined,
+        preferredContact: values.preferredContact,
         bankAccount: undefined,
         creditCard: undefined,
         marketing: {
-          acceptsEmail: formData.marketing.acceptsEmail || false,
-          acceptsSms: formData.marketing.acceptsSms || false,
-          acceptsWhatsApp: formData.marketing.acceptsWhatsApp || false,
+          acceptsEmail: values.marketing.acceptsEmail,
+          acceptsSms: values.marketing.acceptsSms,
+          acceptsWhatsApp: values.marketing.acceptsWhatsApp,
         },
         petPass: {
-          hasPetPass: formData.petPass.hasPetPass || false,
-          plan:
-            formData.petPass.hasPetPass && formData.petPass.product
-              ? (formData.petPass.product as "track" | "protect" | "vetcare")
-              : undefined,
+          hasPetPass: values.petPass.hasPetPass,
+          plan: values.petPass.product,
         },
         services: {
-          wantsGrooming: formData.services.wantsGrooming || false,
-          wantsFoodDelivery: formData.services.wantsFoodDelivery || false,
-          wantsHotelService: formData.services.wantsHotelService || false,
-          wantsTraining: formData.services.wantsTraining || false,
+          wantsGrooming: values.services.wantsGrooming,
+          wantsFoodDelivery: values.services.wantsFoodDelivery,
+          wantsHotelService: values.services.wantsHotelService,
+          wantsTraining: values.services.wantsTraining,
         },
         medicalHistory: undefined,
       };
 
       // Add pet data if provided
-      if (formData.pet.name) {
+      if (values.pet && values.pet.name && values.pet.species) {
         const petData = {
-          name: formData.pet.name,
-          species: formData.pet.species,
-          breed: formData.pet.breed || undefined,
-          sex: formData.pet.sex
-            ? (formData.pet.sex as "male" | "female")
+          name: values.pet.name,
+          species: values.pet.species,
+          breed: values.pet.breed,
+          sex: values.pet.sex,
+          birthDate: values.pet.birthDate,
+          isNeutered: values.pet.isNeutered,
+          microchipNumber: values.pet.microchipNumber || undefined,
+          color: values.pet.color || undefined,
+          observations: values.pet.observations || undefined,
+          hasInsurance: values.pet.hasInsurance || false,
+          insuranceProvider: values.pet.hasInsurance && values.pet.insuranceProvider
+            ? values.pet.insuranceProvider
             : undefined,
-          birthDate: formData.pet.birthDate || undefined,
-          isNeutered: formData.pet.isNeutered || false,
-          microchipNumber: formData.pet.microchipNumber || undefined,
-          color: formData.pet.color || undefined,
-          observations: formData.pet.observations || undefined,
-          hasInsurance: formData.pet.hasInsurance || false,
-          insuranceProvider: formData.pet.hasInsurance
-            ? formData.pet.insuranceProvider
-            : undefined,
-          insuranceNumber: formData.pet.hasInsurance
-            ? formData.pet.insuranceNumber
+          insuranceNumber: values.pet.hasInsurance && values.pet.insuranceNumber
+            ? values.pet.insuranceNumber
             : undefined,
         };
 
@@ -196,7 +206,8 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
       const patientId = await createPatient(patientData);
 
       console.log("Paciente creado con ID:", patientId);
-      onSubmit(formData);
+      onSubmit(values);
+      reset();
       onClose();
     } catch (error) {
       console.error("Error creando paciente:", error);
@@ -208,7 +219,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
     section,
   }: {
     title: string;
-    section: string;
+    section: keyof typeof expandedSections;
   }) => (
     <div
       className="flex items-center justify-between bg-gray-50 p-4 rounded-t-lg cursor-pointer"
@@ -240,7 +251,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form id="patient-form" onSubmit={handleSubmit(onSubmitForm)} className="p-6 space-y-6">
           {/* Owner Information Section */}
           <div className="border rounded-lg shadow-sm">
             <SectionHeader
@@ -250,70 +261,135 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
             {expandedSections.owner && (
               <div className="p-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Nombre"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    required
-                  />
-                  <Input
-                    label="Apellidos"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    required
-                  />
+                  <div>
+                    <Controller
+                      control={control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <Input
+                          label="Nombre *"
+                          {...field}
+                        />
+                      )}
+                    />
+                    {errors.firstName && (
+                      <p className="mt-1 text-xs text-red-600">{errors.firstName.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Controller
+                      control={control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <Input
+                          label="Apellidos *"
+                          {...field}
+                        />
+                      )}
+                    />
+                    {errors.lastName && (
+                      <p className="mt-1 text-xs text-red-600">{errors.lastName.message}</p>
+                    )}
+                  </div>
                 </div>
-                <Input
-                  label="DNI/NIE"
-                  name="idNumber"
-                  value={formData.idNumber}
-                  onChange={handleChange}
-                  required
-                />
-                <Input
-                  label="Dirección"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  disabled
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Email"
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
+                <div>
+                  <Controller
+                    control={control}
+                    name="idNumber"
+                    render={({ field }) => (
+                      <Input
+                        label="DNI/NIE *"
+                        {...field}
+                      />
+                    )}
                   />
-                  <Input
-                    label="Teléfono"
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
+                  {errors.idNumber && (
+                    <p className="mt-1 text-xs text-red-600">{errors.idNumber.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Controller
+                    control={control}
+                    name="address"
+                    render={({ field }) => (
+                      <Input
+                        label="Dirección *"
+                        {...field}
+                      />
+                    )}
                   />
+                  {errors.address && (
+                    <p className="mt-1 text-xs text-red-600">{errors.address.message}</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Fecha de Nacimiento"
-                    type="date"
-                    name="birthDate"
-                    value={formData.birthDate}
-                    onChange={handleChange}
-                  />
-                  <select
-                    name="language"
-                    value={formData.language}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  >
-                    <option value="">Seleccionar Idioma</option>
-                    <option value="es">Español</option>
-                    <option value="en">Inglés</option>
-                    <option value="ca">Catalán</option>
-                  </select>
+                  <div>
+                    <Controller
+                      control={control}
+                      name="email"
+                      render={({ field }) => (
+                        <Input
+                          label="Email"
+                          type="email"
+                          {...field}
+                        />
+                      )}
+                    />
+                    {errors.email && (
+                      <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Controller
+                      control={control}
+                      name="phone"
+                      render={({ field }) => (
+                        <Input
+                          label="Teléfono *"
+                          type="tel"
+                          {...field}
+                        />
+                      )}
+                    />
+                    {errors.phone && (
+                      <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Controller
+                      control={control}
+                      name="birthDate"
+                      render={({ field }) => (
+                        <Input
+                          label="Fecha de Nacimiento *"
+                          type="date"
+                          {...field}
+                        />
+                      )}
+                    />
+                    {errors.birthDate && (
+                      <p className="mt-1 text-xs text-red-600">{errors.birthDate.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Controller
+                      control={control}
+                      name="language"
+                      render={({ field }) => (
+                        <select
+                          {...field}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        >
+                          <option value="">Seleccionar Idioma</option>
+                          <option value="es">Español</option>
+                          <option value="en">Inglés</option>
+                          <option value="ca">Catalán</option>
+                        </select>
+                      )}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
@@ -325,13 +401,18 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                         key={method}
                         className="flex items-center space-x-2"
                       >
-                        <input
-                          type="radio"
+                        <Controller
+                          control={control}
                           name="preferredContact"
-                          value={method}
-                          checked={formData.preferredContact === method}
-                          onChange={handleChange}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          render={({ field }) => (
+                            <input
+                              type="radio"
+                              value={method}
+                              checked={field.value === method}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                          )}
                         />
                         <span className="text-sm text-gray-700 capitalize">
                           {method}
@@ -341,19 +422,27 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Código de descuento"
+                  <Controller
+                    control={control}
                     name="couponCode"
-                    value={formData.couponCode}
-                    onChange={handleChange}
-                    placeholder="Si tiene un código, ingréselo aquí"
+                    render={({ field }) => (
+                      <Input
+                        label="Código de descuento"
+                        {...field}
+                        placeholder="Si tiene un código, ingréselo aquí"
+                      />
+                    )}
                   />
-                  <Input
-                    label="Club de afiliados"
+                  <Controller
+                    control={control}
                     name="affiliateClub"
-                    value={formData.affiliateClub}
-                    onChange={handleChange}
-                    placeholder="Nombre del club si es miembro"
+                    render={({ field }) => (
+                      <Input
+                        label="Club de afiliados"
+                        {...field}
+                        placeholder="Nombre del club si es miembro"
+                      />
+                    )}
                   />
                 </div>
               </div>
@@ -365,109 +454,177 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
             <SectionHeader title="Información de la Mascota" section="pet" />
             {expandedSections.pet && (
               <div className="p-4 space-y-4">
-                <Input
-                  label="Nombre de la Mascota"
-                  name="pet.name"
-                  value={formData.pet.name}
-                  onChange={handleChange}
-                  required
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Especie"
-                    name="pet.species"
-                    value={formData.pet.species}
-                    onChange={handleChange}
+                <div>
+                  <Controller
+                    control={control}
+                    name="pet.name"
+                    render={({ field }) => (
+                      <Input
+                        label="Nombre de la Mascota *"
+                        {...field}
+                      />
+                    )}
                   />
-                  <Input
-                    label="Raza"
+                  {errors.pet?.name && (
+                    <p className="mt-1 text-xs text-red-600">{errors.pet.name.message}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Controller
+                      control={control}
+                      name="pet.species"
+                      render={({ field }) => (
+                        <Input
+                          label="Especie *"
+                          {...field}
+                        />
+                      )}
+                    />
+                    {errors.pet?.species && (
+                      <p className="mt-1 text-xs text-red-600">{errors.pet.species.message}</p>
+                    )}
+                  </div>
+                  <Controller
+                    control={control}
                     name="pet.breed"
-                    value={formData.pet.breed}
-                    onChange={handleChange}
+                    render={({ field }) => (
+                      <Input
+                        label="Raza *"
+                        {...field}
+                      />
+                    )}
                   />
+                  {errors.pet?.breed && (
+                    <p className="mt-1 text-xs text-red-600">{errors.pet.breed.message}</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <select
+                  <Controller
+                    control={control}
                     name="pet.sex"
-                    value={formData.pet.sex}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  >
-                    <option value="">Seleccionar Sexo</option>
-                    <option value="male">Macho</option>
-                    <option value="female">Hembra</option>
-                  </select>
-                  <Input
-                    label="Fecha de Nacimiento"
-                    type="date"
-                    name="pet.birthDate"
-                    value={formData.pet.birthDate}
-                    onChange={handleChange}
+                    render={({ field }) => (
+                      <select
+                        {...field}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      >
+                        <option value="">Seleccionar Sexo *</option>
+                        <option value="male">Macho</option>
+                        <option value="female">Hembra</option>
+                      </select>
+                    )}
                   />
+                  {errors.pet?.sex && (
+                    <p className="mt-1 text-xs text-red-600">{errors.pet.sex.message}</p>
+                  )}
+                  <Controller
+                    control={control}
+                    name="pet.birthDate"
+                    render={({ field }) => (
+                      <Input
+                        label="Fecha de Nacimiento *"
+                        type="date"
+                        {...field}
+                      />
+                    )}
+                  />
+                  {errors.pet?.birthDate && (
+                    <p className="mt-1 text-xs text-red-600">{errors.pet.birthDate.message}</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Color del pelaje"
+                  <Controller
+                    control={control}
                     name="pet.color"
-                    value={formData.pet.color}
-                    onChange={handleChange}
+                    render={({ field }) => (
+                      <Input
+                        label="Color del pelaje"
+                        {...field}
+                      />
+                    )}
                   />
-                  <Input
-                    label="Número de Microchip"
+                  <Controller
+                    control={control}
                     name="pet.microchipNumber"
-                    value={formData.pet.microchipNumber}
-                    onChange={handleChange}
+                    render={({ field }) => (
+                      <Input
+                        label="Número de Microchip"
+                        {...field}
+                      />
+                    )}
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     Observaciones
                   </label>
-                  <textarea
+                  <Controller
+                    control={control}
                     name="pet.observations"
-                    value={formData.pet.observations}
-                    onChange={handleChange}
-                    rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    render={({ field }) => (
+                      <textarea
+                        {...field}
+                        rows={3}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      />
+                    )}
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
+                    <Controller
+                      control={control}
                       name="pet.isNeutered"
-                      checked={formData.pet.isNeutered}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      )}
                     />
                     <span className="text-sm text-gray-700">
                       Esterilizado/a
                     </span>
                   </label>
                   <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
+                    <Controller
+                      control={control}
                       name="pet.hasInsurance"
-                      checked={formData.pet.hasInsurance}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      )}
                     />
                     <span className="text-sm text-gray-700">Tiene seguro</span>
                   </label>
                 </div>
-                {formData.pet.hasInsurance && (
+                {petHasInsurance && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="Nombre de la aseguradora"
+                    <Controller
+                      control={control}
                       name="pet.insuranceProvider"
-                      value={formData.pet.insuranceProvider}
-                      onChange={handleChange}
+                      render={({ field }) => (
+                        <Input
+                          label="Nombre de la aseguradora"
+                          {...field}
+                        />
+                      )}
                     />
-                    <Input
-                      label="Número de póliza"
+                    <Controller
+                      control={control}
                       name="pet.insuranceNumber"
-                      value={formData.pet.insuranceNumber}
-                      onChange={handleChange}
+                      render={({ field }) => (
+                        <Input
+                          label="Número de póliza"
+                          {...field}
+                        />
+                      )}
                     />
                   </div>
                 )}
@@ -485,36 +642,51 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
               <div className="p-4 space-y-4">
                 <div className="space-y-2">
                   <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      name="marketing.emailConsent"
-                      checked={formData.marketing.acceptsEmail}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    <Controller
+                      control={control}
+                      name="marketing.acceptsEmail"
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      )}
                     />
                     <span className="text-sm text-gray-700">
                       Acepto recibir comunicaciones por email
                     </span>
                   </label>
                   <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      name="marketing.smsConsent"
-                      checked={formData.marketing.acceptsSms}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    <Controller
+                      control={control}
+                      name="marketing.acceptsSms"
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      )}
                     />
                     <span className="text-sm text-gray-700">
                       Acepto recibir comunicaciones por SMS
                     </span>
                   </label>
                   <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      name="marketing.whatsappConsent"
-                      checked={formData.marketing.acceptsWhatsApp}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    <Controller
+                      control={control}
+                      name="marketing.acceptsWhatsApp"
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      )}
                     />
                     <span className="text-sm text-gray-700">
                       Acepto recibir comunicaciones por WhatsApp
@@ -526,7 +698,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
-                      {formData.marketing.signedAt ? (
+                      {watch("marketing.signedAt") ? (
                         <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
                           <Check className="h-5 w-5 text-green-600" />
                         </div>
@@ -544,7 +716,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                         Es necesario firmar la autorización para el tratamiento
                         de datos personales y comunicaciones comerciales
                       </p>
-                      {!formData.marketing.signedAt && (
+                      {!watch("marketing.signedAt") && (
                         <Button
                           type="button"
                           variant="outline"
@@ -569,12 +741,17 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
               <div className="p-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-start space-x-4">
-                    <input
-                      type="checkbox"
+                    <Controller
+                      control={control}
                       name="petPass.hasPetPass"
-                      checked={formData.petPass.hasPetPass}
-                      onChange={handleChange}
-                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      )}
                     />
                     <div className="flex-1">
                       <label className="text-sm font-medium text-gray-900">
@@ -585,30 +762,32 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                         PetPass
                       </p>
 
-                      {formData.petPass.hasPetPass && (
+                      {petPassHasPetPass && (
                         <div className="mt-4 relative">
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Producto PetPass
                           </label>
                           <div className="relative">
-                            <select
+                            <Controller
+                              control={control}
                               name="petPass.product"
-                              value={formData.petPass.product}
-                              onChange={handleChange}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white"
-                            >
-                              <option value="undefined">
-                                Seleccionar producto
-                              </option>
-                              <option value="track">PetPass Track</option>
-                              <option value="protect">PetPass Protect</option>
-                              <option value="vetcare">PetPass Vetcare</option>
-                            </select>
+                              render={({ field }) => (
+                                <select
+                                  {...field}
+                                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white"
+                                >
+                                  <option value="">Seleccionar producto</option>
+                                  <option value="track">PetPass Track</option>
+                                  <option value="protect">PetPass Protect</option>
+                                  <option value="vetcare">PetPass Vetcare</option>
+                                </select>
+                              )}
+                            />
                           </div>
 
-                          {formData.petPass.product && (
+                          {watch("petPass.product") && (
                             <div className="mt-2 p-2 bg-white rounded border border-gray-200 text-sm">
-                              {formData.petPass.product === "track" && (
+                              {watch("petPass.product") === "track" && (
                                 <div className="flex flex-col gap-1">
                                   <span className="font-medium text-blue-600">
                                     PetPass Track
@@ -618,7 +797,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                                   </p>
                                 </div>
                               )}
-                              {formData.petPass.product === "protect" && (
+                              {watch("petPass.product") === "protect" && (
                                 <div className="flex flex-col gap-1">
                                   <span className="font-medium text-blue-600">
                                     PetPass Protect
@@ -629,7 +808,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
                                   </p>
                                 </div>
                               )}
-                              {formData.petPass.product === "vetcare" && (
+                              {watch("petPass.product") === "vetcare" && (
                                 <div className="flex flex-col gap-1">
                                   <span className="font-medium text-blue-600">
                                     PetPass Vetcare
@@ -656,48 +835,68 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
             {expandedSections.services && (
               <div className="p-4 space-y-3">
                 <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+                  <Controller
+                    control={control}
                     name="services.wantsGrooming"
-                    checked={formData.services.wantsGrooming}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    render={({ field }) => (
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    )}
                   />
                   <span className="text-sm text-gray-700">
                     Servicio de Peluquería
                   </span>
                 </label>
                 <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+                  <Controller
+                    control={control}
                     name="services.wantsFoodDelivery"
-                    checked={formData.services.wantsFoodDelivery}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    render={({ field }) => (
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    )}
                   />
                   <span className="text-sm text-gray-700">
                     Servicio de Comida a Domicilio
                   </span>
                 </label>
                 <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+                  <Controller
+                    control={control}
                     name="services.wantsHotelService"
-                    checked={formData.services.wantsHotelService}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    render={({ field }) => (
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    )}
                   />
                   <span className="text-sm text-gray-700">
                     Servicio de Hotel para Viajes
                   </span>
                 </label>
                 <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+                  <Controller
+                    control={control}
                     name="services.wantsTraining"
-                    checked={formData.services.wantsTraining}
-                    onChange={handleChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    render={({ field }) => (
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    )}
                   />
                   <span className="text-sm text-gray-700">
                     Servicio de Entrenamiento
@@ -769,7 +968,7 @@ const NewPatientForm: React.FC<NewPatientFormProps> = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" variant="primary" onClick={handleSubmit}>
+            <Button type="submit" variant="primary" form="patient-form">
               Guardar Paciente
             </Button>
           </div>
