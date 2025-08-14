@@ -1,22 +1,13 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Calendar, Clock, FileText, Plus, X, User, Pill, Printer, Download, QrCode } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { FileText, X, Pill, Printer, Download } from 'lucide-react';
 import Card from '../common/Card';
 import Button from '../common/Button';
-import Input from '../common/Input';
 import QRCode from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { generatePrescriptionPDF } from '../../utils/pdfGenerator';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
-
-interface Medication {
-  id: string;
-  name: string;
-  dosage: string;
-  frequency: string;
-  duration: string;
-  instructions: string;
-}
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FormValidator, type NewPrescriptionFormInput, type NewPrescriptionFormOutput } from '../../validators/formValidator';
 
 interface Patient {
   id: string;
@@ -27,14 +18,15 @@ interface Patient {
   weight: number;
   owner: string;
   ownerPhone: string;
+  petId?: string;
 }
 
 interface NewPrescriptionFormProps {
-  onSubmit: (prescription: any) => void;
+  onSubmit: (prescription: NewPrescriptionFormOutput) => void;
   onCancel: () => void;
   patients: Patient[];
-  employees: any[];
-  medicines: any[];
+  employees: Array<{ _id: string; firstName: string; lastName: string; position: string }>;
+  medicines: Array<{ id: string; name: string; activeIngredient: string }>;
 }
 
 const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({ 
@@ -44,28 +36,30 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
   employees = [], 
   medicines = [] 
 }) => {
-  const createPrescription = useMutation(api.prescriptions.createPrescription);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [newMedication, setNewMedication] = useState<Medication>({
-    id: '',
-    name: '',
-    dosage: '',
-    frequency: '',
-    duration: '',
-    instructions: ''
-  });
+  const [selectedMedicines, setSelectedMedicines] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [prescriptionNumber, setPrescriptionNumber] = useState('');
-  const [prescriptionDate, setPrescriptionDate] = useState(new Date().toISOString().split('T')[0]);
   const [veterinarian, setVeterinarian] = useState('Dr. Juan Pérez');
-  const [notes, setNotes] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<{ _id: string; firstName: string; lastName: string; position: string } | null>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
 
+  const form = useForm<NewPrescriptionFormInput, unknown, NewPrescriptionFormOutput>({
+    resolver: zodResolver(FormValidator.newPrescription()),
+    defaultValues: {
+      patientId: '',
+      petId: '',
+      employeeId: '',
+      medicines: [],
+      notes: ''
+    }
+  });
+
+  const { control, handleSubmit, formState: { errors }, watch, setValue } = form;
+
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `Receta-${prescriptionNumber || 'Nueva'}`,
     pageStyle: `
       @page {
@@ -85,16 +79,34 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
   });
 
   const handleDownloadPDF = async () => {
-    if (!selectedPatient || medications.length === 0) return;
+    if (!selectedPatient || selectedMedicines.length === 0) return;
 
     const prescriptionData = {
-      number: prescriptionNumber,
-      date: prescriptionDate,
-      patient: selectedPatient,
-      veterinarian,
-      medications,
-      notes,
-      qrData: generateQRData()
+      prescriptionNumber: prescriptionNumber,
+      date: new Date().toISOString().split('T')[0],
+      patientName: selectedPatient.name,
+      petName: selectedPatient.name,
+      petDetails: `${selectedPatient.species} ${selectedPatient.breed || ''}`,
+      diagnosis: watch("notes") || '',
+             medications: selectedMedicines.map(medicineId => {
+         const medicine = medicines.find(m => m.id === medicineId);
+         return {
+           id: medicineId,
+           name: medicine?.name || 'Medicamento no encontrado',
+           dosage: 'Según indicaciones del veterinario',
+           frequency: 'Según indicaciones del veterinario',
+           duration: 'Según indicaciones del veterinario',
+           notes: ''
+         };
+       }),
+      notes: watch("notes") || '',
+      doctor: veterinarian,
+      clinic: {
+        name: "ClinicPro",
+        address: "Calle de Beatriz de Bobadilla, 9, 28040 Madrid",
+        phone: "+34 912 345 678",
+        email: "info@clinicpro.com"
+      }
     };
 
     try {
@@ -109,46 +121,40 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
 
     return JSON.stringify({
       prescriptionNumber,
-      date: prescriptionDate,
+      date: new Date().toISOString().split('T')[0],
       patient: selectedPatient.name,
       owner: selectedPatient.owner,
       veterinarian,
-      medications: medications.map(med => ({
-        name: med.name,
-        dosage: med.dosage,
-        frequency: med.frequency
-      }))
+      medicines: selectedMedicines
     });
   };
 
-
-
-  const removeMedication = (id: string) => {
-    setMedications(medications.filter(med => med.id !== id));
+  const addMedicine = (medicineId: string) => {
+    if (!selectedMedicines.includes(medicineId)) {
+      const newSelectedMedicines = [...selectedMedicines, medicineId];
+      setSelectedMedicines(newSelectedMedicines);
+      setValue("medicines", newSelectedMedicines);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const removeMedicine = (medicineId: string) => {
+    const newSelectedMedicines = selectedMedicines.filter(id => id !== medicineId);
+    setSelectedMedicines(newSelectedMedicines);
+    setValue("medicines", newSelectedMedicines);
+  };
 
-    if (!selectedPatient || !selectedEmployee || medications.length === 0) {
+  const onSubmitForm = async (values: NewPrescriptionFormOutput) => {
+    if (!selectedPatient || !selectedEmployee || selectedMedicines.length === 0) {
       alert('Por favor completa todos los campos obligatorios');
       return;
     }
 
-    const prescriptionData = {
-      number: prescriptionNumber,
-      date: prescriptionDate,
-      patient: selectedPatient,
-      patientId: selectedPatient.patientId || selectedPatient.id, // Use correct patient ID
-      petId: selectedPatient.petId, // Use the actual pet ID
-      employeeId: selectedEmployee?._id,
-      veterinarian,
-      medications,
-      medicines: medications.map(med => {
-        const medicine = medicines.find(m => m.name === med.name);
-        return medicine?.id;
-      }).filter(Boolean),
-      notes
+    const prescriptionData: NewPrescriptionFormOutput = {
+      patientId: selectedPatient.id,
+      petId: selectedPatient.petId,
+      employeeId: selectedEmployee._id,
+      medicines: selectedMedicines,
+      notes: values.notes || undefined
     };
 
     onSubmit(prescriptionData);
@@ -162,9 +168,9 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
         return;
       }
 
-      if (medications.length === 0) {
-        console.error('No medications added');
-        alert('Por favor añada al menos un medicamento');
+      if (selectedMedicines.length === 0) {
+        console.error('No medicines selected');
+        alert('Por favor seleccione al menos un medicamento');
         return;
       }
 
@@ -175,7 +181,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
       }
 
       console.log('Opening preview with patient:', selectedPatient);
-      console.log('Medications:', medications);
+      console.log('Selected medicines:', selectedMedicines);
       setShowPreview(true);
     } catch (error) {
       console.error('Error opening preview:', error);
@@ -189,136 +195,132 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
         <div className="p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Nueva Receta</h3>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Datos básicos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Número de Receta
-                </label>
-                <Input
-                  value={prescriptionNumber}
-                  onChange={(e) => setPrescriptionNumber(e.target.value)}
-                  placeholder="RX-001"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha
-                </label>
-                <Input
-                  type="date"
-                  value={prescriptionDate}
-                  onChange={(e) => setPrescriptionDate(e.target.value)}
-                />
-              </div>
-            </div>
+          <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
 
             {/* Selección de paciente */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Paciente
+                Paciente *
               </label>
-              <select
-                value={selectedPatient?.id || ''}
-                onChange={(e) => {
-                  const patient = patients?.find(p => p.id === e.target.value);
-                  setSelectedPatient(patient || null);
-                }}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                required
-              >
-                <option value="">Seleccionar paciente...</option>
-                {patients && patients.length > 0 ? patients.map(patient => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.name} - {patient.owner}
-                  </option>
-                )) : (
-                  <option value="" disabled>No hay pacientes disponibles</option>
-                )}</select>
+              <Controller
+                name="patientId"
+                control={control}
+                render={({ field }) => (
+                  <select
+                    value={field.value}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      const patient = patients?.find(p => p.id === e.target.value);
+                      setSelectedPatient(patient || null);
+                    }}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    required
+                  >
+                    <option value="">Seleccionar paciente...</option>
+                    {patients && patients.length > 0 ? patients.map(patient => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.name} - {patient.owner}
+                      </option>
+                    )) : (
+                      <option value="" disabled>No hay pacientes disponibles</option>
+                    )}
+                  </select>
+                )}
+              />
+              {errors.patientId && (
+                <p className="mt-1 text-xs text-red-600">{errors.patientId.message}</p>
+              )}
             </div>
 
             {/* Especialista */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Especialista
+                Especialista *
               </label>
-              <select
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={selectedEmployee?._id || ''}
-                  onChange={(e) => {
-                    const employee = employees.find(emp => emp._id === e.target.value);
-                    setSelectedEmployee(employee || null);
-                    setVeterinarian(employee ? `${employee.firstName} ${employee.lastName}` : '');
-                  }}
-                  required
-                >
-                  <option value="">Seleccionar especialista</option>
-                  {employees && employees.length > 0 ? employees.map(employee => (
-                    <option key={employee._id} value={employee._id}>
-                      {employee.firstName} {employee.lastName} - {employee.position}
-                    </option>
-                  )) : (
-                    <option value="" disabled>No hay especialistas disponibles</option>
-                  )}
-                </select>
+              <Controller
+                name="employeeId"
+                control={control}
+                render={({ field }) => (
+                  <select
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={field.value}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      const employee = employees.find(emp => emp._id === e.target.value);
+                      setSelectedEmployee(employee || null);
+                      setVeterinarian(employee ? `${employee.firstName} ${employee.lastName}` : '');
+                    }}
+                    required
+                  >
+                    <option value="">Seleccionar especialista</option>
+                    {employees && employees.length > 0 ? employees.map(employee => (
+                      <option key={employee._id} value={employee._id}>
+                        {employee.firstName} {employee.lastName} - {employee.position}
+                      </option>
+                    )) : (
+                      <option value="" disabled>No hay especialistas disponibles</option>
+                    )}
+                  </select>
+                )}
+              />
+              {errors.employeeId && (
+                <p className="mt-1 text-xs text-red-600">{errors.employeeId.message}</p>
+              )}
             </div>
 
-            {/* Añadir medicamentos */}
+            {/* Selección de medicamentos */}
             <div>
-              <h4 className="text-md font-medium text-gray-900 mb-3">Medicamentos</h4>
+              <h4 className="text-md font-medium text-gray-900 mb-3">Medicamentos *</h4>
               <div className="border border-gray-200 rounded-lg p-4">
                 <select
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value=""
                   onChange={(e) => {
-                    const selectedMedicine = medicines.find(med => med.name === e.target.value);
-                    if (selectedMedicine) {
-                      const medication = {
-                        id: Date.now().toString(),
-                        name: selectedMedicine.name,
-                        dosage: selectedMedicine.recommendedDosage || 'No especificada',
-                        frequency: '',
-                        duration: selectedMedicine.duration || 'No especificada',
-                        instructions: ''
-                      };
-                      setMedications([...medications, medication]);
+                    if (e.target.value) {
+                      addMedicine(e.target.value);
                       e.target.value = ''; // Reset select
                     }
                   }}
                 >
                   <option value="">Seleccionar medicamento para añadir</option>
                   {medicines.map(medicine => (
-                    <option key={medicine.id} value={medicine.name}>
+                    <option key={medicine.id} value={medicine.id}>
                       {medicine.name} - {medicine.activeIngredient}
                     </option>
                   ))}
                 </select>
               </div>
+              {errors.medicines && (
+                <p className="mt-1 text-xs text-red-600">{errors.medicines.message}</p>
+              )}
             </div>
 
-            {/* Lista de medicamentos añadidos */}
-            {medications && medications.length > 0 && (
+            {/* Lista de medicamentos seleccionados */}
+            {selectedMedicines.length > 0 && (
               <div>
-                <h4 className="text-md font-medium text-gray-900 mb-3">Medicamentos Añadidos</h4>
+                <h4 className="text-md font-medium text-gray-900 mb-3">Medicamentos Seleccionados</h4>
                 <div className="space-y-2">
-                  {medications.map((medication) => (
-                    <div key={medication.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{medication.name}</div>
-                        <div className="text-sm text-gray-600">
-                          Dosis: {medication.dosage} - Duración: {medication.duration}
+                  {selectedMedicines.map((medicineId) => {
+                    const medicine = medicines.find(m => m.id === medicineId);
+                    return medicine ? (
+                      <div key={medicineId} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div className="flex items-center">
+                          <Pill className="text-blue-600 mr-2" size={18} />
+                          <div>
+                            <div className="font-medium text-gray-900">{medicine.name}</div>
+                            <div className="text-sm text-gray-600">{medicine.activeIngredient}</div>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => removeMedicine(medicineId)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <X size={18} />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeMedication(medication.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                  ))}
+                    ) : null;
+                  })}
                 </div>
               </div>
             )}
@@ -328,12 +330,17 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Notas adicionales
               </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                rows={3}
-                placeholder="Instrucciones especiales, recomendaciones..."
+              <Controller
+                name="notes"
+                control={control}
+                render={({ field }) => (
+                  <textarea
+                    {...field}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    rows={3}
+                    placeholder="Instrucciones especiales, recomendaciones..."
+                  />
+                )}
               />
             </div>
 
@@ -345,7 +352,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                   variant="outline"
                   icon={<FileText size={18} />}
                   onClick={handlePreview}
-                  disabled={!selectedPatient || !selectedEmployee || medications.length === 0}
+                  disabled={!selectedPatient || !selectedEmployee || selectedMedicines.length === 0}
                 >
                   Vista Previa
                 </Button>
@@ -361,7 +368,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!selectedPatient || !selectedEmployee || medications.length === 0}
+                  disabled={!selectedPatient || !selectedEmployee || selectedMedicines.length === 0}
                 >
                   Crear Receta
                 </Button>
@@ -423,7 +430,7 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                         <span className="font-medium">Número:</span> {prescriptionNumber}
                       </div>
                       <div>
-                        <span className="font-medium">Fecha:</span> {new Date(prescriptionDate).toLocaleDateString('es-ES')}
+                        <span className="font-medium">Fecha:</span> {new Date().toLocaleDateString('es-ES')}
                       </div>
                       <div>
                         <span className="font-medium">Veterinario:</span> {veterinarian}
@@ -456,51 +463,40 @@ const NewPrescriptionForm: React.FC<NewPrescriptionFormProps> = ({
                 {/* Medicamentos */}
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Medicamentos Prescritos</h3>
-                  <div className="space-y-6">
-                    {medications && medications.map((medication, index) => (
-                      <div key={medication.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-start">
-                          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                            <span className="text-sm font-medium text-blue-600">{index + 1}</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center mb-2">
-                              <Pill className="text-blue-600 mr-2" size={20} />
-                              <h4 className="text-lg font-medium text-gray-900">{medication.name}</h4>
-                            </div>
-                            <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div>
-                                <p className="text-sm text-gray-500">Dosis</p>
-                                <p className="text-sm font-medium">{medication.dosage}</p>
-                              </div>
-                              <div>
-                                <p className="text-sm text-gray-500">Frecuencia</p>
-                                <p className="text-sm font-medium">{medication.frequency}</p>
-                              </div>
-                              <div>
-                                <p className="text-sm text-gray-500">Duración</p>
-                                <p className="text-sm font-medium">{medication.duration}</p>
-                              </div>
-                            </div>
-                            {medication.instructions && (
-                              <div className="mt-3">
-                                <p className="text-sm text-gray-500">Instrucciones</p>
-                                <p className="text-sm">{medication.instructions}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="space-y-4">
+                                         {selectedMedicines.map((medicineId, index) => {
+                       const medicine = medicines.find(m => m.id === medicineId);
+                       return medicine ? (
+                         <div key={medicineId} className="border border-gray-200 rounded-lg p-4">
+                           <div className="flex items-start">
+                             <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                               <span className="text-sm font-medium text-blue-600">{index + 1}</span>
+                             </div>
+                             <div className="flex-1">
+                               <div className="flex items-center mb-2">
+                                 <Pill className="text-blue-600 mr-2" size={20} />
+                                 <h4 className="text-lg font-medium text-gray-900">{medicine.name}</h4>
+                               </div>
+                               <div className="mt-2">
+                                 <p className="text-sm text-gray-600">{medicine.activeIngredient}</p>
+                                 <p className="text-sm text-gray-500 mt-1">
+                                   Dosis, frecuencia y duración según indicaciones del veterinario
+                                 </p>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
+                       ) : null;
+                     })}
                   </div>
                 </div>
 
                 {/* Notas */}
-                {notes && (
+                {watch("notes") && (
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Notas Adicionales</h3>
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <p className="text-sm text-gray-700">{notes}</p>
+                      <p className="text-sm text-gray-700">{watch("notes")}</p>
                     </div>
                   </div>
                 )}

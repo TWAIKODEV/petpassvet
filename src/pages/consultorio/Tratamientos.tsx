@@ -137,12 +137,12 @@ const Tratamientos: React.FC = () => {
 
   const handleNewTreatment = (treatmentData: NewTreatmentFormOutput) => {
     console.log('Nuevo tratamiento creado:', treatmentData);
-    setShowNewTreatmentModal(false);
+      setShowNewTreatmentModal(false);
   };
 
   const handleUpdateTreatment = (treatmentData: NewTreatmentFormOutput) => {
     console.log('Tratamiento actualizado:', treatmentData);
-    setShowEditTreatmentModal(false);
+        setShowEditTreatmentModal(false);
     setSelectedTreatment(null);
   };
 
@@ -695,7 +695,7 @@ const Tratamientos: React.FC = () => {
       {showEditTreatmentModal && selectedTreatment && (
         <NewTreatmentForm 
           onClose={() => {
-            setShowEditTreatmentModal(false);
+                  setShowEditTreatmentModal(false);
             setSelectedTreatment(null);
           }} 
           onSubmit={handleUpdateTreatment}

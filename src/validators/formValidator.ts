@@ -143,27 +143,69 @@ export class FormValidator {
 
   static newTreatment() {
     return z.object({
-      // Required fields
       name: z.string().min(1, "El nombre del tratamiento es obligatorio"),
-      category: z.string().min(1, "Debe seleccionar una categoría"),
+      category: z.string().min(1, "La categoría es obligatoria"),
       description: z.string().min(1, "La descripción es obligatoria"),
-      duration: z.number().int().positive("La duración debe ser un número positivo"),
-      price: z.number().positive("El precio debe ser un número positivo"),
+      duration: z.number().min(1, "La duración debe ser mayor a 0"),
+      followUpPeriod: z.number().optional(),
+      price: z.number().min(0, "El precio debe ser mayor o igual a 0"),
       status: z.enum(["active", "inactive"]),
       species: z.array(z.string()).min(1, "Debe seleccionar al menos una especie"),
       sex: z.enum(["male", "female", "both"]),
+      clinicArea: z.string().optional(),
       conditions: z.array(z.string()).min(1, "Debe seleccionar al menos una dolencia"),
-      associatedMedicines: z.array(z.string()), // This will be Id<"medicines">[] when used
-      procedures: z.array(z.string()),
-      contraindications: z.array(z.string()),
-      sideEffects: z.array(z.string()),
-      
-      // Optional fields
-      followUpPeriod: z.number().int().positive().optional(),
-      clinicArea: z.string().optional().or(z.literal("")),
-      notes: z.string().optional().or(z.literal("")),
-      minAge: z.number().int().positive().optional(),
-      maxAge: z.number().int().positive().optional(),
+      associatedMedicines: z.array(z.string()).optional(),
+      procedures: z.array(z.string()).optional(),
+      contraindications: z.array(z.string()).optional(),
+      sideEffects: z.array(z.string()).optional(),
+      notes: z.string().optional(),
+      minAge: z.number().optional(),
+      maxAge: z.number().optional(),
+    });
+  }
+
+  static newMedicine() {
+    return z.object({
+      name: z.string().min(1, "El nombre del medicamento es obligatorio"),
+      activeIngredient: z.string().min(1, "El principio activo es obligatorio"),
+      manufacturer: z.string().min(1, "El fabricante es obligatorio"),
+      type: z.string().min(1, "El tipo es obligatorio"),
+      dosageForm: z.string().min(1, "La forma farmacéutica es obligatoria"),
+      species: z.array(z.string()).min(1, "Debe seleccionar al menos una especie"),
+      recommendedDosage: z.string().min(1, "La posología recomendada es obligatoria"),
+      duration: z.string().min(1, "La duración es obligatoria"),
+      registrationNumber: z.string().optional(),
+      reference: z.string().optional(),
+      stock: z.number().min(0, "El stock debe ser mayor o igual a 0"),
+      minStock: z.number().min(0, "El stock mínimo debe ser mayor o igual a 0"),
+      basePrice: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
+      vat: z.number().min(0, "El IVA debe ser mayor o igual a 0"),
+      cost: z.number().min(0, "El coste debe ser mayor o igual a 0"),
+      conditions: z.array(z.string()).min(1, "Debe añadir al menos una indicación"),
+      contraindications: z.array(z.string()).optional(),
+      sideEffects: z.array(z.string()).optional(),
+      interactions: z.array(z.string()).optional(),
+      status: z.enum(["active", "inactive"]),
+      atcVetCode: z.string().optional(),
+      prescriptionRequired: z.boolean().optional(),
+      psychotropic: z.boolean().optional(),
+      antibiotic: z.boolean().optional(),
+      administrationRoutes: z.array(z.string()).optional(),
+      excipients: z.array(z.string()).optional(),
+      withdrawalPeriod: z.string().optional(),
+      providerId: z.string().optional(),
+      aiScore: z.number().optional(),
+    });
+  }
+
+  // New Prescription Form
+  static newPrescription() {
+    return z.object({
+      patientId: z.string().min(1, "Debe seleccionar un paciente"),
+      petId: z.string().optional(),
+      employeeId: z.string().min(1, "Debe seleccionar un veterinario"),
+      medicines: z.array(z.string()).min(1, "Debe seleccionar al menos un medicamento"),
+      notes: z.string().optional()
     });
   }
 }
@@ -183,5 +225,11 @@ export type NewPetFormOutput = z.output<ReturnType<typeof FormValidator.newPet>>
 
 export type NewTreatmentFormInput = z.input<ReturnType<typeof FormValidator.newTreatment>>;
 export type NewTreatmentFormOutput = z.output<ReturnType<typeof FormValidator.newTreatment>>;
+
+export type NewMedicineFormInput = z.input<ReturnType<typeof FormValidator.newMedicine>>;
+export type NewMedicineFormOutput = z.output<ReturnType<typeof FormValidator.newMedicine>>;
+
+export type NewPrescriptionFormInput = z.input<ReturnType<typeof FormValidator.newPrescription>>;
+export type NewPrescriptionFormOutput = z.output<ReturnType<typeof FormValidator.newPrescription>>;
 
 

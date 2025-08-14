@@ -26,7 +26,7 @@ const Pets: React.FC = () => {
 
   const handleNewPet = (petData: NewPetFormOutput) => {
     console.log('Nueva mascota creada:', petData);
-    setShowNewPetForm(false);
+      setShowNewPetForm(false);
   };
 
   const handleViewPetDetails = (pet: Doc<"pets"> & { owner: { name: string; email: string; phone: string } | null }) => {
