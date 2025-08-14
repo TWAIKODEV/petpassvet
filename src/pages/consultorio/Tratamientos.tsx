@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Search, Filter, Plus, Edit, Trash, X, Check, Grid, List, ChevronDown, ChevronUp, AlertTriangle, Clock, DollarSign, Pill, FileText, Clipboard, Activity, Calendar, Download, Printer } from 'lucide-react';
+import { Search, Plus, Edit, Trash, Grid, List, AlertTriangle, Clock, DollarSign, Calendar, Download } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import NewTreatmentForm from '../../components/form/NewTreatmentForm';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { type NewTreatmentFormOutput } from '../../validators/formValidator';
 
 interface Treatment {
   _id: Id<"treatments">;
@@ -68,20 +70,6 @@ const conditionOptions = [
   { id: 'Prevención de rabia', name: 'Prevención de rabia' }
 ];
 
-// Common procedures
-const procedureOptions = [
-  { id: 'Ultrasonido dental', name: 'Ultrasonido dental' },
-  { id: 'Pulido dental', name: 'Pulido dental' },
-  { id: 'Aplicación de flúor', name: 'Aplicación de flúor' },
-  { id: 'Radiografía', name: 'Radiografía' },
-  { id: 'Ecografía', name: 'Ecografía' },
-  { id: 'Análisis de sangre', name: 'Análisis de sangre' },
-  { id: 'Biopsia', name: 'Biopsia' },
-  { id: 'Cirugía menor', name: 'Cirugía menor' },
-  { id: 'Anestesia general', name: 'Anestesia general' },
-  { id: 'Masaje terapéutico', name: 'Masaje terapéutico' }
-];
-
 // Clinic areas
 const clinicAreaOptions = [
   { id: 'all', name: 'Todas las áreas' },
@@ -98,9 +86,6 @@ const clinicAreaOptions = [
 
 const Tratamientos: React.FC = () => {
   const treatments = useQuery(api.treatments.getTreatments) || [];
-  const medicines = useQuery(api.medicines.getMedicines) || [];
-  const createTreatment = useMutation(api.treatments.createTreatment);
-  const updateTreatment = useMutation(api.treatments.updateTreatment);
   const deleteTreatment = useMutation(api.treatments.deleteTreatment);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,30 +102,8 @@ const Tratamientos: React.FC = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    description: '',
-    duration: 0,
-    followUpPeriod: 0,
-    price: 0,
-    status: 'active' as 'active' | 'inactive',
-    species: [] as string[],
-    sex: 'both' as 'male' | 'female' | 'both',
-    clinicArea: '',
-    conditions: [] as string[],
-    associatedMedicines: [] as Id<"medicines">[],
-    procedures: [] as string[],
-    contraindications: [] as string[],
-    sideEffects: [] as string[],
-    notes: '',
-    minAge: 0,
-    maxAge: 0,
-  });
-
   // Filter treatments based on search term and filters
-  const filteredTreatments = treatments.filter(treatment => {
+  const filteredTreatments = treatments.filter((treatment: Treatment) => {
     const matchesSearch = treatment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          treatment.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || treatment.category === selectedCategory;
@@ -156,26 +119,6 @@ const Tratamientos: React.FC = () => {
 
   const handleEditTreatment = (treatment: Treatment) => {
     setSelectedTreatment(treatment);
-    setFormData({
-      name: treatment.name,
-      category: treatment.category,
-      description: treatment.description,
-      duration: treatment.duration,
-      followUpPeriod: treatment.followUpPeriod || 0,
-      price: treatment.price,
-      status: treatment.status,
-      species: treatment.species,
-      sex: treatment.sex,
-      clinicArea: treatment.clinicArea || '',
-      conditions: treatment.conditions,
-      associatedMedicines: treatment.associatedMedicines,
-      procedures: treatment.procedures,
-      contraindications: treatment.contraindications,
-      sideEffects: treatment.sideEffects,
-      notes: treatment.notes || '',
-      minAge: treatment.minAge || 0,
-      maxAge: treatment.maxAge || 0,
-    });
     setShowEditTreatmentModal(true);
   };
 
@@ -192,103 +135,15 @@ const Tratamientos: React.FC = () => {
     }
   };
 
-  const handleNewTreatment = async () => {
-    try {
-      const data = {
-        ...formData,
-        followUpPeriod: formData.followUpPeriod || undefined,
-        clinicArea: formData.clinicArea || undefined,
-        notes: formData.notes || undefined,
-        minAge: formData.minAge || undefined,
-        maxAge: formData.maxAge || undefined,
-      };
-      await createTreatment(data);
-      setShowNewTreatmentModal(false);
-      resetForm();
-    } catch (error) {
-      console.error('Error creating treatment:', error);
-    }
+  const handleNewTreatment = (treatmentData: NewTreatmentFormOutput) => {
+    console.log('Nuevo tratamiento creado:', treatmentData);
+    setShowNewTreatmentModal(false);
   };
 
-  const handleUpdateTreatment = async () => {
-    if (selectedTreatment) {
-      try {
-        const data = {
-          id: selectedTreatment._id,
-          ...formData,
-          followUpPeriod: formData.followUpPeriod || undefined,
-          clinicArea: formData.clinicArea || undefined,
-          notes: formData.notes || undefined,
-          minAge: formData.minAge || undefined,
-          maxAge: formData.maxAge || undefined,
-        };
-        await updateTreatment(data);
-        setShowEditTreatmentModal(false);
-        resetForm();
-      } catch (error) {
-        console.error('Error updating treatment:', error);
-      }
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      category: '',
-      description: '',
-      duration: 0,
-      followUpPeriod: 0,
-      price: 0,
-      status: 'active',
-      species: [],
-      sex: 'both',
-      clinicArea: '',
-      conditions: [],
-      associatedMedicines: [],
-      procedures: [],
-      contraindications: [],
-      sideEffects: [],
-      notes: '',
-      minAge: 0,
-      maxAge: 0,
-    });
+  const handleUpdateTreatment = (treatmentData: NewTreatmentFormOutput) => {
+    console.log('Tratamiento actualizado:', treatmentData);
+    setShowEditTreatmentModal(false);
     setSelectedTreatment(null);
-  };
-
-  const handleSpeciesChange = (species: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      species: checked 
-        ? [...prev.species, species]
-        : prev.species.filter(s => s !== species)
-    }));
-  };
-
-  const handleConditionChange = (condition: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      conditions: checked 
-        ? [...prev.conditions, condition]
-        : prev.conditions.filter(c => c !== condition)
-    }));
-  };
-
-  const handleProcedureChange = (procedure: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      procedures: checked 
-        ? [...prev.procedures, procedure]
-        : prev.procedures.filter(p => p !== procedure)
-    }));
-  };
-
-  const handleMedicineChange = (medicineId: Id<"medicines">, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      associatedMedicines: checked 
-        ? [...prev.associatedMedicines, medicineId]
-        : prev.associatedMedicines.filter(m => m !== medicineId)
-    }));
   };
 
   const handleExportExcel = () => {
@@ -345,7 +200,7 @@ const Tratamientos: React.FC = () => {
 
     // Table header
     const headers = ['Nombre', 'Categoría', 'Duración', 'Precio', 'Estado'];
-    let startY = 40;
+    const startY = 40;
     let pageNumber = 1;
 
     // Helper function to add header
@@ -415,11 +270,6 @@ const Tratamientos: React.FC = () => {
   const handlePrint = () => {
     window.print();
     setShowExportOptions(false);
-  };
-
-  const getMedicineName = (medicineId: Id<"medicines">) => {
-    const medicine = medicines.find(m => m._id === medicineId);
-    return medicine ? medicine.name : 'Medicamento no encontrado';
   };
 
   return (
@@ -833,752 +683,25 @@ const Tratamientos: React.FC = () => {
         </div>
       )}
 
-      {/* New Treatment Modal */}
+      {/* New Treatment Form Modal */}
       {showNewTreatmentModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Nuevo Tratamiento</h2>
-              <button
-                onClick={() => {
-                  setShowNewTreatmentModal(false);
-                  resetForm();
-                }}
-                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="overflow-y-auto flex-1 p-6">
-              <form className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Nombre del Tratamiento"
-                    placeholder="Ej: Limpieza Dental Completa"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    required
-                  />
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Categoría
-                    </label>
-                    <select
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      value={formData.category}
-                      onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                      required
-                    >
-                      <option value="">Seleccionar categoría</option>
-                      {categories.filter(c => c.id !== 'all').map(category => (
-                        <option key={category.id} value={category.id}>{category.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Descripción
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      placeholder="Descripción detallada del tratamiento..."
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Duración (minutos)
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="Ej: 30"
-                      value={formData.duration.toString()}
-                      onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
-                      min="1"
-                      required
-                      icon={<Clock size={18} />}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Período de Seguimiento (días)
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="Ej: 14"
-                      value={formData.followUpPeriod?.toString() || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, followUpPeriod: parseInt(e.target.value) || undefined }))}
-                      min="0"
-                      icon={<Calendar size={18} />}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Precio (€)
-                    </label>
-                    <Input
-                      type="number"
-                      placeholder="Ej: 85.00"
-                      value={formData.price.toString()}
-                      onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                      min="0"
-                      step="0.01"
-                      required
-                      icon={<DollarSign size={18} />}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Estado
-                    </label>
-                    <select
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      value={formData.status}
-                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
-                      required
-                    >
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Aplicabilidad</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Especies
-                      </label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-                        {speciesOptions.filter(s => s.id !== 'all').map(species => (
-                          <label key={species.id} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={formData.species.includes(species.id)}
-                              onChange={(e) => handleSpeciesChange(species.id, e.target.checked)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">{species.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Sexo
-                      </label>
-                      <select
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.sex}
-                        onChange={(e) => setFormData(prev => ({ ...prev, sex: e.target.value as 'male' | 'female' | 'both' }))}
-                      >
-                        <option value="both">Ambos</option>
-                        <option value="male">Solo machos</option>
-                        <option value="female">Solo hembras</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Área Clínica
-                      </label>
-                      <select
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.clinicArea}
-                        onChange={(e) => setFormData(prev => ({ ...prev, clinicArea: e.target.value }))}
-                      >
-                        <option value="">Seleccionar área</option>
-                        {clinicAreaOptions.filter(a => a.id !== 'all').map(area => (
-                          <option key={area.id} value={area.id}>{area.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Dolencias Tratadas
-                      </label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-                        {conditionOptions.map(condition => (
-                          <label key={condition.id} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={formData.conditions.includes(condition.id)}
-                              onChange={(e) => handleConditionChange(condition.id, e.target.checked)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">{condition.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-
-<div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Medicamentos Asociados</h3>
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Buscar y seleccionar medicamentos
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Buscar medicamentos..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                          onChange={(e) => {
-                            const searchTerm = e.target.value.toLowerCase();
-                            // Filter medicines based on search term
-                            const filteredMedicines = medicines.filter(medicine =>
-                              medicine.name.toLowerCase().includes(searchTerm) ||
-                              medicine.activeIngredient.toLowerCase().includes(searchTerm)
-                            );
-
-                            // Show dropdown if there's a search term
-                            const dropdown = e.target.nextElementSibling as HTMLElement;
-                            if (searchTerm && filteredMedicines.length > 0) {
-                              dropdown.style.display = 'block';
-                              dropdown.innerHTML = filteredMedicines.map(medicine => `
-                                <div class="medicine-option px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100" 
-                                     data-medicine-id="${medicine._id}"
-                                     data-medicine-name="${medicine.name}"
-                                     data-medicine-ingredient="${medicine.activeIngredient}">
-                                  <div class="font-medium text-sm">${medicine.name}</div>
-                                  <div class="text-xs text-gray-500">${medicine.activeIngredient}</div>
-                                </div>
-                              `).join('');
-
-                              // Add click handlers to options
-                              dropdown.querySelectorAll('.medicine-option').forEach(option => {
-                                option.addEventListener('click', () => {
-                                  const medicineId = option.getAttribute('data-medicine-id') as Id<"medicines">;
-                                  if (!formData.associatedMedicines.includes(medicineId)) {
-                                    handleMedicineChange(medicineId, true);
-                                  }
-                                  (e.target as HTMLInputElement).value = '';
-                                  dropdown.style.display = 'none';
-                                });
-                              });
-                            } else {
-                              dropdown.style.display = 'none';
-                            }
-                          }}
-                          onBlur={(e) => {
-                            // Hide dropdown after a short delay to allow for clicks
-                            setTimeout(() => {
-                              const dropdown = e.target.nextElementSibling as HTMLElement;
-                              dropdown.style.display = 'none';
-                            }, 200);
-                          }}
-                        />
-                        <div 
-                          className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto"
-                          style={{ display: 'none' }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Selected medicines */}
-                    {formData.associatedMedicines.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Medicamentos seleccionados
-                        </label>
-                        <div className="space-y-2">
-                          {formData.associatedMedicines.map(medicineId => {
-                            const medicine = medicines.find(m => m._id === medicineId);
-                            return medicine ? (
-                              <div key={medicineId} className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded-md">
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">{medicine.name}</div>
-                                  <div className="text-xs text-gray-500">{medicine.activeIngredient}</div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMedicineChange(medicineId, false)}
-                                  className="text-red-500 hover:text-red-700 p-1"
-                                >
-                                  <X size={16} />
-                                </button>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Procedimientos</h3>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-                    {procedureOptions.map(procedure => (
-                      <label key={procedure.id} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.procedures.includes(procedure.id)}
-                          onChange={(e) => handleProcedureChange(procedure.id, e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">{procedure.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Contraindicaciones y Efectos Secundarios</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contraindicaciones
-                      </label>
-                      <textarea
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.contraindications.join('\n')}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          contraindications: e.target.value.split('\n').filter(line => line.trim() !== '')
-                        }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Efectos Secundarios
-                      </label>
-                      <textarea
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.sideEffects.join('\n')}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          sideEffects: e.target.value.split('\n').filter(line => line.trim() !== '')
-                        }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notas Adicionales
-                  </label>
-                  <textarea
-                    rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    placeholder="Información adicional relevante..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  />
-                </div>
-              </form>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowNewTreatmentModal(false);
-                  resetForm();
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleNewTreatment}
-              >
-                Guardar Tratamiento
-              </Button>
-            </div>
-          </div>
-        </div>
+        <NewTreatmentForm 
+          onClose={() => setShowNewTreatmentModal(false)} 
+          onSubmit={handleNewTreatment}
+        />
       )}
 
-      {/* Edit Treatment Modal */}
+      {/* Edit Treatment Form Modal */}
       {showEditTreatmentModal && selectedTreatment && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Editar Tratamiento</h2>
-              <button
-                onClick={() => {
-                  setShowEditTreatmentModal(false);
-                  resetForm();
-                }}
-                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="overflow-y-auto flex-1 p-6">
-              <form className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Nombre del Tratamiento"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    required
-                  />
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Categoría
-                    </label>
-                    <select
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      value={formData.category}
-                      onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                      required
-                    >
-                      {categories.filter(c => c.id !== 'all').map(category => (
-                        <option key={category.id} value={category.id}>{category.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Descripción
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Duración (minutos)
-                    </label>
-                    <Input
-                      type="number"
-                      value={formData.duration.toString()}
-                      onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
-                      min="1"
-                      required
-                      icon={<Clock size={18} />}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Período de Seguimiento (días)
-                    </label>
-                    <Input
-                      type="number"
-                      value={formData.followUpPeriod?.toString() || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, followUpPeriod: parseInt(e.target.value) || undefined }))}
-                      min="0"
-                      icon={<Calendar size={18} />}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Precio (€)
-                    </label>
-                    <Input
-                      type="number"
-                      value={formData.price.toString()}
-                      onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                      min="0"
-                      step="0.01"
-                      required
-                      icon={<DollarSign size={18} />}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Estado
-                    </label>
-                    <select
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      value={formData.status}
-                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
-                      required
-                    >
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Aplicabilidad</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Especies
-                      </label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-                        {speciesOptions.filter(s => s.id !== 'all').map(species => (
-                          <label key={species.id} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={formData.species.includes(species.id)}
-                              onChange={(e) => handleSpeciesChange(species.id, e.target.checked)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">{species.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Sexo
-                      </label>
-                      <select
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.sex}
-                        onChange={(e) => setFormData(prev => ({ ...prev, sex: e.target.value as 'male' | 'female' | 'both' }))}
-                      >
-                        <option value="both">Ambos</option>
-                        <option value="male">Solo machos</option>
-                        <option value="female">Solo hembras</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Área Clínica
-                      </label>
-                      <select
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.clinicArea}
-                        onChange={(e) => setFormData(prev => ({ ...prev, clinicArea: e.target.value }))}
-                      >
-                        <option value="">Seleccionar área</option>
-                        {clinicAreaOptions.filter(a => a.id !== 'all').map(area => (
-                          <option key={area.id} value={area.id}>{area.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Dolencias Tratadas
-                      </label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-                        {conditionOptions.map(condition => (
-                          <label key={condition.id} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={formData.conditions.includes(condition.id)}
-                              onChange={(e) => handleConditionChange(condition.id, e.target.checked)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">{condition.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-
-<div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Medicamentos Asociados</h3>
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Buscar y seleccionar medicamentos
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Buscar medicamentos..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                          onChange={(e) => {
-                            const searchTerm = e.target.value.toLowerCase();
-                            // Filter medicines based on search term
-                            const filteredMedicines = medicines.filter(medicine =>
-                              medicine.name.toLowerCase().includes(searchTerm) ||
-                              medicine.activeIngredient.toLowerCase().includes(searchTerm)
-                            );
-
-                            // Show dropdown if there's a search term
-                            const dropdown = e.target.nextElementSibling as HTMLElement;
-                            if (searchTerm && filteredMedicines.length > 0) {
-                              dropdown.style.display = 'block';
-                              dropdown.innerHTML = filteredMedicines.map(medicine => `
-                                <div class="medicine-option px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100" 
-                                     data-medicine-id="${medicine._id}"
-                                     data-medicine-name="${medicine.name}"
-                                     data-medicine-ingredient="${medicine.activeIngredient}">
-                                  <div class="font-medium text-sm">${medicine.name}</div>
-                                  <div class="text-xs text-gray-500">${medicine.activeIngredient}</div>
-                                </div>
-                              `).join('');
-
-                              // Add click handlers to options
-                              dropdown.querySelectorAll('.medicine-option').forEach(option => {
-                                option.addEventListener('click', () => {
-                                  const medicineId = option.getAttribute('data-medicine-id') as Id<"medicines">;
-                                  if (!formData.associatedMedicines.includes(medicineId)) {
-                                    handleMedicineChange(medicineId, true);
-                                  }
-                                  (e.target as HTMLInputElement).value = '';
-                                  dropdown.style.display = 'none';
-                                });
-                              });
-                            } else {
-                              dropdown.style.display = 'none';
-                            }
-                          }}
-                          onBlur={(e) => {
-                            // Hide dropdown after a short delay to allow for clicks
-                            setTimeout(() => {
-                              const dropdown = e.target.nextElementSibling as HTMLElement;
-                              dropdown.style.display = 'none';
-                            }, 200);
-                          }}
-                        />
-                        <div 
-                          className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto"
-                          style={{ display: 'none' }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Selected medicines */}
-                    {formData.associatedMedicines.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Medicamentos seleccionados
-                        </label>
-                        <div className="space-y-2">
-                          {formData.associatedMedicines.map(medicineId => {
-                            const medicine = medicines.find(m => m._id === medicineId);
-                            return medicine ? (
-                              <div key={medicineId} className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded-md">
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">{medicine.name}</div>
-                                  <div className="text-xs text-gray-500">{medicine.activeIngredient}</div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMedicineChange(medicineId, false)}
-                                  className="text-red-500 hover:text-red-700 p-1"
-                                >
-                                  <X size={16} />
-                                </button>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Procedimientos</h3>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-                    {procedureOptions.map(procedure => (
-                      <label key={procedure.id} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.procedures.includes(procedure.id)}
-                          onChange={(e) => handleProcedureChange(procedure.id, e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">{procedure.name}</span>
-                                          </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Contraindicaciones y Efectos Secundarios</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contraindicaciones
-                      </label>
-                      <textarea
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.contraindications.join('\n')}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          contraindications: e.target.value.split('\n').filter(line => line.trim() !== '')
-                        }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Efectos Secundarios
-                      </label>
-                      <textarea
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.sideEffects.join('\n')}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          sideEffects: e.target.value.split('\n').filter(line => line.trim() !== '')
-                        }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notas Adicionales
-                  </label>
-                  <textarea
-                    rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    placeholder="Información adicional relevante..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  />
-                </div>
-              </form>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowEditTreatmentModal(false);
-                  resetForm();
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleUpdateTreatment}
-              >
-                Guardar Cambios
-              </Button>
-            </div>
-          </div>
-        </div>
+        <NewTreatmentForm 
+          onClose={() => {
+            setShowEditTreatmentModal(false);
+            setSelectedTreatment(null);
+          }} 
+          onSubmit={handleUpdateTreatment}
+          initialData={selectedTreatment as unknown as NewTreatmentFormOutput}
+          isEditing={true}
+        />
       )}
 
       {/* Delete Confirmation Modal */}

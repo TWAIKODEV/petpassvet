@@ -140,6 +140,32 @@ export class FormValidator {
       insuranceNumber: z.string().optional().or(z.literal("")),
     });
   }
+
+  static newTreatment() {
+    return z.object({
+      // Required fields
+      name: z.string().min(1, "El nombre del tratamiento es obligatorio"),
+      category: z.string().min(1, "Debe seleccionar una categoría"),
+      description: z.string().min(1, "La descripción es obligatoria"),
+      duration: z.number().int().positive("La duración debe ser un número positivo"),
+      price: z.number().positive("El precio debe ser un número positivo"),
+      status: z.enum(["active", "inactive"]),
+      species: z.array(z.string()).min(1, "Debe seleccionar al menos una especie"),
+      sex: z.enum(["male", "female", "both"]),
+      conditions: z.array(z.string()).min(1, "Debe seleccionar al menos una dolencia"),
+      associatedMedicines: z.array(z.string()), // This will be Id<"medicines">[] when used
+      procedures: z.array(z.string()),
+      contraindications: z.array(z.string()),
+      sideEffects: z.array(z.string()),
+      
+      // Optional fields
+      followUpPeriod: z.number().int().positive().optional(),
+      clinicArea: z.string().optional().or(z.literal("")),
+      notes: z.string().optional().or(z.literal("")),
+      minAge: z.number().int().positive().optional(),
+      maxAge: z.number().int().positive().optional(),
+    });
+  }
 }
 
 // Input type (what the form accepts before defaults are applied)
@@ -154,5 +180,8 @@ export type NewPatientFormOutput = z.output<ReturnType<typeof FormValidator.newP
 // Pet form types
 export type NewPetFormInput = z.input<ReturnType<typeof FormValidator.newPet>>;
 export type NewPetFormOutput = z.output<ReturnType<typeof FormValidator.newPet>>;
+
+export type NewTreatmentFormInput = z.input<ReturnType<typeof FormValidator.newTreatment>>;
+export type NewTreatmentFormOutput = z.output<ReturnType<typeof FormValidator.newTreatment>>;
 
 

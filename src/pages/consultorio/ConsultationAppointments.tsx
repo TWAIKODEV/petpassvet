@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
-import { Search, Filter, Download, Calendar, RefreshCw, FileText, Eye, Printer, X, Stethoscope } from 'lucide-react';
+import { Search, Calendar, RefreshCw } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import NewAppointmentForm from '../../components/dashboard/NewAppointmentForm';
 import { mockPatients, mockDoctors } from '../../data/mockData';
 
 // Mock data for veterinary appointments
@@ -72,6 +73,7 @@ const ConsultationAppointments = () => {
     to: new Date().toISOString().split('T')[0]
   });
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
 
   // Get patient and doctor info for each appointment
   const getPatientById = (id: string) => mockPatients.find(patient => patient.id === id);
@@ -131,6 +133,13 @@ const ConsultationAppointments = () => {
     console.log('Refreshing data...');
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleNewAppointment = (appointmentData: any) => {
+    console.log('Nueva cita creada:', appointmentData);
+    setShowNewAppointmentForm(false);
+    // Aquí podrías refrescar la lista de citas o hacer alguna otra acción
+  };
+
   const toggleRow = (appointmentId: string) => {
     setExpandedRow(current => current === appointmentId ? null : appointmentId);
   };
@@ -148,6 +157,7 @@ const ConsultationAppointments = () => {
         <Button
           variant="primary"
           icon={<Calendar size={18} />}
+          onClick={() => setShowNewAppointmentForm(true)}
         >
           Nueva Cita
         </Button>
@@ -390,6 +400,14 @@ const ConsultationAppointments = () => {
           })}
         </div>
       </div>
+
+      {/* New Appointment Form Modal */}
+      {showNewAppointmentForm && (
+        <NewAppointmentForm 
+          onClose={() => setShowNewAppointmentForm(false)} 
+          onSubmit={handleNewAppointment}
+        />
+      )}
     </div>
   );
 };
