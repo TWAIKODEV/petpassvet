@@ -55,6 +55,7 @@ import Integrations from './pages/tools/Integrations';
 import Logs from './pages/tools/Logs';
 import { ConvexClientProvider } from './context/ConvexProvider';
 import { ToastProvider } from './context/ToastContext';
+import { RegionProvider } from './context/RegionContextProvider';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -79,140 +80,142 @@ function App() {
   return (
     <ConvexClientProvider>
       <AuthProvider>
-          <ToastProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
+        <ToastProvider>
+          <RegionProvider>
+            <Router>
+              <Routes>
+                <Route path="/login" element={<Login />} />
 
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <PageLayout />
-                </ProtectedRoute>
-              }>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/new-prescription" element={<NewPrescriptionPage />} />
-                <Route path="/inbox" element={<Inbox />} />
-                <Route path="/opportunities" element={<Leads />} />
-                <Route path="/patients" element={<Patients />} />
-                <Route path="/calendar" element={<Calendar />} />
-                <Route path="/reports" element={<Reports />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <PageLayout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard/new-prescription" element={<NewPrescriptionPage />} />
+                  <Route path="/inbox" element={<Inbox />} />
+                  <Route path="/opportunities" element={<Leads />} />
+                  <Route path="/patients" element={<Patients />} />
+                  <Route path="/calendar" element={<Calendar />} />
+                  <Route path="/reports" element={<Reports />} />
 
-                {/* Agenda routes */}
-                <Route path="agenda" element={<Calendar />} />
-                <Route path="agenda/citas" element={<Appointments />} />
-                <Route path="agenda/calendario" element={<Calendar />} />
+                  {/* Agenda routes */}
+                  <Route path="agenda" element={<Calendar />} />
+                  <Route path="agenda/citas" element={<Appointments />} />
+                  <Route path="agenda/calendario" element={<Calendar />} />
 
-                {/* Clients routes */}
-                <Route path="clientes/propietarios" element={<Patients />} />
-                <Route path="clientes/propietarios/:id" element={<PatientProfile />} />
-                <Route path="clientes/mascotas" element={<Pets />} />
+                  {/* Clients routes */}
+                  <Route path="clientes/propietarios" element={<Patients />} />
+                  <Route path="clientes/propietarios/:id" element={<PatientProfile />} />
+                  <Route path="clientes/mascotas" element={<Pets />} />
 
-                {/* Opportunities routes */}
-                <Route path="oportunidades" element={<Navigate to="/oportunidades/leads" replace />} />
-                <Route path="oportunidades/leads" element={<Leads />} />
-                <Route path="oportunidades/funnel-ventas" element={<FunnelVentas />} />
+                  {/* Opportunities routes */}
+                  <Route path="oportunidades" element={<Navigate to="/oportunidades/leads" replace />} />
+                  <Route path="oportunidades/leads" element={<Leads />} />
+                  <Route path="oportunidades/funnel-ventas" element={<FunnelVentas />} />
 
-                {/* Consultorio routes */}
-                <Route path="consultorio" element={<Consultation />} />
-                <Route path="consultorio/citas" element={<ConsultationAppointments />} />
-                <Route path="consultorio/consulta/:id" element={<Consultation />} />
-                <Route path="consultorio/historiales" element={<MedicalHistory />} />
-                <Route path="consultorio/tratamientos" element={<Tratamientos />} />
-                <Route path="consultorio/medicamentos" element={<Medications />} />
-                <Route path="consultorio/recetas" element={<Prescriptions />} />
+                  {/* Consultorio routes */}
+                  <Route path="consultorio" element={<Consultation />} />
+                  <Route path="consultorio/citas" element={<ConsultationAppointments />} />
+                  <Route path="consultorio/consulta/:id" element={<Consultation />} />
+                  <Route path="consultorio/historiales" element={<MedicalHistory />} />
+                  <Route path="consultorio/tratamientos" element={<Tratamientos />} />
+                  <Route path="consultorio/medicamentos" element={<Medications />} />
+                  <Route path="consultorio/recetas" element={<Prescriptions />} />
 
-                {/* Peluquería routes */}
-                <Route path="peluqueria" element={<GroomingAppointments />} />
-                <Route path="peluqueria/citas" element={<GroomingAppointments />} />
-                <Route path="peluqueria/citas/:id" element={<GroomingAppointment />} />
-                <Route path="peluqueria/historiales" element={<GroomingHistory />} />
-                <Route path="peluqueria/tratamientos" element={<GroomingTreatments />} />
+                  {/* Peluquería routes */}
+                  <Route path="peluqueria" element={<GroomingAppointments />} />
+                  <Route path="peluqueria/citas" element={<GroomingAppointments />} />
+                  <Route path="peluqueria/citas/:id" element={<GroomingAppointment />} />
+                  <Route path="peluqueria/historiales" element={<GroomingHistory />} />
+                  <Route path="peluqueria/tratamientos" element={<GroomingTreatments />} />
 
-                {/* Tienda routes */}
-                <Route path="tienda" element={<TiendaDashboard />} />
-                <Route path="tienda/productos" element={<TiendaProducts />} />
-                <Route path="tienda/inventario" element={<TiendaInventory />} />
-                <Route path="tienda/pedidos" element={<Pedidos />} />
+                  {/* Tienda routes */}
+                  <Route path="tienda" element={<TiendaDashboard />} />
+                  <Route path="tienda/productos" element={<TiendaProducts />} />
+                  <Route path="tienda/inventario" element={<TiendaInventory />} />
+                  <Route path="tienda/pedidos" element={<Pedidos />} />
 
-                {/* Sales routes */}
-                <Route path="ventas" element={<Sales />} />
-                <Route path="ventas/facturas" element={<Invoices />} />
-                <Route path="ventas/presupuestos" element={<Budgets />} />
+                  {/* Sales routes */}
+                  <Route path="ventas" element={<Sales />} />
+                  <Route path="ventas/facturas" element={<Invoices />} />
+                  <Route path="ventas/presupuestos" element={<Budgets />} />
 
-                {/* Compras routes */}
-                <Route path="compras" element={<Providers />} />
-                <Route path="compras/proveedores" element={<Providers />} />
-                <Route path="compras/proveedores/:id" element={<ProviderProfile />} />
-                <Route path="compras/productos-servicios" element={<ProductsServices />} />
-                <Route path="compras/inventario" element={<Inventory />} />
-                <Route path="compras/pedidos" element={<Pedidos />} />
+                  {/* Compras routes */}
+                  <Route path="compras" element={<Providers />} />
+                  <Route path="compras/proveedores" element={<Providers />} />
+                  <Route path="compras/proveedores/:id" element={<ProviderProfile />} />
+                  <Route path="compras/productos-servicios" element={<ProductsServices />} />
+                  <Route path="compras/inventario" element={<Inventory />} />
+                  <Route path="compras/pedidos" element={<Pedidos />} />
 
-                {/* Marketing routes */}
-                <Route path="marketing" element={<WebDashboard />} />
-                <Route path="marketing/web" element={<WebDashboard />} />
-                <Route path="marketing/campanas" element={<CampañasMK />} />
-                <Route path="marketing/redes-sociales" element={<SocialMediaDashboard />} />
+                  {/* Marketing routes */}
+                  <Route path="marketing" element={<WebDashboard />} />
+                  <Route path="marketing/web" element={<WebDashboard />} />
+                  <Route path="marketing/campanas" element={<CampañasMK />} />
+                  <Route path="marketing/redes-sociales" element={<SocialMediaDashboard />} />
 
-                {/* RRHH routes */}
-                <Route path="rrhh">
-                  <Route path="mi-perfil" element={<MiPerfil />} />
-                  <Route path="control-horario" element={<ControlHorario />} />
-                  <Route path="registrar-entrada-salida" element={<RegistrarEntradaSalida />} />
-                  <Route path="personal" element={<Staff />} />
-                </Route>
+                  {/* RRHH routes */}
+                  <Route path="rrhh">
+                    <Route path="mi-perfil" element={<MiPerfil />} />
+                    <Route path="control-horario" element={<ControlHorario />} />
+                    <Route path="registrar-entrada-salida" element={<RegistrarEntradaSalida />} />
+                    <Route path="personal" element={<Staff />} />
+                  </Route>
 
-                {/* ERP routes */}
-                <Route path="erp">
-                  <Route path="tesoreria" element={<Tesoreria />} />
-                  <Route path="contaplus" element={<ContaPlus />} />
-                  <Route path="impuestos" element={<Impuestos />} />
-                  <Route path="asesorias" element={<Asesorias />} />
-                </Route>
+                  {/* ERP routes */}
+                  <Route path="erp">
+                    <Route path="tesoreria" element={<Tesoreria />} />
+                    <Route path="contaplus" element={<ContaPlus />} />
+                    <Route path="impuestos" element={<Impuestos />} />
+                    <Route path="asesorias" element={<Asesorias />} />
+                  </Route>
 
-                {/* Informes routes */}
-                <Route path="informes">
-                  <Route path="general" element={<General />} />
-                  <Route path="financieros" element={<Financieros />} />
-                </Route>
+                  {/* Informes routes */}
+                  <Route path="informes">
+                    <Route path="general" element={<General />} />
+                    <Route path="financieros" element={<Financieros />} />
+                  </Route>
 
-                {/* Inbox route */}
-                <Route path="inbox" element={<Inbox />} />
+                  {/* Inbox route */}
+                  <Route path="inbox" element={<Inbox />} />
 
-                {/* Tools routes */}
-                <Route path="tools">
-                  <Route path="integrations" element={
+                  {/* Tools routes */}
+                  <Route path="tools">
+                    <Route path="integrations" element={
+                      <ProtectedRoute>
+                        <Integrations />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="logs" element={
+                      <ProtectedRoute>
+                        <Logs />
+                      </ProtectedRoute>
+                    } />
+                  </Route>
+
+                  {/* Administration routes */}
+                  <Route path="administracion" element={<Placeholder pageName="Administración" />} />
+                  <Route path="administracion/configuracion" element={
                     <ProtectedRoute>
-                      <Integrations />
+                      <Configuracion />
                     </ProtectedRoute>
                   } />
-                  <Route path="logs" element={
+                  <Route path="administracion/usuarios" element={
                     <ProtectedRoute>
-                      <Logs />
+                      <Usuarios />
                     </ProtectedRoute>
                   } />
+                  <Route path="administracion/configuracion" element={<Placeholder pageName="Configuración" />} />
+
+                  {/* Catch all */}
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Route>
-
-                {/* Administration routes */}
-                <Route path="administracion" element={<Placeholder pageName="Administración" />} />
-                <Route path="administracion/configuracion" element={
-                  <ProtectedRoute>
-                    <Configuracion />
-                  </ProtectedRoute>
-                } />
-                <Route path="administracion/usuarios" element={
-                  <ProtectedRoute>
-                    <Usuarios />
-                  </ProtectedRoute>
-                } />
-                <Route path="administracion/configuracion" element={<Placeholder pageName="Configuración" />} />
-
-                {/* Catch all */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Route>
-            </Routes>
-          </Router>
-          </ToastProvider>
+              </Routes>
+            </Router>
+          </RegionProvider>
+        </ToastProvider>
       </AuthProvider>
     </ConvexClientProvider>
   );
