@@ -1,5 +1,7 @@
 import { NavItem } from './navigation';
 
+export type { NavItem };
+
 export interface Patient {
   id: string;
   firstName: string;

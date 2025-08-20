@@ -12,8 +12,6 @@ import {
   Mail, 
   ShoppingCart,
   Stethoscope,
-  Menu,
-  X,
   ChevronDown,
   ChevronRight,
   LogOut,
@@ -38,6 +36,26 @@ import {
   UserCircle,
   Wrench
 } from 'lucide-react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import Logo from './Logo';
 
 const getIcon = (iconName: string) => {
@@ -231,13 +249,7 @@ const navItems: NavItem[] = [
   }
 ];
 
-interface SidebarProps {
-  isOpen: boolean;
-  isMobile: boolean;
-  setIsOpen: (isOpen: boolean) => void;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, isMobile, setIsOpen }) => {
+export function AppSidebar() {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { logout } = useAuth();
 
@@ -253,111 +265,90 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isMobile, setIsOpen }) => {
     const isExpanded = expandedItems.includes(item.title);
     const hasChildren = item.children && item.children.length > 0;
 
-    return (
-      <div key={item.title} className="mb-1">
-        <NavLink
-          to={item.href}
-          className={({ isActive }) =>
-            `flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
-              isActive
-                ? 'bg-blue-100 text-blue-900'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`
-          }
-          onClick={(e) => {
-            if (hasChildren) {
-              e.preventDefault();
-              toggleExpanded(item.title);
-            } else if (isMobile) {
-              setIsOpen(false);
-            }
-          }}
-        >
-          <span className="mr-3">{getIcon(item.icon)}</span>
-          <span className="flex-1">{item.title}</span>
-          {hasChildren && (
-            <span className="ml-auto">
-              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </span>
-          )}
-        </NavLink>
+    if (hasChildren) {
+      return (
+        <SidebarMenuItem key={item.title}>
+          <Collapsible 
+            open={isExpanded} 
+            onOpenChange={() => toggleExpanded(item.title)}
+          >
+            <CollapsibleTrigger asChild>
+              <SidebarMenuButton>
+                {getIcon(item.icon)}
+                <span>{item.title}</span>
+                {isExpanded ? <ChevronDown className="ml-auto" size={16} /> : <ChevronRight className="ml-auto" size={16} />}
+              </SidebarMenuButton>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarMenuSub>
+                {item.children?.map((child: {href: string, title: string}) => (
+                  <SidebarMenuSubItem key={child.href}>
+                    <SidebarMenuSubButton asChild>
+                      <NavLink 
+                        to={child.href}
+                        className={({ isActive }) => isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}
+                      >
+                        <span>{child.title}</span>
+                      </NavLink>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                ))}
+              </SidebarMenuSub>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarMenuItem>
+      );
+    }
 
-        {hasChildren && isExpanded && (
-          <div className="ml-6 mt-1 space-y-1">
-            {item.children.map(child => (
-              <NavLink
-                key={child.href}
-                to={child.href}
-                className={({ isActive }) =>
-                  `block px-3 py-2 text-sm rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-100 text-blue-900'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`
-                }
-                onClick={() => isMobile && setIsOpen(false)}
-              >
-                {child.title}
-              </NavLink>
-            ))}
-          </div>
-        )}
-      </div>
+    return (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton asChild>
+          <NavLink 
+            to={item.href}
+            className={({ isActive }) => isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}
+          >
+            {getIcon(item.icon)}
+            <span>{item.title}</span>
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
     );
   };
 
   return (
-    <>
-      {/* Backdrop for mobile */}
-      {isMobile && isOpen && (
-        <div
-          className="fixed inset-0 bg-gray-900/50 z-20"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`
-          fixed lg:static inset-y-0 left-0 z-30
-          w-64 bg-white border-r border-gray-200
-          transform transition-transform duration-200 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          ${!isMobile && 'lg:translate-x-0'}
-          flex flex-col
-        `}
-      >
-        {/* Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+    <Sidebar variant="inset" collapsible="icon">
+      <SidebarHeader>
+        <div className="flex items-center gap-2 px-4 py-2">
           <Logo />
-          {isMobile && (
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+        </div>
+      </SidebarHeader>
+      
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navegación</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map(renderNavItem)}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton 
+              onClick={logout}
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
             >
-              <X size={20} />
-            </button>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4">
-          {navItems.map(renderNavItem)}
-        </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
-          <button
-            onClick={logout}
-            className="flex items-center w-full px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-          >
-            <LogOut size={20} className="mr-3" />
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
-      </aside>
-    </>
+              <LogOut />
+              <span>Cerrar Sesión</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
-};
+}
 
-export default Sidebar;
+export default AppSidebar;

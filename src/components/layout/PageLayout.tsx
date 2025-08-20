@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import Sidebar from './Sidebar';
+import { AppSidebar } from './Sidebar';
 import Header from './Header';
 import ToastContainer from '../common/ToastContainer';
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 const pageTitles: Record<string, string> = {
   '/': 'Inicio',
@@ -45,8 +46,6 @@ const pageTitles: Record<string, string> = {
 };
 
 const PageLayout: React.FC = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
   
@@ -58,37 +57,15 @@ const PageLayout: React.FC = () => {
     document.title = pageTitle;
   }, [pageTitle]);
   
-  // Check if mobile on mount and when window resizes
-  const checkIfMobile = useCallback(() => {
-    const isMobileView = window.innerWidth < 768;
-    setIsMobile(isMobileView);
-    setIsSidebarOpen(!isMobileView);
-  }, []);
-  
   useEffect(() => {
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    
     // Simulate loading state
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 500);
     
     return () => {
-      window.removeEventListener('resize', checkIfMobile);
       clearTimeout(timer);
     };
-  }, [checkIfMobile]);
-  
-  // Close sidebar on mobile when navigating
-  useEffect(() => {
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
-  }, [location.pathname, isMobile]);
-  
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen(prev => !prev);
   }, []);
 
   if (isLoading) {
@@ -100,26 +77,22 @@ const PageLayout: React.FC = () => {
   }
   
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar 
-        isMobile={isMobile} 
-        isOpen={isSidebarOpen} 
-        setIsOpen={setIsSidebarOpen} 
-      />
-      
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header toggleSidebar={toggleSidebar} title={pageTitle} />
-        
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-8">
-          <div className="max-w-full">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+    <SidebarProvider defaultOpen={true}>
+      <AppSidebar />
+      <SidebarInset className="p-0 m-0 md:peer-data-[variant=inset]:m-0 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-0">
+        <div className="flex flex-col h-full">
+          <Header title={pageTitle} />
+          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-8">
+            <div className="max-w-full">
+              <Outlet />
+            </div>
+          </main>
+        </div>
+      </SidebarInset>
       
       {/* Toast Container */}
       <ToastContainer />
-    </div>
+    </SidebarProvider>
   );
 };
 

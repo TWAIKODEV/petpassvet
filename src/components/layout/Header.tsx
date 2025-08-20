@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Search, Bell, Menu, Settings, User, LogOut, Bell as BellIcon, HelpCircle, RefreshCw, Building2 } from 'lucide-react';
+import { Search, Bell, Settings, User, LogOut, Bell as BellIcon, HelpCircle, RefreshCw, Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Button from '../common/Button';
 import Input from '../common/Input';
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface HeaderProps {
-  toggleSidebar: () => void;
   title: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
+const Header: React.FC<HeaderProps> = ({ title }) => {
   const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -27,18 +27,12 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <button 
-                type="button" 
-                className="md:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 focus:outline-none"
-                onClick={toggleSidebar}
-              >
-                <Menu size={24} />
-              </button>
-              <h1 className="ml-2 md:ml-0 text-xl font-semibold text-gray-900">{title}</h1>
+              <SidebarTrigger />
+              <h1 className="ml-2 text-xl font-semibold text-gray-900">{title}</h1>
             </div>
             
             <div className="flex-1 max-w-md mx-auto px-4 sm:px-6 md:px-8 hidden md:block">
@@ -169,12 +163,12 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
                   <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
                     <Input
                       label="Nombre"
-                      defaultValue={user.name}
+                      defaultValue={user?.name}
                     />
                     <Input
                       label="Email"
                       type="email"
-                      defaultValue={user.email}
+                      defaultValue={user?.email}
                     />
                     <Input
                       label="Teléfono"
