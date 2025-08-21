@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './Sidebar';
 import Header from './Header';
+import ProductCategoriesMenu from './ProductCategoriesMenu';
 import ToastContainer from '../common/ToastContainer';
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
@@ -52,6 +53,9 @@ const PageLayout: React.FC = () => {
   // Get current page title based on route
   const pageTitle = pageTitles[location.pathname] || 'ClinicPro';
   
+  // Check if we should show the product categories menu
+  const showProductCategories = location.pathname.startsWith('/tienda/productos');
+  
   // Update document title
   useEffect(() => {
     document.title = pageTitle;
@@ -82,7 +86,9 @@ const PageLayout: React.FC = () => {
       <SidebarInset className="p-0 m-0 md:peer-data-[variant=inset]:m-0 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-0">
         <div className="flex flex-col h-full">
           <Header title={pageTitle} />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-8">
+          {showProductCategories && <ProductCategoriesMenu />}
+          <main className={`flex-1 overflow-x-hidden overflow-y-auto bg-gray-50
+            ${showProductCategories ? 'pt-16 px-4 pb-4 sm:px-6 sm:pb-6 md:pt-20 lg:px-8 lg:pb-8' : 'p-4 sm:p-6 lg:p-8'}`}>
             <div className="max-w-full">
               <Outlet />
             </div>
