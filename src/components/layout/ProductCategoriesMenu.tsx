@@ -61,12 +61,22 @@ export default function ProductCategoriesMenu() {
     <div className="bg-white border-b border-gray-200 w-full px-4 sm:px-6 lg:px-8 py-3 z-10 fixed top-[65px] md:top-[71px]">
         <NavigationMenu viewport={false}>
           <NavigationMenuList>
+            {/* Enlace a todos los productos */}
+            <NavigationMenuItem>
+              <NavigationMenuLink
+                asChild
+                className={navigationMenuTriggerStyle()}
+              >
+                <Link to="/tienda/productos">Todos los productos</Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            
             {hierarchicalCategories.map((parentCategory) => (
               <NavigationMenuItem key={parentCategory.id}>
                 {parentCategory.children && parentCategory.children.length > 0 ? (
                   // Categoría padre con hijos - mostrar con dropdown
                   <>
-                    <NavigationMenuTrigger><Link to={`/categories/${parentCategory.handle}`}>{parentCategory.name}</Link></NavigationMenuTrigger>
+                    <NavigationMenuTrigger><Link to={`/tienda/categorias/${parentCategory.handle}`}>{parentCategory.name}</Link></NavigationMenuTrigger>
                     <NavigationMenuContent>
                       <div className="w-[400px] p-4">
                         {/* Categorías hijas en horizontal y en negrita */}
@@ -76,7 +86,7 @@ export default function ProductCategoriesMenu() {
                               {/* Categoría hija en negrita */}
                               <NavigationMenuLink asChild>
                                 <Link 
-                                  to={`/categories/${childCategory.handle}`}
+                                  to={`/tienda/categorias/${childCategory.handle}`}
                                   className="font-bold text-sm hover:underline"
                                 >
                                   {childCategory.name}
@@ -89,7 +99,7 @@ export default function ProductCategoriesMenu() {
                                   {childCategory.children.map((grandchildCategory) => (
                                     <NavigationMenuLink key={grandchildCategory.id} asChild>
                                       <Link 
-                                        to={`/categories/${grandchildCategory.handle}`}
+                                        to={`/tienda/categorias/${grandchildCategory.handle}`}
                                         className="text-sm text-muted-foreground hover:text-foreground hover:underline"
                                       >
                                         {grandchildCategory.name}
@@ -110,7 +120,7 @@ export default function ProductCategoriesMenu() {
                     asChild
                     className={navigationMenuTriggerStyle()}
                   >
-                    <Link to={`/categories/${parentCategory.handle}`}>{parentCategory.name}</Link>
+                    <Link to={`/tienda/categorias/${parentCategory.handle}`}>{parentCategory.name}</Link>
                   </NavigationMenuLink>
                 )}
               </NavigationMenuItem>

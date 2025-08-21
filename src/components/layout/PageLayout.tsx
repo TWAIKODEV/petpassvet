@@ -54,7 +54,8 @@ const PageLayout: React.FC = () => {
   const pageTitle = pageTitles[location.pathname] || 'ClinicPro';
   
   // Check if we should show the product categories menu
-  const showProductCategories = location.pathname.startsWith('/tienda/productos');
+  const showProductCategories = location.pathname.startsWith('/tienda/productos') || 
+                                location.pathname.startsWith('/tienda/categorias');
   
   // Update document title
   useEffect(() => {
