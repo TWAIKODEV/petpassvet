@@ -89,7 +89,7 @@ const PageLayout: React.FC = () => {
           <Header title={pageTitle} />
           {showProductCategories && <ProductCategoriesMenu />}
           <main className={`flex-1 overflow-x-hidden overflow-y-auto bg-gray-50
-            ${showProductCategories ? 'pt-16 px-4 pb-4 sm:px-6 sm:pb-6 md:pt-20 lg:px-8 lg:pb-8' : 'p-4 sm:p-6 lg:p-8'}`}>
+            ${showProductCategories ? 'px-4 pb-4 sm:px-6 sm:pb-6 pt-16 lg:px-8 lg:pb-8' : 'p-4 sm:p-6 lg:p-8'}`}>
             <div className="max-w-full">
               <Outlet />
             </div>

@@ -38,6 +38,7 @@ import TiendaDashboard from './pages/tienda/Dashboard';
 import TiendaInventory from './pages/tienda/Inventory';
 import TiendaProducts from './pages/tienda/Products';
 import TiendaCategories from './pages/tienda/Categories';
+import TiendaProductPage from './pages/tienda/ProductPage';
 import Pedidos from './pages/tienda/Pedidos';
 import Tesoreria from './pages/erp/Tesoreria';
 import ContaPlus from './pages/erp/ContaPlus';
@@ -136,6 +137,7 @@ function App() {
                   <Route path="tienda" element={<TiendaDashboard />} />
                   <Route path="tienda/categorias/:handle" element={<TiendaCategories />} />
                   <Route path="tienda/productos" element={<TiendaProducts />} />
+                  <Route path="tienda/productos/:handle" element={<TiendaProductPage />} />
                   <Route path="tienda/inventario" element={<TiendaInventory />} />
                   <Route path="tienda/pedidos" element={<Pedidos />} />
 
