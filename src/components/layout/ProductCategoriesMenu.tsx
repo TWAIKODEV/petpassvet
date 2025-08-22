@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react"
 import { HttpTypes } from "@medusajs/types"
 import { sdk } from "@/lib/config"
+import CartPopover from "@/components/cart/CartPopover"
 
 import {
   NavigationMenu,
@@ -58,7 +59,8 @@ export default function ProductCategoriesMenu() {
   const hierarchicalCategories = organizeCategories()
   
   return (
-    <div className="bg-white border-b border-gray-200 w-full px-4 sm:px-6 lg:px-8 py-3 z-10 fixed top-[65px] md:top-[71px]">
+    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-3 z-10 sticky top-[65px] md:top-[71px] w-full">
+      <div className="flex items-center justify-between">
         <NavigationMenu viewport={false}>
           <NavigationMenuList>
             {/* Enlace a todos los productos */}
@@ -125,8 +127,10 @@ export default function ProductCategoriesMenu() {
                 )}
               </NavigationMenuItem>
             ))}
-        </NavigationMenuList>
-      </NavigationMenu>
+          </NavigationMenuList>
+        </NavigationMenu>
+        <CartPopover />
+      </div>
     </div>
   );
 }

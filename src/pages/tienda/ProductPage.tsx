@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ShoppingCart, Heart, ArrowLeft, Package, Truck, Shield } from "lucide-react"
+import { useCartStore } from "@/store/cart"
 
 export default function ProductPage() {
   const { handle } = useParams<{ handle: string }>()
   const [loading, setLoading] = useState(true)
   const [product, setProduct] = useState<HttpTypes.StoreProduct | undefined>()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const addItem = useCartStore((state) => state.addItem)
 
   useEffect(() => {
     if (!loading || !handle) {
@@ -40,6 +42,12 @@ export default function ProductPage() {
   const formatPrice = (price: number | null | undefined) => {
     if (!price) return "N/A"
     return `€${(price / 100).toFixed(2)}`
+  }
+
+  const handleAddToCart = () => {
+    if (product && product.variants && product.variants.length > 0) {
+      addItem(product, product.variants[0], 1)
+    }
   }
 
   const getProductImages = (product: HttpTypes.StoreProduct) => {
@@ -199,6 +207,7 @@ export default function ProductPage() {
                 size="lg" 
                 className="flex-1"
                 disabled={!product.variants || product.variants.length === 0}
+                onClick={handleAddToCart}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Añadir al carrito
