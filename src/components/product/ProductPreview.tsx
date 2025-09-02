@@ -4,24 +4,16 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ShoppingCart, Heart } from "lucide-react"
 import { Link } from "react-router-dom"
-import { useCartStore } from "@/store/cart"
 
 interface ProductPreviewProps {
   product: HttpTypes.StoreProduct
 }
 
 export default function ProductPreview({ product }: ProductPreviewProps) {
-  const addItem = useCartStore((state) => state.addItem)
   
   const formatPrice = (price: number | null | undefined) => {
     if (!price) return "N/A"
     return `€${(price / 100).toFixed(2)}`
-  }
-
-  const handleAddToCart = () => {
-    if (product && product.variants && product.variants.length > 0) {
-      addItem(product, product.variants[0], 1)
-    }
   }
 
   const getProductImage = (product: HttpTypes.StoreProduct) => {
@@ -102,7 +94,7 @@ export default function ProductPreview({ product }: ProductPreviewProps) {
             className="w-full" 
             size="sm"
             disabled={!product.variants || product.variants.length === 0}
-            onClick={handleAddToCart}
+            onClick={() => console.log('Añadir al carrito')}
           >
             <ShoppingCart className="h-4 w-4 mr-2" />
             Añadir al carrito

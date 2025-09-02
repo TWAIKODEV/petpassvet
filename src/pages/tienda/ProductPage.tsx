@@ -1,28 +1,31 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { useParams, Link } from "react-router-dom"
 import { HttpTypes } from "@medusajs/types"
 import { sdk } from "@/lib/config"
+import { useRegion } from "@/context/RegionContextProvider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ShoppingCart, Heart, ArrowLeft, Package, Truck, Shield } from "lucide-react"
-import { useCartStore } from "@/store/cart"
 
 export default function ProductPage() {
   const { handle } = useParams<{ handle: string }>()
   const [loading, setLoading] = useState(true)
   const [product, setProduct] = useState<HttpTypes.StoreProduct | undefined>()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-  const addItem = useCartStore((state) => state.addItem)
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
+  const { region } = useRegion()
 
   useEffect(() => {
-    if (!loading || !handle) {
+    if (!loading || !handle || !region) {
       return 
     }
 
     sdk.store.product.list({
       handle,
+      fields: `*variants.calculated_price`,
+      region_id: region.id,
     })
     .then(({ products }) => {
       if (products.length) {
@@ -30,25 +33,69 @@ export default function ProductPage() {
       }
       setLoading(false)
     })
-  }, [loading, handle])
+  }, [loading, handle, region])
 
   // Reset cuando cambia el handle
   useEffect(() => {
     setProduct(undefined)
     setSelectedImageIndex(0)
+    setSelectedOptions({})
     setLoading(true)
   }, [handle])
 
-  const formatPrice = (price: number | null | undefined) => {
-    if (!price) return "N/A"
-    return `€${(price / 100).toFixed(2)}`
-  }
-
-  const handleAddToCart = () => {
-    if (product && product.variants && product.variants.length > 0) {
-      addItem(product, product.variants[0], 1)
+  // Encontrar la variante seleccionada basándose en las opciones elegidas
+  const selectedVariant = useMemo(() => {
+    if (!product?.variants) {
+      return
     }
-  }
+
+    // Si solo hay una variante, seleccionarla automáticamente
+    if (product.variants.length === 1) {
+      return product.variants[0]
+    }
+
+    // Si no hay opciones o no se han seleccionado todas, no hay variante seleccionada
+    if (
+      !product.options || 
+      Object.keys(selectedOptions).length !== product.options?.length
+    ) {
+      return
+    }
+
+    return product.variants.find((variant) => variant.options?.every(
+      (optionValue) => optionValue.value === selectedOptions[optionValue.option_id!]
+    ))
+  }, [selectedOptions, product])
+
+  const formatPrice = useCallback((amount: number): string => {
+    if (!region) return "N/A"
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: region.currency_code,
+    }).format(amount)
+  }, [region])
+
+  const selectedVariantPrice = useMemo(() => {
+    if (selectedVariant) {
+      return selectedVariant
+    }
+
+    return product?.variants?.sort((a: HttpTypes.StoreProductVariant, b: HttpTypes.StoreProductVariant) => {
+      return (
+        (a.calculated_price?.calculated_amount || 0) -
+        (b.calculated_price?.calculated_amount || 0)
+      )
+    })[0]
+  }, [selectedVariant, product])
+
+  const price = useMemo(() => {
+    if (!selectedVariantPrice) {
+      return
+    }
+
+    // @ts-expect-error - calculated_price is expected to be available at this point
+    return formatPrice(selectedVariantPrice.calculated_price.calculated_amount)
+  }, [selectedVariantPrice, formatPrice])
 
   const getProductImages = (product: HttpTypes.StoreProduct) => {
     const images = []
@@ -163,16 +210,12 @@ export default function ProductPage() {
           </div>
 
           {/* Precio */}
-          {product.variants && product.variants.length > 0 && (
+          {price && (
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold text-gray-900">
-                {formatPrice(product.variants[0].calculated_price?.original_amount)}
+                {!selectedVariant && (product.variants?.length || 0) > 1 && "Desde: "}
+                {price}
               </span>
-              {product.variants[0].calculated_price?.calculated_amount !== product.variants[0].calculated_price?.original_amount && (
-                <span className="text-xl text-gray-500 line-through">
-                  {formatPrice(product.variants[0].calculated_price?.calculated_amount)}
-                </span>
-              )}
             </div>
           )}
 
@@ -181,6 +224,46 @@ export default function ProductPage() {
             <div>
               <h3 className="text-lg font-semibold mb-2">Descripción</h3>
               <p className="text-gray-600 leading-relaxed">{product.description}</p>
+            </div>
+          )}
+
+          {/* Selección de variantes - Solo mostrar si hay más de una variante */}
+          {(product.options?.length || 0) > 0 && (product.variants?.length || 0) > 1 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Opciones</h3>
+              {product.options!.map((option) => (
+                <div key={option.id} className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {option.title}:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {option.values?.map((optionValue) => (
+                      <button
+                        key={optionValue.id}
+                        onClick={() => {
+                          setSelectedOptions((prev) => ({
+                            ...prev,
+                            [option.id!]: optionValue.value!,
+                          }))
+                        }}
+                        className={`px-4 py-2 rounded-md border transition-colors ${
+                          selectedOptions[option.id!] === optionValue.value
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        {optionValue.value}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              {selectedVariant && (
+                <div className="mt-2 text-sm text-green-600 font-medium">
+                  ✓ Variante seleccionada
+                </div>
+              )}
             </div>
           )}
 
@@ -206,8 +289,17 @@ export default function ProductPage() {
               <Button 
                 size="lg" 
                 className="flex-1"
-                disabled={!product.variants || product.variants.length === 0}
-                onClick={handleAddToCart}
+                disabled={
+                  !product?.variants || 
+                  product.variants.length === 0 ||
+                  ((product.options?.length || 0) > 0 && (product.variants?.length || 0) > 1 && !selectedVariant)
+                }
+                onClick={() => {
+                  const variantToAdd = selectedVariant || product.variants?.[0]
+                  if (variantToAdd) {
+                    console.log('Añadir al carrito - Variante ID:', variantToAdd.id)
+                  }
+                }}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Añadir al carrito

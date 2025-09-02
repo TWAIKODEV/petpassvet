@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react"
 import { HttpTypes } from "@medusajs/types"
 import { sdk } from "@/lib/config"
-import CartPopover from "@/components/cart/CartPopover"
 
 import {
   NavigationMenu,
@@ -129,7 +128,6 @@ export default function ProductCategoriesMenu() {
             ))}
           </NavigationMenuList>
         </NavigationMenu>
-        <CartPopover />
       </div>
     </div>
   );
