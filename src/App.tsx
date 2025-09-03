@@ -58,6 +58,7 @@ import Logs from './pages/tools/Logs';
 import { ConvexClientProvider } from './context/ConvexProvider';
 import { ToastProvider } from './context/ToastContext';
 import { RegionProvider } from './context/RegionContextProvider';
+import { CartProvider } from './context/CartContextProvider';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -84,7 +85,8 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <RegionProvider>
-            <Router>
+            <CartProvider>
+              <Router>
               <Routes>
                 <Route path="/login" element={<Login />} />
 
@@ -217,7 +219,8 @@ function App() {
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Route>
               </Routes>
-            </Router>
+              </Router>
+            </CartProvider>
           </RegionProvider>
         </ToastProvider>
       </AuthProvider>

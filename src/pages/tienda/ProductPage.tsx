@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom"
 import { HttpTypes } from "@medusajs/types"
 import { sdk } from "@/lib/config"
 import { useRegion } from "@/context/RegionContextProvider"
+import { useCart } from "@/context/CartContextProvider"
+import { addToCart } from "@/utils/cart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,7 +17,9 @@ export default function ProductPage() {
   const [product, setProduct] = useState<HttpTypes.StoreProduct | undefined>()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
+  const [addingToCart, setAddingToCart] = useState(false)
   const { region } = useRegion()
+  const { refreshCartFromServer } = useCart()
 
   useEffect(() => {
     if (!loading || !handle || !region) {
@@ -290,19 +294,29 @@ export default function ProductPage() {
                 size="lg" 
                 className="flex-1"
                 disabled={
+                  addingToCart ||
                   !product?.variants || 
                   product.variants.length === 0 ||
                   ((product.options?.length || 0) > 0 && (product.variants?.length || 0) > 1 && !selectedVariant)
                 }
-                onClick={() => {
+                onClick={async () => {
                   const variantToAdd = selectedVariant || product.variants?.[0]
-                  if (variantToAdd) {
-                    console.log('Añadir al carrito - Variante ID:', variantToAdd.id)
+                  if (variantToAdd?.id) {
+                    setAddingToCart(true)
+                    try {
+                      await addToCart(variantToAdd.id, 1)
+                      // Refrescar carrito desde servidor para obtener datos actualizados
+                      await refreshCartFromServer()
+                    } catch (error) {
+                      console.error('Error al añadir al carrito:', error)
+                    } finally {
+                      setAddingToCart(false)
+                    }
                   }
                 }}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
-                Añadir al carrito
+                {addingToCart ? 'Añadiendo...' : 'Añadir al carrito'}
               </Button>
               <Button size="lg" variant="outline" className="px-4">
                 <Heart className="h-5 w-5" />
