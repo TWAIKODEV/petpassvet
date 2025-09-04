@@ -208,6 +208,32 @@ export class FormValidator {
       notes: z.string().optional()
     });
   }
+
+  // Checkout Form
+  static checkout() {
+    return z.object({
+      email: z.string().min(1, "El email es obligatorio").email("Email inválido"),
+      firstName: z.string().min(1, "El nombre es obligatorio"),
+      lastName: z.string().min(1, "Los apellidos son obligatorios"),
+      company: z.string().optional().or(z.literal("")),
+      address: z.string().min(1, "La dirección es obligatoria"),
+      postalCode: z.string().min(1, "El código postal es obligatorio"),
+      city: z.string().min(1, "La ciudad es obligatoria"),
+      country: z.string().min(1, "El país es obligatorio"),
+      province: z.string().optional().or(z.literal("")),
+      billingAddressSameAsShipping: z.boolean().default(true),
+      // Billing address (optional if same as shipping)
+      billingFirstName: z.string().optional(),
+      billingLastName: z.string().optional(),
+      billingCompany: z.string().optional().or(z.literal("")),
+      billingAddress: z.string().optional(),
+      billingPostalCode: z.string().optional(),
+      billingCity: z.string().optional(),
+      billingCountry: z.string().optional(),
+      billingProvince: z.string().optional().or(z.literal("")),
+
+    });
+  }
 }
 
 // Input type (what the form accepts before defaults are applied)
@@ -231,5 +257,8 @@ export type NewMedicineFormOutput = z.output<ReturnType<typeof FormValidator.new
 
 export type NewPrescriptionFormInput = z.input<ReturnType<typeof FormValidator.newPrescription>>;
 export type NewPrescriptionFormOutput = z.output<ReturnType<typeof FormValidator.newPrescription>>;
+
+export type CheckoutFormInput = z.input<ReturnType<typeof FormValidator.checkout>>;
+export type CheckoutFormOutput = z.output<ReturnType<typeof FormValidator.checkout>>;
 
 
