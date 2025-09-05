@@ -16,6 +16,7 @@ import {
   Trash2, 
   ShoppingBag 
 } from "lucide-react"
+import { Link } from "react-router-dom"
 
 export default function CartPopover() {
   const { cart, refreshCartFromServer } = useCart()
@@ -157,8 +158,10 @@ export default function CartPopover() {
                   <Button variant="outline" size="sm" className="w-full">
                     Ver carrito
                   </Button>
-                  <Button size="sm" className="w-full">
-                    Finalizar compra
+                  <Button size="sm" className="w-full" asChild>
+                    <Link to="/tienda/checkout">
+                      Finalizar compra
+                    </Link>
                   </Button>
                 </div>
               </div>

@@ -2,7 +2,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingCart, Heart } from "lucide-react"
+import { Heart } from "lucide-react"
 import { Link } from "react-router-dom"
 
 interface ProductPreviewProps {
@@ -89,16 +89,7 @@ export default function ProductPreview({ product }: ProductPreviewProps) {
       </CardContent>
 
       <CardFooter className="pt-2">
-        <div className="w-full space-y-2">
-          <Button 
-            className="w-full" 
-            size="sm"
-            disabled={!product.variants || product.variants.length === 0}
-            onClick={() => console.log('Añadir al carrito')}
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Añadir al carrito
-          </Button>
+        <div className="w-full">
           <Button variant="outline" size="sm" className="w-full" asChild>
             <Link to={`/tienda/productos/${product.handle}`}>
               Ver detalles

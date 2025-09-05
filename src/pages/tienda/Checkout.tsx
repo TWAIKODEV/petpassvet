@@ -3,23 +3,39 @@ import { useCart } from "@/context/CartContextProvider"
 import AddressForm from "@/components/checkout/AddressForm"
 import DeliveryForm from "@/components/checkout/DeliveryForm"
 import PaymentForm from "@/components/checkout/PaymentForm"
+import ConfirmationOrder from "@/components/checkout/ConfirmationOrder"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Check } from "lucide-react"
+import { HttpTypes } from "@medusajs/types"
 
-type CheckoutStep = "address" | "delivery" | "payment" | "review"
+type CheckoutStep = "address" | "delivery" | "payment"
 
 export default function Checkout() {
   const { cart } = useCart()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>("address")
+  const [completedOrder, setCompletedOrder] = useState<HttpTypes.StoreOrder | null>(null)
+  const [stepCompleted, setStepCompleted] = useState({
+    address: false,
+    delivery: false,
+    payment: false
+  })
   
   const steps = [
-    { id: "address", label: "Dirección", completed: false },
-    { id: "delivery", label: "Entrega", completed: false },
-    { id: "payment", label: "Pago", completed: false },
-    { id: "review", label: "Revisar", completed: false },
+    { id: "address", label: "Dirección", completed: stepCompleted.address },
+    { id: "delivery", label: "Entrega", completed: stepCompleted.delivery },
+    { id: "payment", label: "Pago", completed: stepCompleted.payment },
   ]
+
+  const handleStepComplete = (step: CheckoutStep) => {
+    setStepCompleted(prev => ({ ...prev, [step]: true }))
+  }
+
+  const handleOrderComplete = (order: HttpTypes.StoreOrder) => {
+    setCompletedOrder(order)
+    handleStepComplete('payment')
+  }
 
   const formatPrice = (amount: number, currencyCode: string = "EUR") => {
     return new Intl.NumberFormat("es-ES", {
@@ -32,92 +48,85 @@ export default function Checkout() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Progress Steps - Desktop only */}
-        <div className="mb-8 hidden lg:block">
-          <div className="flex items-center justify-center space-x-8">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  currentStep === step.id ? 'border-blue-600 bg-blue-600 text-white' :
-                  step.completed ? 'border-green-600 bg-green-600 text-white' :
-                  'border-gray-300 bg-white text-gray-400'
-                }`}>
-                  {step.completed ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <span className="text-sm font-medium">{index + 1}</span>
+        {/* Progress Steps - Desktop only - Solo mostrar cuando NO hay pedido completado */}
+        {!completedOrder && (
+          <div className="mb-8 hidden lg:block">
+            <div className="flex items-center justify-center space-x-8">
+              {steps.map((step, index) => (
+                <div key={step.id} className="flex items-center">
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                    currentStep === step.id ? 'border-blue-600 bg-blue-600 text-white' :
+                    step.completed ? 'border-green-600 bg-green-600 text-white' :
+                    'border-gray-300 bg-white text-gray-400'
+                  }`}>
+                    {step.completed ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <span className="text-sm font-medium">{index + 1}</span>
+                    )}
+                  </div>
+                  <span className={`ml-2 text-sm font-medium ${
+                    currentStep === step.id ? 'text-blue-600' :
+                    step.completed ? 'text-green-600' :
+                    'text-gray-400'
+                  }`}>
+                    {step.label}
+                  </span>
+                  {index < steps.length - 1 && (
+                    <div className={`ml-8 h-0.5 w-16 ${
+                      step.completed ? 'bg-green-600' : 'bg-gray-300'
+                    }`} />
                   )}
                 </div>
-                <span className={`ml-2 text-sm font-medium ${
-                  currentStep === step.id ? 'text-blue-600' :
-                  step.completed ? 'text-green-600' :
-                  'text-gray-400'
-                }`}>
-                  {step.label}
-                </span>
-                {index < steps.length - 1 && (
-                  <div className={`ml-8 h-0.5 w-16 ${
-                    step.completed ? 'bg-green-600' : 'bg-gray-300'
-                  }`} />
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Current Step Content */}
           <div className="lg:col-span-2">
-            {currentStep === "address" && (
-              <AddressForm onContinue={() => setCurrentStep("delivery")} />
-            )}
-            
-            {currentStep === "delivery" && (
-              <DeliveryForm 
-                onContinue={() => setCurrentStep("payment")} 
-                onBack={() => setCurrentStep("address")}
-              />
-            )}
+            {completedOrder ? (
+              <ConfirmationOrder order={completedOrder} />
+            ) : (
+              <>
+                {currentStep === "address" && (
+                  <AddressForm 
+                    onContinue={() => {
+                      handleStepComplete("address")
+                      setCurrentStep("delivery")
+                    }} 
+                  />
+                )}
+                
+                {currentStep === "delivery" && (
+                  <DeliveryForm 
+                    onContinue={() => {
+                      handleStepComplete("delivery")
+                      setCurrentStep("payment")
+                    }} 
+                    onBack={() => setCurrentStep("address")}
+                  />
+                )}
 
-            {currentStep === "payment" && (
-              <PaymentForm 
-                onContinue={() => setCurrentStep("review")} 
-                onBack={() => setCurrentStep("delivery")}
-              />
-            )}
-
-            {currentStep === "review" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Revisar pedido</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-gray-500 text-sm">
-                    Revisión final del pedido antes de confirmar.
-                  </div>
-                  <div className="pt-6 flex gap-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep("payment")}
-                    >
-                      Volver
-                    </Button>
-                    <Button>
-                      Confirmar pedido
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                {currentStep === "payment" && (
+                  <PaymentForm 
+                    onOrderComplete={handleOrderComplete}
+                    onBack={() => setCurrentStep("delivery")}
+                  />
+                )}
+              </>
             )}
           </div>
 
           {/* Right Column - Cart Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-8">
-              <CardHeader>
-                <CardTitle>En tu Carrito</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            {!completedOrder && (
+              <Card className="sticky top-8">
+                <CardHeader>
+                  <CardTitle>En tu Carrito</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                 {/* Cart Items */}
                 {cart?.items?.map((item) => (
                   <div key={item.id} className="flex items-center space-x-3">
@@ -194,6 +203,7 @@ export default function Checkout() {
                 </div>
               </CardContent>
             </Card>
+            )}
           </div>
         </div>
       </div>

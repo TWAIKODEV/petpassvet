@@ -13,17 +13,18 @@ import { sdk } from "@/lib/config"
 import { HttpTypes } from "@medusajs/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import SystemDefaultPayment from "./SystemDefaultPayment"
 
 const stripe = loadStripe(
   import.meta.env.VITE_PUBLIC_STRIPE_PK || "temp"
 )
 
 interface PaymentFormProps {
-  onContinue?: () => void
+  onOrderComplete?: (order: HttpTypes.StoreOrder) => void
   onBack?: () => void
 }
 
-export default function PaymentForm({ onContinue, onBack }: PaymentFormProps) {
+export default function PaymentForm({ onOrderComplete, onBack }: PaymentFormProps) {
   const { cart, setCart } = useCart()
   console.log("cart", cart)
   const [paymentProviders, setPaymentProviders] = useState<
@@ -106,36 +107,16 @@ export default function PaymentForm({ onContinue, onBack }: PaymentFormProps) {
       case activePaymentSession.provider_id.startsWith("pp_stripe_"):
         return (
           <StripePayment 
-            onContinue={onContinue}
+            onOrderComplete={onOrderComplete}
             onBack={onBack}
           />
         )
       case activePaymentSession.provider_id.startsWith("pp_system_default"):
         return (
-          <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800">
-                Has elegido pago manual. No se requieren acciones adicionales.
-              </p>
-            </div>
-            <div className="pt-6 flex gap-4">
-              {onBack && (
-                <Button
-                  variant="outline"
-                  onClick={onBack}
-                  className="flex-1"
-                >
-                  Volver a entrega
-                </Button>
-              )}
-              <Button
-                onClick={onContinue}
-                className="flex-1 bg-black text-white hover:bg-gray-800"
-              >
-                Continuar
-              </Button>
-            </div>
-          </div>
+          <SystemDefaultPayment 
+            onOrderComplete={onOrderComplete}
+            onBack={onBack}
+          />
         )
       default:
         return (
@@ -159,7 +140,7 @@ export default function PaymentForm({ onContinue, onBack }: PaymentFormProps) {
           </div>
         )
     }
-  }, [cart, onContinue, onBack])
+  }, [cart, onOrderComplete, onBack])
 
   if (!cart) {
     return (
@@ -244,10 +225,10 @@ export default function PaymentForm({ onContinue, onBack }: PaymentFormProps) {
 
 // Stripe Payment Component
 const StripePayment = ({ 
-  onContinue, 
+  onOrderComplete, 
   onBack 
 }: {
-  onContinue?: () => void
+  onOrderComplete?: (order: HttpTypes.StoreOrder) => void
   onBack?: () => void
 }) => {
   const { cart } = useCart()
@@ -269,7 +250,7 @@ const StripePayment = ({
         }}>
         <StripeForm 
           clientSecret={clientSecret}
-          onContinue={onContinue}
+          onOrderComplete={onOrderComplete}
           onBack={onBack}
         />
       </Elements>
@@ -280,11 +261,11 @@ const StripePayment = ({
 // Stripe Form Component
 const StripeForm = ({ 
   clientSecret,
-  onContinue,
+  onOrderComplete,
   onBack
 }: {
   clientSecret: string | undefined
-  onContinue?: () => void
+  onOrderComplete?: (order: HttpTypes.StoreOrder) => void
   onBack?: () => void
 }) => {
   const { cart, refreshCart } = useCart()
@@ -348,11 +329,11 @@ const StripeForm = ({
       } else if (data.type === "order" && data.order) {
         // Order placed successfully
         console.log("Pedido realizado:", data.order)
-        refreshCart()
+        await refreshCart()
         
-        // Navigate to success page if callback provided
-        if (onContinue) {
-          onContinue()
+        // Call parent with the completed order
+        if (onOrderComplete) {
+          onOrderComplete(data.order)
         }
       }
     } catch (err) {
