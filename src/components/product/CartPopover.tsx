@@ -19,7 +19,6 @@ import {
 
 export default function CartPopover() {
   const { cart, refreshCartFromServer } = useCart()
-  console.log(cart)
   const [loading, setLoading] = useState<string | null>(null)
 
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {

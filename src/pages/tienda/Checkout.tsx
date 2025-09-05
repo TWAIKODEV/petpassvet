@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useCart } from "@/context/CartContextProvider"
 import AddressForm from "@/components/checkout/AddressForm"
 import DeliveryForm from "@/components/checkout/DeliveryForm"
+import PaymentForm from "@/components/checkout/PaymentForm"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -79,27 +80,10 @@ export default function Checkout() {
             )}
 
             {currentStep === "payment" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pago</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-gray-500 text-sm">
-                    Los métodos de pago se implementarán en el siguiente paso.
-                  </div>
-                  <div className="pt-6 flex gap-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentStep("delivery")}
-                    >
-                      Volver
-                    </Button>
-                    <Button onClick={() => setCurrentStep("review")}>
-                      Continuar a revisión
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <PaymentForm 
+                onContinue={() => setCurrentStep("review")} 
+                onBack={() => setCurrentStep("delivery")}
+              />
             )}
 
             {currentStep === "review" && (
